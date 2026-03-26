@@ -1,0 +1,33 @@
+﻿report:
+  title: "Lab SOP Compliance Report"
+  organization: "LabSOPGuard"
+  output_pdf: true
+  output_fallback_txt: true
+
+rendering:
+  engine: WeasyPrint
+  template_engine: Jinja2
+  include_charts: true
+  include_timeline: true
+  include_keyframes: true
+
+sections:
+  - cover
+  - executive_summary
+  - timeline
+  - step_details
+  - violation_cards
+  - statistics
+  - corrective_actions
+  - appendix
+
+required_input_fields:
+  - title
+  - session_id
+  - summary
+  - violations
+  - timeline
+
+output_paths:
+  pdf: outputs/reports/runtime_report.pdf
+  txt: outputs/reports/runtime_report.txt

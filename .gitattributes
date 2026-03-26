@@ -1,0 +1,18 @@
+﻿* text=auto
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.npy binary
+*.pt binary
+*.pth binary

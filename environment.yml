@@ -1,0 +1,19 @@
+﻿name: LabSOPGuard
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy>=1.26.0
+  - pandas>=2.2.0
+  - pyyaml>=6.0.1
+  - matplotlib>=3.8.0
+  - pillow>=10.2.0
+  - opencv>=4.9.0
+  - pip:
+      - torch>=2.2.0
+      - transformers>=4.39.0
+      - accelerate>=0.28.0
+      - reportlab>=4.0.0

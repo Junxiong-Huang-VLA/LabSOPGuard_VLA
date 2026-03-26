@@ -1,0 +1,72 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LabSOPGuard | 实验室SOP合规智能监控系统</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <h1>LabSOPGuard</h1>
+    <p>实验室 SOP 合规智能监控系统</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>项目介绍</h2>
+      <p>面向实验室场景的实时监控平台，支持视频采集、多层级检测、违规识别、告警归档与自动报告生成。</p>
+    </section>
+
+    <section class="card">
+      <h2>模块结构</h2>
+      <ul>
+        <li>Video: 视频流采集与预处理</li>
+        <li>Detection: 轻量模型 + 动作分析 + VLM 接口</li>
+        <li>Monitoring: SOP 规则引擎与异常判定</li>
+        <li>Alerting: 实时告警与事件归档</li>
+        <li>Reporting: 报告输入构建与 PDF 生成</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>环境配置步骤</h2>
+      <ol>
+        <li>运行 `scripts/setup_env.ps1` 或 `setup_env.sh`</li>
+        <li>复用或创建 `LabSOPGuard` 环境</li>
+        <li>运行 `14_check_environment.py` 完成依赖检查</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>数据规范</h2>
+      <p>视频、SOP 文档、结构化标注统一放在 `data/raw`，输出事件统一为可追溯 JSON/CSV。</p>
+    </section>
+
+    <section class="card">
+      <h2>检测与告警流程</h2>
+      <pre><code>Capture -> Detection -> SOP Engine -> Violation -> Alert -> Archive</code></pre>
+    </section>
+
+    <section class="card">
+      <h2>报告生成流程</h2>
+      <pre><code>Events -> Report Input Builder -> PDF/TXT -> outputs/reports</code></pre>
+    </section>
+
+    <section class="card">
+      <h2>GitHub 使用建议</h2>
+      <ul>
+        <li>主分支保护 + PR 审核</li>
+        <li>规则变更与文档同步提交</li>
+        <li>实验记录模板持续维护</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <span id="year"></span> LabSOPGuard
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

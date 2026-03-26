@@ -1,0 +1,12 @@
+﻿tasks:
+  - name: pick_container
+    template: "pick up the {target_object} from {source_zone}"
+  - name: place_container
+    template: "place the {target_object} to {target_zone}"
+  - name: reorder_samples
+    template: "sort samples by {criterion}"
+
+constraints:
+  ambiguous_instruction_policy: ask_for_clarification
+  safety_first: true
+  max_speed_scale: 0.7

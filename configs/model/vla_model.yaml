@@ -1,0 +1,27 @@
+﻿model_stack:
+  layer1_realtime_pose:
+    model: YOLO26-pose
+    runtime: TensorRT_FP16
+    target_fps_per_stream: 30
+  layer2_action_analysis:
+    model: SkateFormer
+    fallback_model: ST-GCN++
+    target_fps: 30
+  layer3_vlm_semantic:
+    model: Qwen3-VL-8B
+    runtime: SGLang
+    analysis_fps: 1
+  layer4_step_anomaly:
+    framework: PREGO
+    mode: expected_step_prediction
+
+runtime:
+  preferred_pipeline: DeepStream_8.0
+  prototype_pipeline: Ultralytics_API
+  max_cameras_rtx3060: 8
+
+training:
+  epochs: 10
+  batch_size: 4
+  learning_rate: 0.0001
+  num_workers: 0

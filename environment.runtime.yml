@@ -1,0 +1,14 @@
+name: LabSOPGuard
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - cudatoolkit=12.1
+  - ffmpeg
+  - pip:
+      - -r requirements-lock.txt
+

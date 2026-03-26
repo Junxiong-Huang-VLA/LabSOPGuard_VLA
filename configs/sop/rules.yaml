@@ -1,0 +1,57 @@
+﻿sop:
+  id: SOP-LAB-COMPLIANCE-001
+  version: 2026.01
+  description: "Lab SOP compliance monitoring with layered AI detection"
+
+required_steps:
+  - wear_ppe
+  - verify_reagent_label
+  - prepare_transfer_tool
+  - execute_transfer
+  - close_container
+  - clean_workspace
+  - dispose_waste
+
+ppe_requirements:
+  must_wear:
+    - gloves
+    - goggles
+    - lab_coat
+
+violation_rules:
+  missing_ppe:
+    sop_step: wear_ppe
+    severity: high
+    condition: "not gloves or not goggles or not lab_coat"
+    message: "PPE is incomplete"
+  reagent_unverified:
+    sop_step: verify_reagent_label
+    severity: high
+    condition: "transfer_started and not label_verified"
+    message: "Transfer started before reagent verification"
+  unsafe_transfer_zone:
+    sop_step: execute_transfer
+    severity: high
+    condition: "transfer_in_restricted_zone"
+    message: "Unsafe transfer detected in restricted zone"
+  container_not_closed:
+    sop_step: close_container
+    severity: medium
+    condition: "experiment_end and not container_closed"
+    message: "Container is not closed before experiment end"
+  waste_not_disposed:
+    sop_step: dispose_waste
+    severity: medium
+    condition: "experiment_end and not waste_disposed"
+    message: "Waste disposal not completed"
+
+severity_levels:
+  high:
+    response: immediate_alert
+    report_priority: P1
+  medium:
+    response: warning_alert
+    report_priority: P2
+  low:
+    response: log_only
+    report_priority: P3

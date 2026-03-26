@@ -1,0 +1,62 @@
+version: 1
+project: LabSOPGuard_VLA
+task_type: detection_and_sop_compliance
+
+classes:
+  - id: 0
+    name: balance
+    description: lab balance or weighing device
+  - id: 1
+    name: beaker
+    description: beaker container
+  - id: 2
+    name: gloved_hand
+    description: protective glove on hand
+  - id: 3
+    name: lab_coat
+    description: laboratory protective coat
+  - id: 4
+    name: paper
+    description: paper sheet or label paper
+  - id: 5
+    name: reagent_bottle
+    description: reagent bottle
+  - id: 6
+    name: sample_bottle
+    description: sample bottle
+  - id: 7
+    name: sample_bottle_blue
+    description: blue sample bottle
+  - id: 8
+    name: spatula
+    description: spatula tool
+  - id: 9
+    name: tube
+    description: tube container
+  - id: 10
+    name: tube-cap
+    description: tube cap
+  - id: 11
+    name: spearhead
+    description: spearhead-like lab tool head
+  - id: 12
+    name: pipette
+    description: pipette transfer tool
+
+label_rules:
+  bbox_format: xyxy
+  min_box_area_ratio: 0.0005
+  occlusion:
+    partially_visible: allowed
+    heavily_occluded: mark_attribute
+  ambiguous_object:
+    use_unknown_tag: true
+    unknown_tag: unclear_object
+
+sop_mapping:
+  wear_gloves:
+    required_classes: [gloved_hand]
+  verify_label:
+    required_classes: [sample_bottle, sample_bottle_blue, reagent_bottle, tube]
+  pipette_transfer:
+    required_classes: [pipette, sample_bottle]

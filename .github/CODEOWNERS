@@ -1,0 +1,15 @@
+﻿# Global default owner
+* @Huang-jx0
+
+# Core modules
+/src/project_name/video/ @Huang-jx0
+/src/project_name/detection/ @Huang-jx0
+/src/project_name/monitoring/ @Huang-jx0
+/src/project_name/alerting/ @Huang-jx0
+/src/project_name/perception/ @Huang-jx0
+/src/project_name/report/ @Huang-jx0
+/src/project_name/reporting/ @Huang-jx0
+/scripts/ @Huang-jx0
+/configs/ @Huang-jx0
+/docs/ @Huang-jx0
+/web/ @Huang-jx0

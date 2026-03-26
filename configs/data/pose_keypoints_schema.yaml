@@ -1,0 +1,10 @@
+default_keypoints: 3
+
+keypoint_names:
+  titration_tool: [tool_tip, tool_body_center, tool_grasp_point]
+  target_vessel: [vessel_center, vessel_rim_left, vessel_rim_right]
+
+class_alias:
+  titration_tool: [pipette, spatula, spearhead]
+  target_vessel: [beaker, sample_bottle, sample_bottle_blue, reagent_bottle, tube]
+

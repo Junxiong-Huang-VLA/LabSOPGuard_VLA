@@ -1,0 +1,45 @@
+model_path: yolo26s-pose.pt
+device: cuda:0
+conf: 0.25
+iou: 0.45
+imgsz: 960
+
+depth_window_size: 5
+min_valid_depth_ratio: 0.2
+max_depth_m: 3.0
+depth_unit: auto
+
+intrinsics:
+  fx: 615.0
+  fy: 615.0
+  cx: 320.0
+  cy: 240.0
+
+keypoint_names:
+  titration_tool: [tool_tip, tool_body_center, tool_grasp_point]
+  target_vessel: [vessel_center, vessel_rim_left, vessel_rim_right]
+  default: [kp_0, kp_1, kp_2, kp_3, kp_4, kp_5, kp_6, kp_7, kp_8, kp_9, kp_10, kp_11, kp_12, kp_13, kp_14, kp_15, kp_16]
+
+class_alias:
+  titration_tool: [titration_tool, pipette, spatula, spearhead]
+  target_vessel: [target_vessel, beaker, sample_bottle, sample_bottle_blue, reagent_bottle, tube]
+
+frames:
+  mode: sampled
+  note: infer.py uses --target-fps and --max-frames for frame sampling.
+
+extrinsics:
+  calibration_type: eye_on_base
+  robot_base_frame: dummy_link
+  tracking_base_frame: global_color_optical_frame
+  transform:
+    translation:
+      x: -0.736315
+      y: -0.0478544
+      z: 1.14669
+    rotation:
+      x: 0.999387
+      y: -0.0147962
+      z: -0.00924636
+      w: -0.0303465
+

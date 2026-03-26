@@ -1,0 +1,33 @@
+﻿alerting:
+  latency_target_ms: 200
+  severity_threshold: medium
+  cooldown_seconds: 10
+
+channels:
+  console:
+    enabled: true
+  websocket:
+    enabled: true
+    endpoint: "/ws"
+  mqtt:
+    enabled: true
+    topic: "labsopguard/alerts"
+  webhook:
+    enabled: false
+    url: ""
+
+routing:
+  high:
+    - console
+    - websocket
+    - mqtt
+    - webhook
+  medium:
+    - console
+    - websocket
+  low:
+    - console
+
+archive:
+  alert_jsonl: outputs/predictions/alerts.jsonl
+  retain_days: 180

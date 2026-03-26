@@ -1,0 +1,28 @@
+backend: ultralytics
+model: yolo26s-pose.pt
+device: cuda:0
+layer2_window: 30
+layer2_backend: skateformer
+enable_vlm: true
+strict_model: true
+
+# Canonical class registry for lab scenario.
+# Detection labels from model will be normalized via aliases below.
+class_registry:
+  sample_container:
+    - bottle
+    - jar
+    - vial
+    - cup
+  pipette:
+    - pipette
+    - dropper
+    - pen
+  glove:
+    - glove
+    - gloves
+    - hand
+  goggles:
+    - goggle
+    - goggles
+    - glasses

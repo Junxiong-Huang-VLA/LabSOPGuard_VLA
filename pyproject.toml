@@ -1,0 +1,28 @@
+﻿[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lab-embodied-vla"
+version = "0.1.0"
+description = "Reusable Vision-Language-Action scaffold for chemistry lab workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26.0",
+  "pandas>=2.2.0",
+  "pyyaml>=6.0.1",
+  "matplotlib>=3.8.0",
+  "pillow>=10.2.0",
+  "opencv-python>=4.9.0",
+  "transformers>=4.39.0",
+  "accelerate>=0.28.0",
+  "torch>=2.2.0",
+  "ultralytics>=8.4.12",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

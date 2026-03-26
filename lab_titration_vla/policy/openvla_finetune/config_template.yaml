@@ -1,0 +1,15 @@
+model:
+  name: openvla
+  base_checkpoint: ""
+  precision: bf16
+
+data:
+  trajectories_index_csv: lab_titration_vla/data/trajectories/index.csv
+  instruction_dir: lab_titration_vla/data/instructions
+
+train:
+  epochs: 10
+  batch_size: 4
+  lr: 1.0e-4
+  gradient_accumulation: 4
+
