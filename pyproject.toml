@@ -19,6 +19,9 @@ dependencies = [
   "accelerate>=0.28.0",
   "torch>=2.2.0",
   "ultralytics>=8.4.12",
+  "flask>=3.0.0",
+  "openai>=1.40.0",
+  "mediapipe>=0.10.14",
 ]
 
 [tool.setuptools]
@@ -26,3 +29,4 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+

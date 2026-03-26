@@ -31,3 +31,6 @@ jinja2==3.1.6
 weasyprint==65.1
 reportlab==4.4.4
 
+flask==3.1.1
+openai==1.79.0
+mediapipe==0.10.21

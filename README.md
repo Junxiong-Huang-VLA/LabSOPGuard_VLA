@@ -174,3 +174,19 @@ git add .
 git commit -m "feat: update batch workflows and docs"
 git push origin main
 ```
+
+## Integrated System Mainline
+
+Mainline entry is now `integrated_system`.
+
+- Start: `python integrated_system/app_integrated.py`
+- Web: `http://localhost:5001`
+- Docs: `docs/integrated_system.md`
+
+Core APIs:
+
+- `POST /api/analyze`
+- `GET /api/status/<task_id>`
+- `GET /api/progress`
+- `GET /api/download/<task_id>/<file_type>`
+- `GET /api/health`
