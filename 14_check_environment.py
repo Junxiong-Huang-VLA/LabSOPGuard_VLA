@@ -19,6 +19,7 @@ REQUIRED_IMPORTS: Dict[str, str] = {
     "reportlab": "reportlab",
     "flask": "flask",
     "openai": "openai",
+    "mediapipe": "mediapipe",
 }
 
 
@@ -86,6 +87,33 @@ def check_torch_cuda() -> dict:
     return info
 
 
+def check_mediapipe_api() -> dict:
+    """Check whether mediapipe legacy solutions API is available."""
+    info = {
+        "ok": True,
+        "mediapipe_version": "unknown",
+        "has_solutions": False,
+        "has_tasks": False,
+        "message": "ok",
+    }
+    try:
+        import mediapipe as mp  # type: ignore
+
+        info["mediapipe_version"] = str(getattr(mp, "__version__", "unknown"))
+        info["has_solutions"] = bool(hasattr(mp, "solutions"))
+        info["has_tasks"] = bool(hasattr(mp, "tasks"))
+        if not info["has_solutions"]:
+            info["ok"] = False
+            info["message"] = (
+                "mediapipe.solutions missing; integrated hand_detection will degrade to skip mode. "
+                "Recommend: pip install \"mediapipe>=0.10.14,<0.10.20\""
+            )
+    except Exception as exc:
+        info["ok"] = False
+        info["message"] = f"mediapipe import failed: {exc}"
+    return info
+
+
 def check_interpreter_alignment(project_name: str) -> dict:
     active = os.environ.get("CONDA_DEFAULT_ENV", "")
     exe = sys.executable
@@ -109,6 +137,7 @@ def main() -> int:
         "python": check_python_version(),
         "imports": check_imports(),
         "torch_cuda": check_torch_cuda(),
+        "mediapipe_api": check_mediapipe_api(),
         "interpreter_alignment": check_interpreter_alignment(args.project_name),
     }
 
@@ -119,6 +148,8 @@ def main() -> int:
         errors.append("imports")
     if not report["torch_cuda"]["ok"]:
         errors.append("torch_cuda")
+    if not report["mediapipe_api"]["ok"]:
+        errors.append("mediapipe_api")
     if not report["interpreter_alignment"]["ok"]:
         errors.append("interpreter_alignment")
 
@@ -134,4 +165,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

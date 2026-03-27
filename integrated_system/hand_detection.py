@@ -40,16 +40,30 @@ def run_hand_detection(
     mp_hands = None
     mp_draw = None
     hands = None
+    hand_backend = "disabled"
+    warnings: List[str] = []
 
     if mp is not None:
-        mp_hands = mp.solutions.hands
-        mp_draw = mp.solutions.drawing_utils
-        hands = mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=2,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-        )
+        # MediaPipe package API may differ by version:
+        # - legacy: mp.solutions.hands
+        # - tasks-only builds: no "solutions" export
+        if hasattr(mp, "solutions"):
+            mp_hands = mp.solutions.hands
+            mp_draw = mp.solutions.drawing_utils
+            hands = mp_hands.Hands(
+                static_image_mode=False,
+                max_num_hands=2,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
+            hand_backend = "mediapipe_solutions"
+        else:
+            warnings.append(
+                "mediapipe.solutions is unavailable in current mediapipe build; hand detection skipped."
+            )
+            hand_backend = "mediapipe_no_solutions"
+    else:
+        warnings.append("mediapipe package is not installed; hand detection skipped.")
 
     try:
         frame_id = -1
@@ -80,7 +94,7 @@ def run_hand_detection(
             if hands is None:
                 cv2.putText(
                     frame,
-                    "MediaPipe not installed, hand detection skipped",
+                    "Hand detection skipped (mediapipe backend unavailable)",
                     (20, 36),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
@@ -125,6 +139,8 @@ def run_hand_detection(
         "hand_presence_ratio": float(hand_frames / total_frames) if total_frames else 0.0,
         "max_hands_in_frame": max_hands,
         "mediapipe_enabled": hands is not None,
+        "hand_backend": hand_backend,
+        "warnings": warnings,
     }
 
     payload = {
@@ -132,6 +148,7 @@ def run_hand_detection(
         "summary": summary,
         "frame_results": frame_results,
         "annotated_video": str(annotated_path).replace("\\", "/") if enable_video_export else None,
+        "warnings": warnings,
     }
     hand_json.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return payload

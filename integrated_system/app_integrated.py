@@ -14,6 +14,7 @@ import threading
 import time
 import traceback
 import uuid
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -124,14 +125,30 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
         if options.get("enable_hand_detection", True):
             _update_task(task_id, progress=12, current_stage="hand_detection", message="Running hand detection")
             _emit_progress(task_id, 12, "hand_detection", "Running MediaPipe hand detection")
-            hand_payload = run_hand_detection(
-                video_path=str(video_path),
-                output_dir=output_dir,
-                enable_video_export=bool(options.get("enable_video_export", True)),
-            )
-            outputs["hand_json"] = _safe_rel(output_dir / "hand_detection.json")
-            if hand_payload.get("annotated_video"):
-                outputs["annotated_video"] = _safe_rel(Path(str(hand_payload["annotated_video"])))
+            try:
+                hand_payload = run_hand_detection(
+                    video_path=str(video_path),
+                    output_dir=output_dir,
+                    enable_video_export=bool(options.get("enable_video_export", True)),
+                )
+                outputs["hand_json"] = _safe_rel(output_dir / "hand_detection.json")
+                if hand_payload.get("annotated_video"):
+                    outputs["annotated_video"] = _safe_rel(Path(str(hand_payload["annotated_video"])))
+            except Exception as hand_exc:
+                # Hand detection should not kill the whole pipeline.
+                hand_payload = {
+                    "summary": {
+                        "total_sampled_frames": 0,
+                        "frames_with_hands": 0,
+                        "hand_presence_ratio": 0.0,
+                        "max_hands_in_frame": 0,
+                        "mediapipe_enabled": False,
+                        "hand_backend": "failed",
+                        "warnings": [f"hand detection failed: {hand_exc}"],
+                    },
+                    "warnings": [f"hand detection failed: {hand_exc}"],
+                }
+                _emit_progress(task_id, 14, "hand_detection", f"Hand detection skipped: {hand_exc}")
         else:
             _emit_progress(task_id, 12, "hand_detection", "Hand detection skipped")
 
@@ -324,6 +341,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
         task = _task_snapshot(task_id)
         if not task:
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
+        options = task.get("options", {}) if isinstance(task.get("options"), dict) else {}
+        if file_type == "annotated_video" and not bool(options.get("enable_video_export", True)):
+            return jsonify({"ok": False, "error": "annotated video export was disabled for this task"}), 400
 
         out_dir = PROJECT_ROOT / task.get("output_dir", "")
         outputs = task.get("outputs", {}) if isinstance(task.get("outputs"), dict) else {}
@@ -346,6 +366,46 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
             return jsonify({"ok": False, "error": f"file not ready: {file_type}"}), 404
         return send_file(path, as_attachment=True)
 
+    @app.get("/api/download_bundle/<task_id>")
+    def download_bundle(task_id: str):
+        task = _task_snapshot(task_id)
+        if not task:
+            return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
+
+        out_dir = PROJECT_ROOT / task.get("output_dir", "")
+        outputs = task.get("outputs", {}) if isinstance(task.get("outputs"), dict) else {}
+        if not out_dir.exists():
+            return jsonify({"ok": False, "error": "output directory not found"}), 404
+
+        candidates: Dict[str, str] = {
+            "annotated_video": outputs.get("annotated_video", ""),
+            "report": outputs.get("report", ""),
+            "part1_keyframes": outputs.get("part1_keyframes", ""),
+            "analysis_json": outputs.get("analysis_json", ""),
+            "overall_summary": outputs.get("overall_summary", ""),
+            "alarm_log": outputs.get("alarm_log", ""),
+            "task_result": outputs.get("task_result", ""),
+        }
+
+        existing_files: list[Path] = []
+        for rel in candidates.values():
+            if not rel:
+                continue
+            p = PROJECT_ROOT / rel
+            if p.exists() and p.is_file():
+                existing_files.append(p)
+
+        if not existing_files:
+            return jsonify({"ok": False, "error": "no downloadable outputs ready"}), 404
+
+        bundle_path = out_dir / f"{task_id}_bundle.zip"
+        with zipfile.ZipFile(bundle_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for p in existing_files:
+                arcname = _safe_rel(p)
+                zf.write(p, arcname=arcname)
+
+        return send_file(bundle_path, as_attachment=True, download_name=f"{task_id}_bundle.zip")
+
     @app.get("/api/health")
     def health():
         api_ready = bool(os.getenv("DOUBAO_API_KEY") or os.getenv("ARK_API_KEY") or os.getenv("OPENAI_API_KEY"))
@@ -365,4 +425,3 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 if __name__ == "__main__":
     app = create_app()
     app.run(host=SETTINGS.host, port=SETTINGS.port, debug=SETTINGS.debug, threaded=True)
-

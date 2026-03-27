@@ -61,3 +61,22 @@ conda run -n base python 00_setup_environment.py --project-name LabSOPGuard --py
 - 安装失败：先升级 pip，再 `--no-cache-dir`
 - CUDA 不可用：检查驱动与 torch 构建匹配
 - 导入失败：确认命令执行在 `LabSOPGuard` 环境内
+
+## 6) MediaPipe 兼容修复（`module 'mediapipe' has no attribute 'solutions'`）
+
+如果集成页面报错：
+
+`module 'mediapipe' has no attribute 'solutions'`
+
+执行一键修复脚本（会在 `LabSOPGuard` 环境内重装兼容版本）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\fix_mediapipe_compat.ps1 -EnvName LabSOPGuard
+```
+
+修复后重启本地预览：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\stop_preview.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\start_preview.ps1
+```

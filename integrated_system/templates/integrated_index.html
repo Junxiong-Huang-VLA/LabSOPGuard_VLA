@@ -34,6 +34,29 @@
     .status-ok { color: var(--ok); }
     .status-failed { color: var(--err); }
     .downloads button { margin-right: 8px; margin-bottom: 8px; }
+    .file-hint { margin-top: 8px; font-size: 13px; color: var(--muted); }
+    .file-hint .ok { color: var(--ok); font-weight: 600; }
+    .file-hint .warn { color: var(--warn); font-weight: 600; }
+    .file-links { margin-top: 8px; font-size: 13px; }
+    .file-links a { margin-right: 10px; text-decoration: none; color: var(--primary); }
+    .file-links a:hover { text-decoration: underline; }
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #143a67;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.18);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      z-index: 9999;
+      pointer-events: none;
+      font-size: 13px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
     pre { white-space: pre-wrap; word-break: break-word; background: #f7faff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; max-height: 220px; overflow: auto; }
   </style>
 </head>
@@ -82,7 +105,10 @@
         <button class="secondary" data-type="analysis_json">下载 AI 分析 JSON</button>
         <button class="secondary" data-type="summary_txt">下载总结 TXT</button>
         <button class="secondary" data-type="alarm_log">下载报警日志</button>
+        <button id="bundleBtn" class="secondary">一键下载 ZIP</button>
       </div>
+      <div id="fileHint" class="file-hint">暂无可下载文件</div>
+      <div id="fileLinks" class="file-links"></div>
       <pre id="resultBox">暂无结果</pre>
     </div>
 
@@ -91,17 +117,82 @@
       <div id="healthText" class="muted">检查中...</div>
     </div>
   </div>
+  <div id="toast" class="toast"></div>
 
   <script>
     let currentTaskId = "";
     let sse = null;
     let pollingTimer = null;
+    let lastStatus = "idle";
 
     const el = (id) => document.getElementById(id);
     const setProgress = (p) => {
       const pct = Math.max(0, Math.min(100, Number(p || 0)));
       el("bar").style.width = pct + "%";
       el("progressText").textContent = pct.toFixed(1) + "%";
+    };
+    const FILE_TYPE_TO_OUTPUT_KEY = {
+      annotated_video: "annotated_video",
+      pdf: "report",
+      keyframes_json: "part1_keyframes",
+      analysis_json: "analysis_json",
+      summary_txt: "overall_summary",
+      alarm_log: "alarm_log",
+    };
+    const FILE_LABEL = {
+      annotated_video: "标注视频",
+      pdf: "PDF 报告",
+      keyframes_json: "关键帧 JSON",
+      analysis_json: "AI 分析 JSON",
+      summary_txt: "总结 TXT",
+      alarm_log: "报警日志",
+    };
+
+    const setDownloadEnabled = (enabled, outputs = null) => {
+      document.querySelectorAll('.downloads button').forEach(btn => {
+        if (btn.id === 'bundleBtn') return;
+        if (!enabled) {
+          btn.disabled = true;
+          return;
+        }
+        const t = btn.getAttribute('data-type');
+        const k = FILE_TYPE_TO_OUTPUT_KEY[t];
+        btn.disabled = !(outputs && k && outputs[k]);
+      });
+      const bundleBtn = el('bundleBtn');
+      if (bundleBtn) {
+        const hasAny = outputs && Object.values(FILE_TYPE_TO_OUTPUT_KEY).some((k) => outputs[k]);
+        bundleBtn.disabled = !(enabled && hasAny);
+      }
+    };
+    const showToast = (msg) => {
+      const t = el('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    };
+    const updateFileHint = (status, outputs = null) => {
+      if (status !== 'completed') {
+        el('fileHint').innerHTML = '<span class="warn">任务未完成，下载按钮暂不可用。</span>';
+        el('fileLinks').innerHTML = '';
+        return;
+      }
+      const ready = [];
+      Object.entries(FILE_TYPE_TO_OUTPUT_KEY).forEach(([t, k]) => {
+        if (outputs && outputs[k]) ready.push(t);
+      });
+      if (ready.length === 0) {
+        el('fileHint').innerHTML = '<span class="warn">任务已完成，但尚未检测到可下载文件。</span>';
+        el('fileLinks').innerHTML = '';
+      } else {
+        el('fileHint').innerHTML = `<span class="ok">可下载文件：</span>${ready.join('、')}`;
+        const links = ready.map((t) => {
+          const label = FILE_LABEL[t] || t;
+          const href = `/api/download/${currentTaskId}/${t}`;
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer">下载${label}</a>`;
+        });
+        el('fileLinks').innerHTML = links.join('');
+      }
     };
 
     async function refreshHealth() {
@@ -125,6 +216,15 @@
       el('statusText').className = data.status === 'failed' ? 'status-failed' : (data.status === 'completed' ? 'status-ok' : '');
       el('messageText').textContent = data.message || '';
       el('resultBox').textContent = JSON.stringify(data, null, 2);
+      setDownloadEnabled(data.status === 'completed', data.outputs || {});
+      updateFileHint(data.status, data.outputs || {});
+      if (lastStatus !== 'completed' && data.status === 'completed') {
+        showToast('任务完成，可直接下载结果文件。');
+      }
+      if (lastStatus !== 'failed' && data.status === 'failed') {
+        showToast('任务失败，请查看结果区错误信息。');
+      }
+      lastStatus = data.status || lastStatus;
       if (data.status === 'completed' || data.status === 'failed') {
         if (pollingTimer) {
           clearInterval(pollingTimer);
@@ -167,6 +267,8 @@
       form.append('enable_video_export', el('enableVideo').checked ? '1' : '0');
 
       el('startBtn').disabled = true;
+      setDownloadEnabled(false);
+      updateFileHint('running', null);
       el('messageText').textContent = '任务提交中...';
 
       try {
@@ -177,6 +279,7 @@
         }
 
         currentTaskId = data.task_id;
+        lastStatus = data.status || "pending";
         el('taskIdText').textContent = `task_id: ${currentTaskId}`;
         el('statusText').textContent = data.status;
         setProgress(data.progress || 0);
@@ -193,9 +296,49 @@
     });
 
     document.querySelectorAll('.downloads button').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        if (btn.id === 'bundleBtn') {
+          if (!currentTaskId) {
+            alert('请先运行任务');
+            return;
+          }
+          try {
+            const res = await fetch(`/api/status/${currentTaskId}`);
+            const data = await res.json();
+            if (!data.ok || data.status !== 'completed') {
+              alert(`任务尚未完成（当前状态: ${data.status || 'unknown'}），请稍后再下载。`);
+              return;
+            }
+            window.open(`/api/download_bundle/${currentTaskId}`, '_blank');
+          } catch (e) {
+            alert(`状态检查失败: ${e}`);
+          }
+          return;
+        }
         if (!currentTaskId) {
           alert('请先运行任务');
+          return;
+        }
+        try {
+          const res = await fetch(`/api/status/${currentTaskId}`);
+          const data = await res.json();
+          if (!data.ok) {
+            alert(data.error || '任务状态不可用');
+            return;
+          }
+          if (data.status !== 'completed') {
+            alert(`任务尚未完成（当前状态: ${data.status}），请稍后再下载。`);
+            return;
+          }
+          const outputs = data.outputs || {};
+          const t = btn.getAttribute('data-type');
+          const k = FILE_TYPE_TO_OUTPUT_KEY[t];
+          if (!k || !outputs[k]) {
+            alert(`当前任务未生成该文件：${t}`);
+            return;
+          }
+        } catch (e) {
+          alert(`状态检查失败: ${e}`);
           return;
         }
         const t = btn.getAttribute('data-type');
@@ -203,6 +346,8 @@
       });
     });
 
+    setDownloadEnabled(false);
+    updateFileHint('idle', null);
     refreshHealth();
     setInterval(refreshHealth, 10000);
   </script>
