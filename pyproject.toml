@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -29,4 +29,20 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = [
+  "tests",
+  "integrated_system/tests",
+]
+pythonpath = [
+  ".",
+]
+norecursedirs = [
+  "outputs",
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+]
 

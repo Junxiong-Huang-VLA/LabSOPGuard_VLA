@@ -1,0 +1,18 @@
+path: D:/LabEmbodiedVLA/LabSOPGuard/data/dataset
+train: images/train
+val: images/test
+test: images/test
+names:
+  0: balance
+  1: beaker
+  2: gloved_hand
+  3: lab_coat
+  4: paper
+  5: reagent_bottle
+  6: sample_bottle
+  7: sample_bottle_blue
+  8: spatula
+  9: tube
+  10: tube-cap
+  11: spearhead
+  12: pipette

@@ -10,14 +10,15 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import json
 import os
+import shutil
 import threading
 import time
 import traceback
 import uuid
 import zipfile
+from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from flask import Flask, Response, jsonify, render_template, request, send_file
@@ -98,6 +99,10 @@ def _update_task(task_id: str, **kwargs: Any) -> None:
         TASKS[task_id] = task
 
 
+def _update_task_outputs(task_id: str, outputs: Dict[str, str]) -> None:
+    _update_task(task_id, outputs=dict(outputs))
+
+
 def _task_snapshot(task_id: str) -> Dict[str, Any]:
     with TASKS_LOCK:
         t = dict(TASKS.get(task_id, {}))
@@ -110,6 +115,171 @@ def _safe_rel(path: str | Path) -> str:
         return str(p.relative_to(PROJECT_ROOT)).replace("\\", "/")
     except Exception:
         return str(p).replace("\\", "/")
+
+
+def _safe_read_text(path: Path, limit: int = 8000) -> str:
+    if not path.exists() or not path.is_file():
+        return ""
+    try:
+        raw = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    raw = raw.strip()
+    if len(raw) > limit:
+        return raw[:limit] + "\n...[truncated]"
+    return raw
+
+
+def _task_public_payload(task_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
+    output_dir_rel = str(task.get("output_dir", ""))
+    output_dir = PROJECT_ROOT / output_dir_rel if output_dir_rel else None
+    outputs = dict(task.get("outputs", {}) if isinstance(task.get("outputs"), dict) else {})
+
+    keyframe_images: list[str] = []
+    if output_dir and output_dir.exists():
+        part1 = output_dir / "part1_keyframes.json"
+        if part1.exists():
+            try:
+                part1_data = json.loads(part1.read_text(encoding="utf-8"))
+                for item in part1_data.get("keyframes", []):
+                    img_name = str(item.get("image", "")).strip()
+                    if img_name:
+                        keyframe_images.append(f"keyframes/{img_name}")
+            except Exception:
+                pass
+        if not keyframe_images:
+            for p in sorted((output_dir / "keyframes").glob("keyframe_*.jpg"))[:24]:
+                keyframe_images.append(f"keyframes/{p.name}")
+
+    keyframe_urls = [f"/api/artifact/{task_id}?path={rel}" for rel in keyframe_images]
+
+    annotated_rel = str(outputs.get("annotated_video") or "")
+    annotated_abs = (PROJECT_ROOT / annotated_rel) if annotated_rel else None
+    annotated_exists = bool(annotated_abs and annotated_abs.exists())
+    annotated_artifact_path = ""
+    if annotated_exists and output_dir:
+        try:
+            annotated_artifact_path = str(annotated_abs.relative_to(output_dir)).replace("\\", "/")
+        except Exception:
+            annotated_artifact_path = "hand_annotated.mp4"
+    summary_rel = str(outputs.get("overall_summary") or "")
+    summary_text = _safe_read_text(PROJECT_ROOT / summary_rel) if summary_rel else ""
+    alarm_rel = str(outputs.get("alarm_log") or "")
+    alarm_exists = bool(alarm_rel and (PROJECT_ROOT / alarm_rel).exists())
+    report_rel = str(outputs.get("report") or "")
+    report_exists = bool(report_rel and (PROJECT_ROOT / report_rel).exists())
+    report_is_pdf = bool(report_exists and Path(report_rel).suffix.lower() == ".pdf")
+
+    public = {
+        "task_id": task_id,
+        "status": str(task.get("status", "unknown")),
+        "progress": float(task.get("progress", 0.0) or 0.0),
+        "current_stage": str(task.get("current_stage", "unknown")),
+        "message": str(task.get("message", "")),
+        "outputs": outputs,
+        "output_dir": output_dir_rel,
+        "video_path": str(task.get("video_path", "")),
+        "created_at": task.get("created_at"),
+        "updated_at": task.get("updated_at"),
+        "options": task.get("options", {}),
+        "error": task.get("error"),
+        "failure": _classify_failure(task),
+        "artifacts": {
+            "annotated_video_url": (
+                f"/api/artifact/{task_id}?path={annotated_artifact_path}" if (annotated_exists and annotated_artifact_path) else ""
+            ),
+            "annotated_video_exists": annotated_exists,
+            "keyframe_image_urls": keyframe_urls,
+            "keyframe_count": len(keyframe_urls),
+            "summary_text": summary_text,
+            "alarm_log_exists": alarm_exists,
+            "pdf_exists": report_exists,
+            "pdf_generated": report_is_pdf,
+            "report_path": report_rel,
+        },
+    }
+    return public
+
+
+def _classify_failure(task: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    status = str(task.get("status", "")).strip().lower()
+    if status != "failed":
+        return None
+
+    stage = str(task.get("current_stage", "")).strip() or "unknown"
+    message = str(task.get("message", "")).strip()
+    error = str(task.get("error", "")).strip()
+    blob = f"{message}\n{error}".lower()
+
+    category = "runtime_error"
+    level = "P2"
+    title = "Runtime Failure"
+    hint = "Inspect traceback and stage logs, then retry the task."
+
+    if "permissionerror" in blob or "access is denied" in blob or "拒绝访问" in blob:
+        category = "permission_error"
+        level = "P0"
+        title = "Permission Denied"
+        hint = "Check folder ACL and ensure the process can read/write input and output paths."
+    elif "no module named" in blob or "modulenotfounderror" in blob or "importerror" in blob:
+        category = "dependency_missing"
+        level = "P0"
+        title = "Missing Dependency"
+        hint = "Install missing Python packages in the active runtime environment."
+    elif "api key" in blob or "auth" in blob or "unauthorized" in blob or "forbidden" in blob:
+        category = "auth_or_api_error"
+        level = "P1"
+        title = "Auth/API Configuration Error"
+        hint = "Check API key variables and endpoint configuration before retry."
+    elif "file not found" in blob or "no such file" in blob or "missing video" in blob:
+        category = "input_or_file_error"
+        level = "P1"
+        title = "Input/File Error"
+        hint = "Verify uploaded video and intermediate files exist and are readable."
+    elif "timeout" in blob or "timed out" in blob:
+        category = "timeout"
+        level = "P1"
+        title = "Timeout"
+        hint = "Reduce workload or increase timeout/resource limits and retry."
+
+    # Stage-specific hints make triage faster for operators.
+    stage_norm = stage.strip().lower()
+    if stage_norm == "hand_detection" and category == "runtime_error":
+        title = "Hand Detection Failure"
+        hint = "Check mediapipe/opencv runtime and video codec compatibility."
+    elif stage_norm == "keyframe_extract" and category == "runtime_error":
+        title = "Keyframe/AI Analysis Failure"
+        hint = "Check keyframe extraction parameters and AI model endpoint availability."
+    elif stage_norm == "step_check" and category == "runtime_error":
+        title = "SOP Step Check Failure"
+        hint = "Validate SOP rules YAML and keyframe analysis payload format."
+    elif stage_norm == "pdf" and category == "runtime_error":
+        title = "PDF Generation Failure"
+        hint = "Check reportlab/font setup; fallback TXT should still be available."
+
+    return {
+        "category": category,
+        "level": level,
+        "stage": stage,
+        "title": title,
+        "hint": hint,
+        "message": message,
+    }
+
+
+def _is_openai_key_configured() -> bool:
+    return bool(os.getenv("DOUBAO_API_KEY") or os.getenv("ARK_API_KEY"))
+
+
+def _probe_modules() -> Dict[str, bool]:
+    modules = {}
+    for mod_name in ("cv2", "mediapipe", "openai", "reportlab"):
+        try:
+            __import__(mod_name)
+            modules[mod_name] = True
+        except Exception:
+            modules[mod_name] = False
+    return modules
 
 
 def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dict[str, Any], settings: IntegratedSettings) -> None:
@@ -134,6 +304,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 outputs["hand_json"] = _safe_rel(output_dir / "hand_detection.json")
                 if hand_payload.get("annotated_video"):
                     outputs["annotated_video"] = _safe_rel(Path(str(hand_payload["annotated_video"])))
+                _update_task_outputs(task_id, outputs)
             except Exception as hand_exc:
                 # Hand detection should not kill the whole pipeline.
                 hand_payload = {
@@ -167,6 +338,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
         outputs["part1_keyframes"] = _safe_rel(output_dir / "part1_keyframes.json")
         outputs["overall_summary"] = _safe_rel(output_dir / "overall_summary.txt")
         outputs["analysis_json"] = _safe_rel(output_dir / "keyframe_ai_analysis.json")
+        _update_task_outputs(task_id, outputs)
 
         if options.get("enable_step_check", True):
             _update_task(task_id, progress=67, current_stage="step_check", message="Checking SOP step order")
@@ -182,6 +354,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 hand_summary=hand_payload.get("summary", {}),
             )
             outputs["alarm_log"] = _safe_rel(output_dir / "alarm_log.json")
+            _update_task_outputs(task_id, outputs)
         else:
             _emit_progress(task_id, 67, "step_check", "Step check skipped")
 
@@ -201,6 +374,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 output_dir / "integrated_analysis_report.pdf",
             )
             outputs["report"] = _safe_rel(report_path)
+            _update_task_outputs(task_id, outputs)
         else:
             _emit_progress(task_id, 84, "pdf", "PDF generation skipped")
 
@@ -232,6 +406,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
             current_stage="failed",
             message=str(exc),
             error=traceback.format_exc(),
+            outputs=outputs if "outputs" in locals() else {},
         )
         _emit_progress(task_id, 100.0, "failed", f"Task failed: {exc}")
 
@@ -301,7 +476,85 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 "progress": 0.0,
                 "current_stage": "queued",
                 "message": "Task accepted",
+                "outputs": {},
                 "output_dir": _safe_rel(out_dir),
+            }
+        )
+
+    @app.post("/api/retry/<task_id>")
+    def retry(task_id: str):
+        source_task = _task_snapshot(task_id)
+        if not source_task:
+            return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
+
+        source_video_rel = str(source_task.get("video_path", "")).strip()
+        source_video = PROJECT_ROOT / source_video_rel if source_video_rel else None
+        if not source_video_rel or source_video is None or not source_video.exists() or not source_video.is_file():
+            return jsonify({"ok": False, "error": "source video not found for retry", "task_id": task_id}), 400
+
+        prev_options = source_task.get("options", {}) if isinstance(source_task.get("options"), dict) else {}
+        options = {
+            "enable_hand_detection": _normalize_bool(
+                request.form.get("enable_hand_detection"),
+                bool(prev_options.get("enable_hand_detection", cfg.enable_hand_detection)),
+            ),
+            "enable_ai_analysis": _normalize_bool(
+                request.form.get("enable_ai_analysis"),
+                bool(prev_options.get("enable_ai_analysis", cfg.enable_ai_analysis)),
+            ),
+            "enable_pdf": _normalize_bool(
+                request.form.get("enable_pdf"),
+                bool(prev_options.get("enable_pdf", cfg.enable_pdf)),
+            ),
+            "enable_step_check": _normalize_bool(
+                request.form.get("enable_step_check"),
+                bool(prev_options.get("enable_step_check", cfg.enable_step_check)),
+            ),
+            "enable_video_export": _normalize_bool(
+                request.form.get("enable_video_export"),
+                bool(prev_options.get("enable_video_export", cfg.enable_video_export)),
+            ),
+        }
+
+        new_task_id = uuid.uuid4().hex[:12]
+        out_dir = cfg.outputs_root / f"{_now_ts()}_{new_task_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        ext = source_video.suffix or ".mp4"
+        input_video = out_dir / f"input{ext}"
+        shutil.copy2(str(source_video), str(input_video))
+
+        task = {
+            "task_id": new_task_id,
+            "status": "pending",
+            "progress": 0.0,
+            "current_stage": "queued",
+            "message": f"Retry queued from {task_id}",
+            "outputs": {},
+            "output_dir": _safe_rel(out_dir),
+            "video_path": _safe_rel(input_video),
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+            "options": options,
+            "retry_of": task_id,
+        }
+        with TASKS_LOCK:
+            TASKS[new_task_id] = task
+
+        EXECUTOR.submit(_run_pipeline, new_task_id, input_video, out_dir, options, cfg)
+        _emit_progress(new_task_id, 0, "queued", f"Retry queued from {task_id}")
+
+        return jsonify(
+            {
+                "ok": True,
+                "task_id": new_task_id,
+                "status": "pending",
+                "progress": 0.0,
+                "current_stage": "queued",
+                "message": f"Retry accepted from {task_id}",
+                "outputs": {},
+                "output_dir": _safe_rel(out_dir),
+                "source_task_id": task_id,
             }
         )
 
@@ -309,15 +562,150 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
     def status(task_id: str):
         task = _task_snapshot(task_id)
         if not task:
+            return jsonify(
+                {
+                    "ok": False,
+                    "task_id": task_id,
+                    "status": "not_found",
+                    "progress": 0.0,
+                    "current_stage": "not_found",
+                    "message": "task not found",
+                    "outputs": {},
+                    "error": "task not found",
+                }
+            ), 404
+        return jsonify({"ok": True, **_task_public_payload(task_id, task)})
+
+    @app.get("/api/tasks")
+    def list_tasks():
+        raw_limit = request.args.get("limit", "20").strip()
+        raw_offset = request.args.get("offset", "0").strip()
+        status_filter = request.args.get("status", "").strip().lower()
+        keyword = request.args.get("q", "").strip().lower()
+        try:
+            limit = max(1, min(100, int(raw_limit)))
+        except Exception:
+            limit = 20
+        try:
+            offset = max(0, int(raw_offset))
+        except Exception:
+            offset = 0
+
+        with TASKS_LOCK:
+            entries = [(tid, dict(task)) for tid, task in TASKS.items()]
+
+        entries.sort(key=lambda x: str(x[1].get("created_at", "")), reverse=True)
+
+        status_counts: Dict[str, int] = {}
+        for _, task in entries:
+            s = str(task.get("status", "unknown")).lower()
+            status_counts[s] = status_counts.get(s, 0) + 1
+
+        filtered_entries = []
+        for tid, task in entries:
+            status = str(task.get("status", "unknown")).lower()
+            if status_filter and status != status_filter:
+                continue
+            if keyword:
+                hay = "\n".join(
+                    [
+                        str(tid),
+                        str(task.get("message", "")),
+                        str(task.get("current_stage", "")),
+                        str(task.get("status", "")),
+                        str(task.get("error", "")),
+                    ]
+                ).lower()
+                if keyword not in hay:
+                    continue
+            filtered_entries.append((tid, task))
+
+        total_filtered = len(filtered_entries)
+        sliced = filtered_entries[offset : offset + limit]
+
+        items: list[Dict[str, Any]] = []
+        for tid, task in sliced:
+            item = {
+                "task_id": tid,
+                "status": str(task.get("status", "unknown")),
+                "progress": float(task.get("progress", 0.0) or 0.0),
+                "current_stage": str(task.get("current_stage", "unknown")),
+                "message": str(task.get("message", "")),
+                "created_at": task.get("created_at"),
+                "updated_at": task.get("updated_at"),
+                "output_dir": str(task.get("output_dir", "")),
+                "failure": _classify_failure(task),
+                "can_retry": bool(
+                    str(task.get("video_path", "")).strip()
+                    and (PROJECT_ROOT / str(task.get("video_path", ""))).exists()
+                ),
+            }
+            items.append(item)
+
+        return jsonify(
+            {
+                "ok": True,
+                "count": len(items),
+                "total": total_filtered,
+                "offset": offset,
+                "limit": limit,
+                "has_more": (offset + len(items)) < total_filtered,
+                "status_counts": status_counts,
+                "query": keyword,
+                "tasks": items,
+            }
+        )
+
+    @app.get("/api/diagnostic/<task_id>")
+    def diagnostic(task_id: str):
+        task = _task_snapshot(task_id)
+        if not task:
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
-        return jsonify({"ok": True, **task})
+
+        failure = _classify_failure(task)
+        out_dir = PROJECT_ROOT / str(task.get("output_dir", ""))
+        outputs = task.get("outputs", {}) if isinstance(task.get("outputs"), dict) else {}
+        existing_outputs: Dict[str, str] = {}
+        for key, rel in outputs.items():
+            rel_s = str(rel)
+            abs_p = PROJECT_ROOT / rel_s
+            if abs_p.exists() and abs_p.is_file():
+                existing_outputs[key] = rel_s
+
+        traceback_text = str(task.get("error", "") or "")
+        traceback_tail = traceback_text[-4000:] if traceback_text else ""
+
+        payload = {
+            "ok": True,
+            "task_id": task_id,
+            "status": str(task.get("status", "unknown")),
+            "current_stage": str(task.get("current_stage", "")),
+            "message": str(task.get("message", "")),
+            "created_at": task.get("created_at"),
+            "updated_at": task.get("updated_at"),
+            "video_path": str(task.get("video_path", "")),
+            "output_dir": str(task.get("output_dir", "")),
+            "failure": failure,
+            "options": task.get("options", {}),
+            "existing_outputs": existing_outputs,
+            "output_dir_exists": bool(out_dir.exists()),
+            "traceback_tail": traceback_tail,
+        }
+
+        if request.args.get("download", "0").strip() in {"1", "true", "yes"}:
+            raw = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+            bio = BytesIO(raw)
+            filename = f"{task_id}_diagnostic.json"
+            return send_file(bio, as_attachment=True, download_name=filename, mimetype="application/json")
+        return jsonify(payload)
 
     @app.get("/api/progress")
     def progress_sse():
         watch_task = request.args.get("task_id", "").strip()
+        start_from = request.args.get("start", "").strip().lower()
 
         def event_stream():
-            idx = 0
+            idx = max(len(PROGRESS_EVENTS) - 80, 0) if start_from == "recent" else 0
             while True:
                 with PROGRESS_COND:
                     if idx >= len(PROGRESS_EVENTS):
@@ -335,6 +723,28 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 time.sleep(0.02)
 
         return Response(event_stream(), mimetype="text/event-stream")
+
+    @app.get("/api/artifact/<task_id>")
+    def artifact(task_id: str):
+        task = _task_snapshot(task_id)
+        if not task:
+            return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
+
+        rel = request.args.get("path", "").replace("\\", "/").strip().lstrip("/")
+        if not rel:
+            return jsonify({"ok": False, "error": "missing query param path"}), 400
+
+        out_dir = PROJECT_ROOT / str(task.get("output_dir", ""))
+        candidate = (out_dir / rel).resolve()
+        out_resolved = out_dir.resolve()
+        try:
+            candidate.relative_to(out_resolved)
+        except Exception:
+            return jsonify({"ok": False, "error": "illegal path"}), 400
+        if not candidate.exists() or not candidate.is_file():
+            return jsonify({"ok": False, "error": "artifact not found"}), 404
+
+        return send_file(candidate, as_attachment=False)
 
     @app.get("/api/download/<task_id>/<file_type>")
     def download(task_id: str, file_type: str):
@@ -408,14 +818,33 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.get("/api/health")
     def health():
-        api_ready = bool(os.getenv("DOUBAO_API_KEY") or os.getenv("ARK_API_KEY") or os.getenv("OPENAI_API_KEY"))
+        modules = _probe_modules()
+        api_ready = _is_openai_key_configured()
+        degraded_reasons = []
+        if not modules.get("cv2", False):
+            degraded_reasons.append("opencv_missing")
+        if not modules.get("mediapipe", False):
+            degraded_reasons.append("mediapipe_missing(hand detection will be skipped)")
+        if not modules.get("reportlab", False):
+            degraded_reasons.append("reportlab_missing(pdf will fallback to txt)")
+        if not api_ready:
+            degraded_reasons.append("missing_DOUBAO_API_KEY_or_ARK_API_KEY(ai analysis will be skipped)")
         return jsonify(
             {
                 "status": "ok",
                 "service": "integrated_system",
                 "port": cfg.port,
                 "api_key_configured": api_ready,
+                "available_modules": modules,
                 "task_count": len(TASKS),
+                "degraded_reasons": degraded_reasons,
+                "defaults": {
+                    "enable_hand_detection": cfg.enable_hand_detection,
+                    "enable_ai_analysis": cfg.enable_ai_analysis,
+                    "enable_pdf": cfg.enable_pdf,
+                    "enable_step_check": cfg.enable_step_check,
+                    "enable_video_export": cfg.enable_video_export,
+                },
             }
         )
 

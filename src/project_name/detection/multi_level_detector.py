@@ -63,13 +63,20 @@ class MultiLevelDetector:
         self.layer2_window = int(self.runtime_cfg.get("layer2_window", 30))
         self.strict_model = bool(self.runtime_cfg.get("strict_model", True))
         self.layer2_backend = str(self.runtime_cfg.get("layer2_backend", "skateformer"))
+        ppe_cfg = self.runtime_cfg.get("ppe", {}) if isinstance(self.runtime_cfg, dict) else {}
+        self.ppe_hold_frames = int(ppe_cfg.get("hold_frames", 20))
+        raw_ppe_th = ppe_cfg.get("class_conf_thresholds", {}) if isinstance(ppe_cfg, dict) else {}
+        self.ppe_class_thresholds = {
+            str(k).strip().lower(): float(v) for k, v in (raw_ppe_th.items() if isinstance(raw_ppe_th, dict) else [])
+        }
+        self._ppe_last_seen: Dict[str, int] = {"wear_gloves": -10**9, "wear_goggles": -10**9, "wear_lab_coat": -10**9}
 
         self.class_registry = self.runtime_cfg.get("class_registry", {})
         self.alias_to_canonical: Dict[str, str] = {}
         for canonical, aliases in self.class_registry.items():
-            self.alias_to_canonical[canonical.lower()] = canonical
+            self.alias_to_canonical[self._canonicalize_token(canonical)] = canonical
             for a in aliases:
-                self.alias_to_canonical[str(a).lower()] = canonical
+                self.alias_to_canonical[self._canonicalize_token(str(a))] = canonical
 
         self._model = None
         if self.backend == "ultralytics" and YOLO is not None:
@@ -84,7 +91,50 @@ class MultiLevelDetector:
         )
 
     def _normalize_label(self, raw_label: str) -> str:
-        return self.alias_to_canonical.get(raw_label.lower(), raw_label)
+        key = self._canonicalize_token(raw_label)
+        return self.alias_to_canonical.get(key, raw_label)
+
+    @staticmethod
+    def _canonicalize_token(text: str) -> str:
+        return (
+            str(text)
+            .strip()
+            .lower()
+            .replace("-", "_")
+            .replace(" ", "_")
+        )
+
+    def _ppe_threshold(self, canonical_label: str) -> float:
+        key = self._canonicalize_token(canonical_label)
+        if key in self.ppe_class_thresholds:
+            return float(self.ppe_class_thresholds[key])
+        return max(0.1, float(self.confidence_threshold) * 0.5)
+
+    def _resolve_ppe_flags(self, frame_id: int, objects: List[Dict[str, Any]]) -> Dict[str, bool]:
+        seen_now = {
+            "wear_gloves": False,
+            "wear_goggles": False,
+            "wear_lab_coat": False,
+        }
+
+        for obj in objects:
+            label = self._canonicalize_token(str(obj.get("label", "")))
+            score = float(obj.get("score", 0.0))
+            if label in {"glove", "gloves"} and score >= self._ppe_threshold("glove"):
+                seen_now["wear_gloves"] = True
+            if label in {"goggle", "goggles", "safety_glasses", "protective_goggles", "eyewear"} and score >= self._ppe_threshold("goggles"):
+                seen_now["wear_goggles"] = True
+            if label in {"lab_coat", "labcoat", "white_coat", "coat"} and score >= self._ppe_threshold("lab_coat"):
+                seen_now["wear_lab_coat"] = True
+
+        out: Dict[str, bool] = {}
+        for key, val in seen_now.items():
+            if val:
+                self._ppe_last_seen[key] = int(frame_id)
+                out[key] = True
+                continue
+            out[key] = (int(frame_id) - int(self._ppe_last_seen.get(key, -10**9))) <= self.ppe_hold_frames
+        return out
 
     def _detect_with_ultralytics(
         self, frame_bgr: np.ndarray
@@ -168,12 +218,8 @@ class MultiLevelDetector:
         else:
             objects = self._detect_fallback(frame)
 
-        labels = {str(o.get("label", "")).lower() for o in objects}
-        # Use exact label membership to avoid substring false-positives (e.g. "no_goggle"
-        # matching "goggle") and remove the unreliable mean-intensity heuristic.
-        wearing_gloves = any(lbl in {"glove", "gloves"} for lbl in labels)
-        wearing_goggles = any(lbl in {"goggle", "goggles", "safety_glasses"} for lbl in labels)
-        wearing_lab_coat = any(lbl in {"lab_coat", "labcoat", "coat"} for lbl in labels)
+        ppe_flags = self._resolve_ppe_flags(frame.frame_id, objects)
+        labels = {self._canonicalize_token(str(o.get("label", ""))) for o in objects}
 
         layer2_res = self._action_classifier.update(keypoints17)
         actions = ["verify_label"]
@@ -216,9 +262,9 @@ class MultiLevelDetector:
             frame_id=frame.frame_id,
             timestamp_sec=frame.timestamp_sec,
             ppe={
-                "wear_gloves": wearing_gloves,
-                "wear_goggles": wearing_goggles,
-                "wear_lab_coat": wearing_lab_coat,
+                "wear_gloves": bool(ppe_flags.get("wear_gloves", False)),
+                "wear_goggles": bool(ppe_flags.get("wear_goggles", False)),
+                "wear_lab_coat": bool(ppe_flags.get("wear_lab_coat", False)),
             },
             objects=[o for o in objects if float(o.get("score", 0.0)) >= self.confidence_threshold],
             actions=actions,

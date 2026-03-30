@@ -26,3 +26,18 @@ class_registry:
     - goggle
     - goggles
     - glasses
+    - safety_glasses
+    - protective_goggles
+    - eyewear
+  lab_coat:
+    - lab_coat
+    - labcoat
+    - white_coat
+    - coat
+
+ppe:
+  hold_frames: 20
+  class_conf_thresholds:
+    glove: 0.20
+    goggles: 0.20
+    lab_coat: 0.25

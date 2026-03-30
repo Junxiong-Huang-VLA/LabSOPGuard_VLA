@@ -45,12 +45,22 @@ def _is_row_valid(row: Dict[str, str]) -> bool:
     return str(row.get("pair_status", "")).strip().lower() == "paired"
 
 
+def _resolve_alert_cooldown(alert_config: str) -> float:
+    try:
+        cfg = load_yaml(alert_config)
+    except Exception:
+        return 0.0
+    alerting = cfg.get("alerting", {}) if isinstance(cfg, dict) else {}
+    return float(alerting.get("cooldown_seconds", 0.0))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Batch monitor export for manifest rows")
     parser.add_argument("--manifest-csv", default=None)
     parser.add_argument("--data-config", default="configs/data/dataset.yaml")
     parser.add_argument("--valid-only", action="store_true")
     parser.add_argument("--rules", default="configs/sop/rules.yaml")
+    parser.add_argument("--alert-config", default="configs/alerts/alerting.yaml")
     parser.add_argument("--max-frames", type=int, default=120)
     parser.add_argument("--target-fps", type=float, default=10.0)
     parser.add_argument("--out-json", default="outputs/predictions/export_summary.json")
@@ -65,7 +75,12 @@ def main() -> int:
         rows = [r for r in rows if _is_row_valid(r)]
 
     rules = load_yaml(args.rules)
-    pipeline = SOPMonitorPipeline(rules=rules)
+    pipeline = SOPMonitorPipeline(
+        rules=rules,
+        alert_cooldown_seconds=_resolve_alert_cooldown(args.alert_config),
+        emit_console_alerts=False,
+        persist_alerts=False,
+    )
     logger = setup_logger("export_results")
 
     outputs: List[Dict[str, Any]] = []

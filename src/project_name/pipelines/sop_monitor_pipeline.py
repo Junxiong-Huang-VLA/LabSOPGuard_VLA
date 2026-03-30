@@ -15,10 +15,19 @@ from project_name.video.capture import VideoCaptureStream
 
 
 class SOPMonitorPipeline:
-    def __init__(self, rules: Dict[str, Any], confidence_threshold: float = 0.45) -> None:
+    def __init__(
+        self,
+        rules: Dict[str, Any],
+        confidence_threshold: float = 0.45,
+        alert_cooldown_seconds: float = 0.0,
+        emit_console_alerts: bool = True,
+        persist_alerts: bool = True,
+    ) -> None:
         self.detector = MultiLevelDetector(confidence_threshold=confidence_threshold)
-        self.engine = SOPComplianceEngine(rules=rules)
+        self.engine = SOPComplianceEngine(rules=rules, cooldown_seconds=alert_cooldown_seconds)
         self.notifier = AlertNotifier()
+        self.emit_console_alerts = bool(emit_console_alerts)
+        self.persist_alerts = bool(persist_alerts)
 
         self.object_parser = ObjectParser()
         self.event_structurer = EventStructurer()
@@ -34,6 +43,7 @@ class SOPMonitorPipeline:
         camera_id: str = "cam0",
         camera_offsets_ms: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
+        self.engine.reset()
         stream = VideoCaptureStream(video_source, target_fps=target_fps)
 
         detections_raw: List[Dict[str, Any]] = []
@@ -64,8 +74,9 @@ class SOPMonitorPipeline:
 
             vlist = self.engine.update(det)
             if vlist:
-                self.notifier.send_console(vlist)
-                rows = self.notifier.notify(vlist)
+                if self.emit_console_alerts:
+                    self.notifier.send_console(vlist)
+                rows = self.notifier.notify(vlist) if self.persist_alerts else [asdict(v) for v in vlist]
                 violations_raw.extend(rows)
                 for v in rows:
                     ve = self.event_structurer.build_violation_event(

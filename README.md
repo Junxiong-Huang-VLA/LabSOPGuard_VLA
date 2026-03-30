@@ -190,3 +190,10 @@ Core APIs:
 - `GET /api/progress`
 - `GET /api/download/<task_id>/<file_type>`
 - `GET /api/health`
+
+## 0-to-1 Documentation
+
+- Project implementation doc: `docs/project_0to1_implementation.md`
+- Developer execution playbook: `docs/developer_0to1_playbook.md`
+- Unified pipeline entry: `python scripts/run_0to1_pipeline.py`
+- Profile compare report: `python scripts/run_0to1_pipeline.py --from-stage analyze --to-stage analyze --compare-profiles`

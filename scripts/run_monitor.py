@@ -86,6 +86,15 @@ def _is_row_valid(row: Dict[str, str]) -> bool:
     return str(row.get("pair_status", "")).strip().lower() == "paired"
 
 
+def _resolve_alert_cooldown(alert_config: str) -> float:
+    try:
+        cfg = load_yaml(alert_config)
+    except Exception:
+        return 0.0
+    alerting = cfg.get("alerting", {}) if isinstance(cfg, dict) else {}
+    return float(alerting.get("cooldown_seconds", 0.0))
+
+
 def _run_one(
     pipeline: SOPMonitorPipeline,
     video: str,
@@ -127,6 +136,7 @@ def main() -> int:
     parser.add_argument("--valid-only", action="store_true", help="Batch mode: only valid_status=valid")
     parser.add_argument("--data-config", default="configs/data/dataset.yaml")
     parser.add_argument("--rules", default="configs/sop/rules.yaml")
+    parser.add_argument("--alert-config", default="configs/alerts/alerting.yaml")
     parser.add_argument("--report-config", default="configs/report/report.yaml")
     parser.add_argument("--session-id", default="session_runtime")
     parser.add_argument("--camera-id", default="cam0")
@@ -142,7 +152,12 @@ def main() -> int:
     logger = setup_logger("run_monitor")
     rules = load_yaml(args.rules)
     report_cfg = load_yaml(args.report_config)
-    pipeline = SOPMonitorPipeline(rules=rules)
+    pipeline = SOPMonitorPipeline(
+        rules=rules,
+        alert_cooldown_seconds=_resolve_alert_cooldown(args.alert_config),
+        emit_console_alerts=True,
+        persist_alerts=True,
+    )
     offsets = _load_offsets(args.camera_offsets_json)
 
     if args.video:

@@ -1,0 +1,43 @@
+{
+  "src_root": "data/interim/frames",
+  "out_root": "data/dataset",
+  "seed": 42,
+  "ratios": {
+    "train_ratio": 0.8,
+    "val_ratio": 0.0,
+    "test_ratio": 0.2
+  },
+  "totals": {
+    "all_images_found": 634,
+    "unique_images_used": 634,
+    "invalid_label_images": 0
+  },
+  "splits": {
+    "train": {
+      "images": 507,
+      "labeled_images": 474,
+      "unlabeled_images": 33,
+      "boxes": 6726
+    },
+    "val": {
+      "images": 0,
+      "labeled_images": 0,
+      "unlabeled_images": 0,
+      "boxes": 0
+    },
+    "test": {
+      "images": 127,
+      "labeled_images": 120,
+      "unlabeled_images": 7,
+      "boxes": 1563
+    }
+  },
+  "label_source_counts": {
+    "no_label": 40,
+    "labels_dir": 474,
+    "coco_json_tail": 120
+  },
+  "invalid_label_examples": [],
+  "dataset_yaml": "data/dataset/dataset.yaml",
+  "mapping_csv": "data/dataset/source_to_dataset_mapping.csv"
+}

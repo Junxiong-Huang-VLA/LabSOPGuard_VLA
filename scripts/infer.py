@@ -113,6 +113,15 @@ def _is_row_valid(row: Dict[str, str]) -> bool:
     return str(row.get("pair_status", "")).strip().lower() == "paired"
 
 
+def _resolve_alert_cooldown(alert_config: str) -> float:
+    try:
+        cfg = load_yaml(alert_config)
+    except Exception:
+        return 0.0
+    alerting = cfg.get("alerting", {}) if isinstance(cfg, dict) else {}
+    return float(alerting.get("cooldown_seconds", 0.0))
+
+
 def _build_pose_mvp(args: argparse.Namespace) -> PoseDepthMVP:
     pose_cfg_raw = load_yaml("configs/vision_pose.yaml")
     cfg = PoseConfig(
@@ -153,6 +162,7 @@ def main() -> int:
         help="When using --manifest-csv, only run rows with valid_status=valid.",
     )
     parser.add_argument("--rules", default="configs/sop/rules.yaml")
+    parser.add_argument("--alert-config", default="configs/alerts/alerting.yaml")
     parser.add_argument("--data-config", default="configs/data/dataset.yaml")
     parser.add_argument("--sample-id", default="session_demo")
     parser.add_argument("--camera-id", default="cam0")
@@ -180,7 +190,12 @@ def main() -> int:
 
     logger = setup_logger("infer")
     rules = load_yaml(args.rules)
-    pipeline = SOPMonitorPipeline(rules=rules)
+    pipeline = SOPMonitorPipeline(
+        rules=rules,
+        alert_cooldown_seconds=_resolve_alert_cooldown(args.alert_config),
+        emit_console_alerts=False,
+        persist_alerts=False,
+    )
     offsets = _load_offsets(args.camera_offsets_json)
     pose_mvp: PoseDepthMVP | None = None
     if args.enable_pose or args.export_3d:

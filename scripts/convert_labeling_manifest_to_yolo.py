@@ -3,12 +3,14 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 import shutil
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import cv2
+import numpy as np
 import yaml
 
 
@@ -53,6 +55,29 @@ def _bbox_xyxy_to_yolo(xyxy: List[float], w: int, h: int) -> Tuple[float, float,
 def _read_rows(path: Path) -> List[Dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def _safe_read_image(path: Path):
+    # On Windows unicode paths, prefer fromfile+imdecode to avoid imread warning noise.
+    if os.name == "nt":
+        try:
+            data = np.fromfile(str(path), dtype=np.uint8)
+            if data.size > 0:
+                img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                if img is not None:
+                    return img
+        except Exception:
+            pass
+    img = cv2.imread(str(path))
+    if img is not None:
+        return img
+    try:
+        data = np.fromfile(str(path), dtype=np.uint8)
+        if data.size == 0:
+            return None
+        return cv2.imdecode(data, cv2.IMREAD_COLOR)
+    except Exception:
+        return None
 
 
 def main() -> int:
@@ -103,7 +128,7 @@ def main() -> int:
             if not src_img.exists():
                 continue
 
-            img = cv2.imread(str(src_img))
+            img = _safe_read_image(src_img)
             if img is None:
                 continue
             h, w = img.shape[:2]

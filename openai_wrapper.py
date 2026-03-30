@@ -15,7 +15,7 @@ def _load_openai_client():
 
 
 def _read_api_key() -> Optional[str]:
-    return os.getenv("DOUBAO_API_KEY") or os.getenv("ARK_API_KEY") or os.getenv("OPENAI_API_KEY")
+    return os.getenv("DOUBAO_API_KEY") or os.getenv("ARK_API_KEY")
 
 
 def build_openai_client(base_url: Optional[str] = None):
@@ -41,6 +41,33 @@ def _img_to_data_url(path: str | Path) -> str:
     return f"data:image/jpeg;base64,{b64}"
 
 
+def _extract_response_text(resp: Any) -> str:
+    # Compatible with both plain string content and structured content parts.
+    if not resp or not getattr(resp, "choices", None):
+        return ""
+    first = resp.choices[0]
+    msg = getattr(first, "message", None)
+    if msg is None:
+        return ""
+
+    content = getattr(msg, "content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        chunks: List[str] = []
+        for part in content:
+            if isinstance(part, dict):
+                text = str(part.get("text", "")).strip()
+                if text:
+                    chunks.append(text)
+            else:
+                text = str(getattr(part, "text", "")).strip()
+                if text:
+                    chunks.append(text)
+        return "\n".join(chunks).strip()
+    return str(content or "").strip()
+
+
 def analyze_keyframes_with_openai(
     image_paths: Iterable[str | Path],
     model: str,
@@ -55,11 +82,11 @@ def analyze_keyframes_with_openai(
     if client is None:
         return {
             "enabled": False,
-            "reason": "missing_openai_client_or_api_key",
+            "reason": "missing_openai_client_or_api_key(DOUBAO_API_KEY/ARK_API_KEY)",
             "analyses": [
                 {
                     "image": p.name,
-                    "summary": "AI analysis skipped (missing API key or openai package).",
+                    "summary": "AI analysis skipped (missing DOUBAO_API_KEY/ARK_API_KEY or openai package).",
                     "risk_level": "unknown",
                 }
                 for p in paths
@@ -87,11 +114,7 @@ def analyze_keyframes_with_openai(
                 ],
                 temperature=0.2,
             )
-            text = ""
-            if resp and getattr(resp, "choices", None):
-                first = resp.choices[0]
-                msg = getattr(first, "message", None)
-                text = getattr(msg, "content", "") or ""
+            text = _extract_response_text(resp)
             analyses.append(
                 {
                     "image": p.name,

@@ -6,71 +6,170 @@
   <title>实验视频自动分析系统 - integrated_system</title>
   <style>
     :root {
-      --bg: #f4f7fb;
+      --bg: #f2f6fb;
       --card: #ffffff;
-      --line: #d7dfeb;
-      --text: #1f2d3d;
+      --line: #d6deea;
+      --text: #1e2d3f;
       --muted: #5f6f82;
-      --primary: #1368ce;
-      --ok: #0f8a4b;
-      --warn: #b26a00;
-      --err: #bc1f2d;
+      --primary: #0f67cb;
+      --ok: #0e8f4c;
+      --warn: #b46a05;
+      --err: #bd1f2f;
     }
-    body { margin: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); background: linear-gradient(150deg, #eef4ff, #f9fbff 45%, #f2f8f6); }
-    .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px 24px; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: 0 6px 22px rgba(15, 42, 81, 0.06); margin-bottom: 14px; }
-    h1 { margin: 8px 0 12px; font-size: 24px; }
-    h2 { margin: 0 0 12px; font-size: 16px; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: linear-gradient(135deg, #ecf3ff 0%, #f8fbff 40%, #eef8f3 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .wrap { max-width: 1100px; margin: 20px auto; padding: 0 14px 20px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 20px rgba(10, 35, 70, 0.06);
+    }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    h2 { margin: 0 0 10px; font-size: 16px; }
     .muted { color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
-    label.opt { display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+    label.opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fafcff;
+    }
     input[type=file] { width: 100%; }
-    button { background: var(--primary); color: white; border: 0; border-radius: 9px; padding: 10px 14px; cursor: pointer; }
-    button.secondary { background: #415f80; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .progress { height: 14px; border-radius: 999px; background: #e6edf8; overflow: hidden; }
-    .bar { height: 100%; width: 0; background: linear-gradient(90deg, #1d74de, #0f8a4b); transition: width .25s; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    button {
+      border: 0;
+      border-radius: 9px;
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    button.secondary { background: #3f5d80; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .progress { height: 14px; border-radius: 999px; background: #e5edf9; overflow: hidden; }
+    .bar { height: 100%; width: 0; background: linear-gradient(90deg, #1b74de, #0e8f4c); transition: width 0.25s ease; }
     .status-ok { color: var(--ok); }
+    .status-running { color: var(--warn); }
     .status-failed { color: var(--err); }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      background: #f6f9ff;
+    }
+    .pill.ok { border-color: #9fd9be; background: #edf9f2; color: var(--ok); }
+    .pill.warn { border-color: #efcf92; background: #fff8ec; color: var(--warn); }
     .downloads button { margin-right: 8px; margin-bottom: 8px; }
     .file-hint { margin-top: 8px; font-size: 13px; color: var(--muted); }
-    .file-hint .ok { color: var(--ok); font-weight: 600; }
-    .file-hint .warn { color: var(--warn); font-weight: 600; }
     .file-links { margin-top: 8px; font-size: 13px; }
-    .file-links a { margin-right: 10px; text-decoration: none; color: var(--primary); }
+    .file-links a { margin-right: 10px; color: var(--primary); text-decoration: none; }
     .file-links a:hover { text-decoration: underline; }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #f7faff;
+    }
+    video {
+      width: 100%;
+      max-height: 330px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #000;
+    }
+    .keyframes {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+    }
+    .kf { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fafcff; }
+    .kf img { width: 100%; height: 95px; object-fit: cover; display: block; }
+    .kf .cap { font-size: 12px; color: var(--muted); padding: 4px 6px; }
     .toast {
       position: fixed;
-      right: 18px;
-      bottom: 18px;
-      background: #143a67;
-      color: #fff;
+      right: 16px;
+      bottom: 16px;
+      z-index: 9999;
       border-radius: 10px;
+      background: #133e70;
+      color: #fff;
       padding: 10px 14px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.18);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
       opacity: 0;
       transform: translateY(8px);
-      transition: opacity .25s, transform .25s;
-      z-index: 9999;
       pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
       font-size: 13px;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
-    pre { white-space: pre-wrap; word-break: break-word; background: #f7faff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; max-height: 220px; overflow: auto; }
+    .history-list { display: grid; gap: 8px; }
+    .history-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdff;
+      padding: 10px;
+    }
+    .history-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+    .history-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .history-fail {
+      margin-top: 8px;
+      border: 1px solid #efcf92;
+      border-radius: 8px;
+      background: #fff8ec;
+      color: #6f4b13;
+      padding: 8px;
+      font-size: 13px;
+    }
+    .history-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .history-controls select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #fff;
+      color: var(--text);
+    }
+    .history-summary {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>实验视频自动分析系统</h1>
-      <div class="muted">主线: <code>integrated_system</code> | 默认端口: <code>5001</code></div>
+      <div class="muted">主线: <code>integrated_system</code> | 访问地址: <code>http://localhost:5001</code></div>
     </div>
 
     <div class="card">
       <h2>1. 上传视频与开关</h2>
       <div class="row" style="margin-bottom: 10px;">
         <input id="videoInput" type="file" accept="video/*" />
+        <span id="videoName" class="muted">尚未选择视频</span>
       </div>
       <div class="grid">
         <label class="opt"><input id="enableHand" type="checkbox" checked /> 手部检测</label>
@@ -90,21 +189,50 @@
       <div class="progress"><div id="bar" class="bar"></div></div>
       <div class="row" style="margin-top: 8px;">
         <div>进度: <b id="progressText">0%</b></div>
-        <div>阶段: <b id="stageText">-</b></div>
+        <div>当前阶段: <b id="stageText">-</b></div>
         <div>状态: <b id="statusText">idle</b></div>
       </div>
       <div id="messageText" class="muted" style="margin-top: 6px;">等待任务开始</div>
     </div>
 
     <div class="card">
-      <h2>3. 结果与下载</h2>
+      <h2>3. 结果展示</h2>
+      <div class="grid-2">
+        <div>
+          <div class="row" style="margin-bottom: 6px;">
+            <b>标注视频</b>
+            <span id="videoStatus" class="pill warn">未生成</span>
+          </div>
+          <video id="annotatedVideo" controls style="display:none;"></video>
+          <div id="videoEmpty" class="muted">分析完成后显示标注视频预览</div>
+        </div>
+        <div>
+          <div class="row" style="margin-bottom: 6px;">
+            <b>文本总结</b>
+            <span id="pdfStatus" class="pill warn">PDF 未知</span>
+            <span id="alarmStatus" class="pill warn">alarm_log 未知</span>
+          </div>
+          <pre id="summaryBox">暂无摘要</pre>
+        </div>
+      </div>
+      <div style="margin-top: 12px;">
+        <div class="row" style="margin-bottom: 6px;">
+          <b>关键帧预览</b>
+          <span id="keyframeCount" class="muted">0 帧</span>
+        </div>
+        <div id="keyframeGrid" class="keyframes"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. 下载</h2>
       <div class="downloads">
         <button class="secondary" data-type="annotated_video">下载标注视频</button>
         <button class="secondary" data-type="pdf">下载 PDF</button>
         <button class="secondary" data-type="keyframes_json">下载关键帧 JSON</button>
         <button class="secondary" data-type="analysis_json">下载 AI 分析 JSON</button>
         <button class="secondary" data-type="summary_txt">下载总结 TXT</button>
-        <button class="secondary" data-type="alarm_log">下载报警日志</button>
+        <button class="secondary" data-type="alarm_log">下载 alarm_log.json</button>
         <button id="bundleBtn" class="secondary">一键下载 ZIP</button>
       </div>
       <div id="fileHint" class="file-hint">暂无可下载文件</div>
@@ -113,119 +241,352 @@
     </div>
 
     <div class="card">
-      <h2>4. 系统健康</h2>
+      <h2>5. 任务历史</h2>
+      <div class="history-controls">
+        <label for="historyStatus">状态筛选</label>
+        <select id="historyStatus">
+          <option value="">全部</option>
+          <option value="pending">pending</option>
+          <option value="running">running</option>
+          <option value="completed">completed</option>
+          <option value="failed">failed</option>
+        </select>
+        <label for="retryMode">重试参数</label>
+        <select id="retryMode">
+          <option value="source">复用原任务参数</option>
+          <option value="current">使用当前页面开关</option>
+        </select>
+        <button id="historyRefreshBtn" class="secondary">刷新历史</button>
+      </div>
+      <div id="historyStats" class="history-summary">统计加载中...</div>
+      <div id="historyList" class="history-list">
+        <div class="muted">暂无历史任务</div>
+      </div>
+      <div class="row" style="margin-top: 10px;">
+        <button id="historyMoreBtn" class="secondary" style="display:none;">加载更多</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>6. 系统健康</h2>
       <div id="healthText" class="muted">检查中...</div>
     </div>
   </div>
+
   <div id="toast" class="toast"></div>
 
   <script>
     let currentTaskId = "";
     let sse = null;
     let pollingTimer = null;
+    let historyTimer = null;
+    let historyStatusFilter = "";
+    let historyOffset = 0;
+    const historyLimit = 12;
+    let historyHasMore = false;
     let lastStatus = "idle";
 
-    const el = (id) => document.getElementById(id);
-    const setProgress = (p) => {
-      const pct = Math.max(0, Math.min(100, Number(p || 0)));
-      el("bar").style.width = pct + "%";
-      el("progressText").textContent = pct.toFixed(1) + "%";
-    };
     const FILE_TYPE_TO_OUTPUT_KEY = {
       annotated_video: "annotated_video",
       pdf: "report",
       keyframes_json: "part1_keyframes",
       analysis_json: "analysis_json",
       summary_txt: "overall_summary",
-      alarm_log: "alarm_log",
+      alarm_log: "alarm_log"
     };
+
     const FILE_LABEL = {
       annotated_video: "标注视频",
       pdf: "PDF 报告",
       keyframes_json: "关键帧 JSON",
       analysis_json: "AI 分析 JSON",
       summary_txt: "总结 TXT",
-      alarm_log: "报警日志",
+      alarm_log: "alarm_log.json"
     };
 
-    const setDownloadEnabled = (enabled, outputs = null) => {
-      document.querySelectorAll('.downloads button').forEach(btn => {
-        if (btn.id === 'bundleBtn') return;
+    const $ = (id) => document.getElementById(id);
+
+    function escapeHtml(v) {
+      return String(v || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function setProgress(progressValue) {
+      const pct = Math.max(0, Math.min(100, Number(progressValue || 0)));
+      $("bar").style.width = pct + "%";
+      $("progressText").textContent = pct.toFixed(1) + "%";
+    }
+
+    function setStatusClass(status) {
+      const n = $("statusText");
+      n.className = "";
+      if (status === "completed") n.className = "status-ok";
+      if (status === "failed") n.className = "status-failed";
+      if (status === "running" || status === "pending") n.className = "status-running";
+    }
+
+    function showToast(msg) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2800);
+    }
+
+    function setDownloadEnabled(enabled, outputs) {
+      document.querySelectorAll(".downloads button").forEach((btn) => {
+        if (btn.id === "bundleBtn") return;
         if (!enabled) {
           btn.disabled = true;
           return;
         }
-        const t = btn.getAttribute('data-type');
-        const k = FILE_TYPE_TO_OUTPUT_KEY[t];
-        btn.disabled = !(outputs && k && outputs[k]);
+        const fileType = btn.getAttribute("data-type");
+        const key = FILE_TYPE_TO_OUTPUT_KEY[fileType];
+        btn.disabled = !(outputs && key && outputs[key]);
       });
-      const bundleBtn = el('bundleBtn');
-      if (bundleBtn) {
-        const hasAny = outputs && Object.values(FILE_TYPE_TO_OUTPUT_KEY).some((k) => outputs[k]);
-        bundleBtn.disabled = !(enabled && hasAny);
+
+      const bundleBtn = $("bundleBtn");
+      const hasAny = outputs && Object.values(FILE_TYPE_TO_OUTPUT_KEY).some((k) => outputs[k]);
+      bundleBtn.disabled = !(enabled && hasAny);
+    }
+
+    function setPill(id, ok, okText, badText) {
+      const p = $(id);
+      p.className = ok ? "pill ok" : "pill warn";
+      p.textContent = ok ? okText : badText;
+    }
+
+    function renderArtifacts(artifacts) {
+      const a = artifacts || {};
+      const video = $("annotatedVideo");
+      const empty = $("videoEmpty");
+
+      if (a.annotated_video_url) {
+        video.src = a.annotated_video_url;
+        video.style.display = "block";
+        empty.style.display = "none";
+      } else {
+        video.removeAttribute("src");
+        video.style.display = "none";
+        empty.style.display = "block";
       }
-    };
-    const showToast = (msg) => {
-      const t = el('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2800);
-    };
-    const updateFileHint = (status, outputs = null) => {
-      if (status !== 'completed') {
-        el('fileHint').innerHTML = '<span class="warn">任务未完成，下载按钮暂不可用。</span>';
-        el('fileLinks').innerHTML = '';
+
+      setPill("videoStatus", !!a.annotated_video_exists, "已生成", "未生成");
+      setPill("alarmStatus", !!a.alarm_log_exists, "alarm_log 已生成", "alarm_log 未生成");
+
+      const pdfGenerated = !!a.pdf_generated;
+      const pdfExists = !!a.pdf_exists;
+      setPill("pdfStatus", pdfGenerated, "PDF 已生成", pdfExists ? "仅生成 TXT 报告" : "PDF 未生成");
+
+      const summary = String(a.summary_text || "").trim();
+      $("summaryBox").textContent = summary || "暂无摘要";
+
+      const urls = Array.isArray(a.keyframe_image_urls) ? a.keyframe_image_urls : [];
+      $("keyframeCount").textContent = `${urls.length} 帧`;
+      const grid = $("keyframeGrid");
+      grid.innerHTML = "";
+
+      if (urls.length === 0) {
+        grid.innerHTML = '<div class="muted">暂无关键帧</div>';
         return;
       }
-      const ready = [];
-      Object.entries(FILE_TYPE_TO_OUTPUT_KEY).forEach(([t, k]) => {
-        if (outputs && outputs[k]) ready.push(t);
+
+      urls.slice(0, 24).forEach((url, i) => {
+        const d = document.createElement("div");
+        d.className = "kf";
+        const idx = String(i + 1).padStart(3, "0");
+        d.innerHTML = `<img src="${url}" alt="keyframe_${idx}"><div class="cap">keyframe_${idx}</div>`;
+        grid.appendChild(d);
       });
-      if (ready.length === 0) {
-        el('fileHint').innerHTML = '<span class="warn">任务已完成，但尚未检测到可下载文件。</span>';
-        el('fileLinks').innerHTML = '';
-      } else {
-        el('fileHint').innerHTML = `<span class="ok">可下载文件：</span>${ready.join('、')}`;
-        const links = ready.map((t) => {
-          const label = FILE_LABEL[t] || t;
-          const href = `/api/download/${currentTaskId}/${t}`;
-          return `<a href="${href}" target="_blank" rel="noopener noreferrer">下载${label}</a>`;
-        });
-        el('fileLinks').innerHTML = links.join('');
+    }
+
+    function updateFileHint(status, outputs) {
+      if (status !== "completed") {
+        $("fileHint").innerHTML = '<span class="status-running">任务未完成，下载按钮暂不可用。</span>';
+        $("fileLinks").innerHTML = "";
+        return;
       }
-    };
+
+      const ready = [];
+      Object.entries(FILE_TYPE_TO_OUTPUT_KEY).forEach(([fileType, key]) => {
+        if (outputs && outputs[key]) ready.push(fileType);
+      });
+
+      if (ready.length === 0) {
+        $("fileHint").innerHTML = '<span class="status-failed">任务已完成，但未检测到可下载文件。</span>';
+        $("fileLinks").innerHTML = "";
+        return;
+      }
+
+      $("fileHint").innerHTML = `<span class="status-ok">可下载文件:</span> ${ready.map((x) => FILE_LABEL[x] || x).join("、")}`;
+      $("fileLinks").innerHTML = ready
+        .map((fileType) => `<a href="/api/download/${currentTaskId}/${fileType}" target="_blank" rel="noopener">下载${FILE_LABEL[fileType] || fileType}</a>`)
+        .join("");
+    }
 
     async function refreshHealth() {
       try {
-        const res = await fetch('/api/health');
+        const res = await fetch("/api/health");
         const data = await res.json();
-        el('healthText').innerHTML = `状态: <b class="status-ok">${data.status}</b> | API Key: <b>${data.api_key_configured ? '已配置' : '未配置'}</b> | 任务数: ${data.task_count}`;
-      } catch (e) {
-        el('healthText').innerHTML = `<span class="status-failed">健康检查失败: ${e}</span>`;
+        const modules = data.available_modules || {};
+        const moduleText = Object.entries(modules)
+          .map(([k, v]) => `${k}:${v ? "ok" : "missing"}`)
+          .join(" | ");
+        const degraded = Array.isArray(data.degraded_reasons) && data.degraded_reasons.length
+          ? ` | 降级: ${data.degraded_reasons.join(", ")}`
+          : "";
+
+        $("healthText").innerHTML =
+          `状态: <b class="status-ok">${data.status}</b> | API Key: <b>${data.api_key_configured ? "已配置" : "未配置(会跳过AI)"}</b> | 模块: ${moduleText} | 任务数: ${data.task_count}${degraded}`;
+      } catch (err) {
+        $("healthText").innerHTML = `<span class="status-failed">健康检查失败: ${err}</span>`;
+      }
+    }
+
+    function activateTask(taskId) {
+      if (!taskId) return;
+      currentTaskId = taskId;
+      $("taskIdText").textContent = `task_id: ${currentTaskId}`;
+      connectSSE();
+      if (pollingTimer) clearInterval(pollingTimer);
+      pollingTimer = setInterval(fetchStatus, 1500);
+      fetchStatus();
+    }
+
+    async function refreshTaskHistory(reset = true) {
+      try {
+        if (reset) historyOffset = 0;
+        const qs = new URLSearchParams();
+        qs.set("limit", String(historyLimit));
+        qs.set("offset", String(historyOffset));
+        if (historyStatusFilter) qs.set("status", historyStatusFilter);
+        const url = `/api/tasks?${qs.toString()}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        const wrap = $("historyList");
+        if (reset) wrap.innerHTML = "";
+
+        if (reset && tasks.length === 0) {
+          wrap.innerHTML = '<div class="muted">暂无历史任务</div>';
+          $("historyStats").textContent = "共 0 条任务";
+          $("historyMoreBtn").style.display = "none";
+          return;
+        }
+
+        const counts = data.status_counts || {};
+        $("historyStats").textContent =
+          `共 ${Number(data.total || 0)} 条 | pending ${Number(counts.pending || 0)} | running ${Number(counts.running || 0)} | completed ${Number(counts.completed || 0)} | failed ${Number(counts.failed || 0)}`;
+
+        tasks.forEach((task) => {
+          const id = String(task.task_id || "");
+          const status = String(task.status || "unknown");
+          const stage = String(task.current_stage || "-");
+          const msg = String(task.message || "");
+          const createdAt = String(task.created_at || "-");
+          const updatedAt = String(task.updated_at || "-");
+          const fail = task.failure || null;
+          const canRetry = !!task.can_retry;
+          const statusClass =
+            status === "completed"
+              ? "pill ok"
+              : status === "failed"
+                ? "pill warn"
+                : "pill";
+
+          const failHtml = fail
+            ? `<div class="history-fail"><b>${escapeHtml(fail.level)} ${escapeHtml(fail.title)}</b> (${escapeHtml(fail.category)})<br>阶段: ${escapeHtml(fail.stage)}<br>说明: ${escapeHtml(fail.message || msg)}<br>建议: ${escapeHtml(fail.hint)}</div>`
+            : "";
+
+          const activeLabel = currentTaskId && currentTaskId === id ? "当前查看中" : "查看";
+          const item = document.createElement("div");
+          item.className = "history-item";
+          const retryBtn = (status === "failed" && canRetry)
+            ? `<button class="secondary history-retry-btn" data-task-id="${escapeHtml(id)}">重试</button>`
+            : "";
+          item.innerHTML = `
+            <div class="history-top">
+              <div>
+                <code>${escapeHtml(id)}</code>
+                <span class="${statusClass}">${escapeHtml(status)}</span>
+              </div>
+              <div>
+                <button class="secondary history-view-btn" data-task-id="${escapeHtml(id)}">${activeLabel}</button>
+                ${retryBtn}
+              </div>
+            </div>
+            <div class="history-meta">阶段: ${escapeHtml(stage)} | 创建: ${escapeHtml(createdAt)} | 更新: ${escapeHtml(updatedAt)}</div>
+            <div class="history-meta">消息: ${escapeHtml(msg || "-")}</div>
+            ${failHtml}
+          `;
+          wrap.appendChild(item);
+        });
+
+        historyOffset += tasks.length;
+        historyHasMore = !!data.has_more;
+        $("historyMoreBtn").style.display = historyHasMore ? "inline-block" : "none";
+      } catch (err) {
+        $("historyList").innerHTML = `<div class="status-failed">任务历史加载失败: ${escapeHtml(err)}</div>`;
+        $("historyMoreBtn").style.display = "none";
+      }
+    }
+
+    async function retryTask(sourceTaskId) {
+      if (!sourceTaskId) return;
+      try {
+        const useCurrent = $("retryMode").value === "current";
+        const form = new FormData();
+        if (useCurrent) {
+          form.append("enable_hand_detection", $("enableHand").checked ? "1" : "0");
+          form.append("enable_ai_analysis", $("enableAI").checked ? "1" : "0");
+          form.append("enable_pdf", $("enablePDF").checked ? "1" : "0");
+          form.append("enable_step_check", $("enableStep").checked ? "1" : "0");
+          form.append("enable_video_export", $("enableVideo").checked ? "1" : "0");
+        }
+        const res = await fetch(`/api/retry/${sourceTaskId}`, {
+          method: "POST",
+          body: useCurrent ? form : undefined,
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "重试提交失败");
+        showToast(`已创建重试任务: ${data.task_id}`);
+        activateTask(String(data.task_id || ""));
+        await refreshTaskHistory(true);
+      } catch (err) {
+        showToast(`重试失败: ${err}`);
       }
     }
 
     async function fetchStatus() {
       if (!currentTaskId) return;
+
       const res = await fetch(`/api/status/${currentTaskId}`);
       const data = await res.json();
       if (!data.ok) return;
+
       setProgress(data.progress);
-      el('stageText').textContent = data.current_stage || '-';
-      el('statusText').textContent = data.status || '-';
-      el('statusText').className = data.status === 'failed' ? 'status-failed' : (data.status === 'completed' ? 'status-ok' : '');
-      el('messageText').textContent = data.message || '';
-      el('resultBox').textContent = JSON.stringify(data, null, 2);
-      setDownloadEnabled(data.status === 'completed', data.outputs || {});
+      $("stageText").textContent = data.current_stage || "-";
+      $("statusText").textContent = data.status || "-";
+      setStatusClass(data.status);
+      $("messageText").textContent = data.message || "";
+      $("resultBox").textContent = JSON.stringify(data, null, 2);
+
+      renderArtifacts(data.artifacts || {});
+      setDownloadEnabled(data.status === "completed", data.outputs || {});
       updateFileHint(data.status, data.outputs || {});
-      if (lastStatus !== 'completed' && data.status === 'completed') {
-        showToast('任务完成，可直接下载结果文件。');
+
+      if (lastStatus !== "completed" && data.status === "completed") {
+        showToast("任务已完成，可预览并下载结果");
       }
-      if (lastStatus !== 'failed' && data.status === 'failed') {
-        showToast('任务失败，请查看结果区错误信息。');
+      if (lastStatus !== "failed" && data.status === "failed") {
+        showToast("任务失败，请查看结果区错误信息");
       }
       lastStatus = data.status || lastStatus;
-      if (data.status === 'completed' || data.status === 'failed') {
+
+      if (data.status === "completed" || data.status === "failed") {
         if (pollingTimer) {
           clearInterval(pollingTimer);
           pollingTimer = null;
@@ -236,120 +597,124 @@
     function connectSSE() {
       if (!currentTaskId) return;
       if (sse) sse.close();
-      sse = new EventSource(`/api/progress?task_id=${currentTaskId}`);
+
+      sse = new EventSource(`/api/progress?task_id=${currentTaskId}&start=recent`);
       sse.onmessage = (evt) => {
         try {
-          const d = JSON.parse(evt.data || '{}');
-          if (d.type === 'heartbeat') return;
+          const d = JSON.parse(evt.data || "{}");
+          if (d.type === "heartbeat") return;
           setProgress(d.progress);
-          el('stageText').textContent = d.current_stage || '-';
-          el('messageText').textContent = d.message || '';
-        } catch (_) {}
+          $("stageText").textContent = d.current_stage || "-";
+          $("messageText").textContent = d.message || "";
+        } catch (_) {
+          // ignore parse errors
+        }
       };
+
       sse.onerror = () => {
         if (sse) sse.close();
       };
     }
 
-    el('startBtn').addEventListener('click', async () => {
-      const file = el('videoInput').files[0];
+    $("videoInput").addEventListener("change", () => {
+      const file = $("videoInput").files[0];
+      $("videoName").textContent = file ? `已选择: ${file.name}` : "尚未选择视频";
+    });
+
+    $("startBtn").addEventListener("click", async () => {
+      const file = $("videoInput").files[0];
       if (!file) {
-        alert('请先选择视频文件');
+        alert("请先选择视频文件");
         return;
       }
 
       const form = new FormData();
-      form.append('video', file);
-      form.append('enable_hand_detection', el('enableHand').checked ? '1' : '0');
-      form.append('enable_ai_analysis', el('enableAI').checked ? '1' : '0');
-      form.append('enable_pdf', el('enablePDF').checked ? '1' : '0');
-      form.append('enable_step_check', el('enableStep').checked ? '1' : '0');
-      form.append('enable_video_export', el('enableVideo').checked ? '1' : '0');
+      form.append("video", file);
+      form.append("enable_hand_detection", $("enableHand").checked ? "1" : "0");
+      form.append("enable_ai_analysis", $("enableAI").checked ? "1" : "0");
+      form.append("enable_pdf", $("enablePDF").checked ? "1" : "0");
+      form.append("enable_step_check", $("enableStep").checked ? "1" : "0");
+      form.append("enable_video_export", $("enableVideo").checked ? "1" : "0");
 
-      el('startBtn').disabled = true;
-      setDownloadEnabled(false);
-      updateFileHint('running', null);
-      el('messageText').textContent = '任务提交中...';
+      $("startBtn").disabled = true;
+      setDownloadEnabled(false, null);
+      renderArtifacts({});
+      updateFileHint("running", null);
+      $("messageText").textContent = "任务提交中...";
+      $("resultBox").textContent = "任务已提交，等待后端执行...";
+      setProgress(0);
 
       try {
-        const res = await fetch('/api/analyze', { method: 'POST', body: form });
+        const res = await fetch("/api/analyze", { method: "POST", body: form });
         const data = await res.json();
-        if (!res.ok || !data.ok) {
-          throw new Error(data.error || '任务提交失败');
-        }
+        if (!res.ok || !data.ok) throw new Error(data.error || "任务提交失败");
 
         currentTaskId = data.task_id;
         lastStatus = data.status || "pending";
-        el('taskIdText').textContent = `task_id: ${currentTaskId}`;
-        el('statusText').textContent = data.status;
-        setProgress(data.progress || 0);
-        connectSSE();
+        $("taskIdText").textContent = `task_id: ${currentTaskId}`;
+        $("statusText").textContent = data.status || "pending";
+        setStatusClass(data.status || "pending");
 
+        connectSSE();
         if (pollingTimer) clearInterval(pollingTimer);
         pollingTimer = setInterval(fetchStatus, 1500);
         await fetchStatus();
-      } catch (e) {
-        el('messageText').textContent = `提交失败: ${e}`;
+        await refreshTaskHistory();
+      } catch (err) {
+        $("messageText").textContent = `提交失败: ${err}`;
       } finally {
-        el('startBtn').disabled = false;
+        $("startBtn").disabled = false;
       }
     });
 
-    document.querySelectorAll('.downloads button').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (btn.id === 'bundleBtn') {
-          if (!currentTaskId) {
-            alert('请先运行任务');
-            return;
-          }
-          try {
-            const res = await fetch(`/api/status/${currentTaskId}`);
-            const data = await res.json();
-            if (!data.ok || data.status !== 'completed') {
-              alert(`任务尚未完成（当前状态: ${data.status || 'unknown'}），请稍后再下载。`);
-              return;
-            }
-            window.open(`/api/download_bundle/${currentTaskId}`, '_blank');
-          } catch (e) {
-            alert(`状态检查失败: ${e}`);
-          }
-          return;
-        }
+    document.querySelectorAll(".downloads button").forEach((btn) => {
+      btn.addEventListener("click", () => {
         if (!currentTaskId) {
-          alert('请先运行任务');
+          alert("请先运行任务");
           return;
         }
-        try {
-          const res = await fetch(`/api/status/${currentTaskId}`);
-          const data = await res.json();
-          if (!data.ok) {
-            alert(data.error || '任务状态不可用');
-            return;
-          }
-          if (data.status !== 'completed') {
-            alert(`任务尚未完成（当前状态: ${data.status}），请稍后再下载。`);
-            return;
-          }
-          const outputs = data.outputs || {};
-          const t = btn.getAttribute('data-type');
-          const k = FILE_TYPE_TO_OUTPUT_KEY[t];
-          if (!k || !outputs[k]) {
-            alert(`当前任务未生成该文件：${t}`);
-            return;
-          }
-        } catch (e) {
-          alert(`状态检查失败: ${e}`);
+        if (btn.id === "bundleBtn") {
+          window.open(`/api/download_bundle/${currentTaskId}`, "_blank");
           return;
         }
-        const t = btn.getAttribute('data-type');
-        window.open(`/api/download/${currentTaskId}/${t}`, '_blank');
+        const t = btn.getAttribute("data-type");
+        window.open(`/api/download/${currentTaskId}/${t}`, "_blank");
       });
     });
 
-    setDownloadEnabled(false);
-    updateFileHint('idle', null);
+    document.addEventListener("click", (evt) => {
+      const target = evt.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.classList.contains("history-view-btn")) {
+        const taskId = target.getAttribute("data-task-id") || "";
+        activateTask(taskId);
+        return;
+      }
+      if (target.classList.contains("history-retry-btn")) {
+        const sourceTaskId = target.getAttribute("data-task-id") || "";
+        retryTask(sourceTaskId);
+      }
+    });
+
+    $("historyStatus").addEventListener("change", () => {
+      historyStatusFilter = $("historyStatus").value || "";
+      refreshTaskHistory(true);
+    });
+    $("historyRefreshBtn").addEventListener("click", () => {
+      refreshTaskHistory(true);
+    });
+    $("historyMoreBtn").addEventListener("click", () => {
+      if (!historyHasMore) return;
+      refreshTaskHistory(false);
+    });
+
+    setDownloadEnabled(false, null);
+    renderArtifacts({});
+    updateFileHint("idle", null);
     refreshHealth();
+    refreshTaskHistory(true);
     setInterval(refreshHealth, 10000);
+    historyTimer = setInterval(() => refreshTaskHistory(true), 5000);
   </script>
 </body>
 </html>

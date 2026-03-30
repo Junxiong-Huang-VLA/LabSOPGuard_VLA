@@ -1,14 +1,21 @@
 ﻿from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 
 def _build_lines(report_data: Dict[str, Any]) -> List[str]:
+    outputs = report_data.get("outputs", {}) if isinstance(report_data.get("outputs"), dict) else {}
+    overall_summary = str(report_data.get("overall_summary", "") or "").strip()
+    if not overall_summary:
+        overall_summary = "No overall summary generated."
+
     lines: List[str] = [
         "Integrated Analysis Report",
         "",
+        f"Generated At: {datetime.utcnow().isoformat()}Z",
         f"Task ID: {report_data.get('task_id', 'unknown')}",
         f"Input Video: {report_data.get('video_path', 'unknown')}",
         f"Status: {report_data.get('status', 'unknown')}",
@@ -17,7 +24,7 @@ def _build_lines(report_data: Dict[str, Any]) -> List[str]:
         json.dumps(report_data.get("hand_summary", {}), ensure_ascii=False),
         "",
         "Keyframe Analysis:",
-        report_data.get("overall_summary", ""),
+        overall_summary,
         "",
         "Step Check:",
         f"Alarm Count: {len(report_data.get('alarms', []))}",
@@ -29,7 +36,6 @@ def _build_lines(report_data: Dict[str, Any]) -> List[str]:
         )
 
     lines.extend(["", "Output Files:"])
-    outputs = report_data.get("outputs", {})
     for k, v in outputs.items():
         lines.append(f"- {k}: {v}")
     return lines
@@ -39,8 +45,15 @@ def _register_font():
     try:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
     except Exception:
         return None
+
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+        return "STSong-Light"
+    except Exception:
+        pass
 
     candidates = [
         Path("C:/Windows/Fonts/msyh.ttc"),
@@ -84,5 +97,7 @@ def generate_integrated_pdf(report_data: Dict[str, Any], output_path: str | Path
         return str(out)
     except Exception:
         fallback = out.with_suffix(".txt")
+        lines.append("")
+        lines.append("NOTE: PDF generation failed, exported as TXT fallback.")
         fallback.write_text("\n".join(lines), encoding="utf-8")
         return str(fallback)
