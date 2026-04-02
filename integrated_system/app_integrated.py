@@ -18,7 +18,7 @@ import uuid
 import zipfile
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from flask import Flask, Response, jsonify, render_template, request, send_file
@@ -39,11 +39,21 @@ TASKS: Dict[str, Dict[str, Any]] = {}
 TASKS_LOCK = threading.Lock()
 PROGRESS_EVENTS: list[Dict[str, Any]] = []
 PROGRESS_COND = threading.Condition()
+TASKS_PERSIST_LOCK = threading.Lock()
+TASKS_BOOTSTRAP_LOCK = threading.Lock()
+TASKS_BOOTSTRAPPED = False
+PERSIST_META: Dict[str, Any] = {"last_saved_at": "", "last_error": ""}
+PERSIST_INTERVAL_SEC = 1.0
 
 SETTINGS = load_settings()
 EXECUTOR = ThreadPoolExecutor(max_workers=SETTINGS.max_workers, thread_name_prefix="integrated-worker")
+TASK_REGISTRY_FILE = SETTINGS.outputs_root / SETTINGS.task_registry_filename
 
 VALID_TASK_STATUS = {"pending", "running", "completed", "failed"}
+
+
+class TaskCancelled(Exception):
+    pass
 
 
 def _now_ts() -> str:
@@ -68,6 +78,152 @@ def _clamp_progress(progress: Any) -> float:
 def _safe_message(message: Any, default: str = "") -> str:
     msg = str(message or "").strip()
     return msg or default
+
+
+def _utc_now_iso() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def _parse_utc_iso(value: Any) -> Optional[datetime]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        dt = datetime.fromisoformat(raw)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _json_safe_clone(payload: Any) -> Any:
+    try:
+        return json.loads(json.dumps(payload, ensure_ascii=False))
+    except Exception:
+        return payload
+
+
+def _trim_task_registry(max_items: int = 600) -> None:
+    with TASKS_LOCK:
+        if len(TASKS) <= max_items:
+            return
+        ordered = sorted(
+            TASKS.items(),
+            key=lambda x: str(x[1].get("created_at", "")),
+            reverse=True,
+        )
+        keep = dict(ordered[:max_items])
+        TASKS.clear()
+        TASKS.update(keep)
+
+
+def _persist_tasks_to_disk(force: bool = False) -> None:
+    now_ts = time.time()
+    last_saved_ts = float(PERSIST_META.get("last_saved_ts") or 0.0)
+    if not force and (now_ts - last_saved_ts) < PERSIST_INTERVAL_SEC:
+        return
+
+    with TASKS_PERSIST_LOCK:
+        last_saved_ts = float(PERSIST_META.get("last_saved_ts") or 0.0)
+        if not force and (now_ts - last_saved_ts) < PERSIST_INTERVAL_SEC:
+            return
+
+        try:
+            SETTINGS.outputs_root.mkdir(parents=True, exist_ok=True)
+            with TASKS_LOCK:
+                tasks_snapshot = _json_safe_clone(TASKS)
+            payload = {
+                "version": 1,
+                "saved_at": _utc_now_iso(),
+                "task_count": len(tasks_snapshot),
+                "tasks": tasks_snapshot,
+            }
+            tmp_path = TASK_REGISTRY_FILE.with_suffix(".tmp")
+            tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp_path.replace(TASK_REGISTRY_FILE)
+            PERSIST_META["last_saved_at"] = str(payload["saved_at"])
+            PERSIST_META["last_saved_ts"] = now_ts
+            PERSIST_META["last_error"] = ""
+            PERSIST_META["registry_path"] = _safe_rel(TASK_REGISTRY_FILE)
+        except Exception as exc:
+            PERSIST_META["last_error"] = str(exc)
+
+
+def _normalize_loaded_task(task_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
+    task_norm = dict(task) if isinstance(task, dict) else {}
+    task_norm["task_id"] = task_id
+    task_norm["status"] = _normalize_task_status(task_norm.get("status"), default="failed")
+    task_norm["progress"] = _clamp_progress(task_norm.get("progress", 0.0))
+    task_norm["current_stage"] = _safe_message(task_norm.get("current_stage"), "等待执行")
+    task_norm["message"] = _safe_message(task_norm.get("message"), "")
+    task_norm["updated_at"] = _safe_message(task_norm.get("updated_at"), _utc_now_iso())
+    task_norm["created_at"] = _safe_message(task_norm.get("created_at"), task_norm["updated_at"])
+    task_norm["outputs"] = dict(task_norm.get("outputs", {}) if isinstance(task_norm.get("outputs"), dict) else {})
+    task_norm["options"] = dict(task_norm.get("options", {}) if isinstance(task_norm.get("options"), dict) else {})
+    task_norm["module_status"] = dict(
+        task_norm.get("module_status", {}) if isinstance(task_norm.get("module_status"), dict) else {}
+    )
+    task_norm["module_notes"] = list(task_norm.get("module_notes", []) if isinstance(task_norm.get("module_notes"), list) else [])
+    return task_norm
+
+
+def _bootstrap_tasks_from_disk() -> int:
+    global TASKS_BOOTSTRAPPED
+    with TASKS_BOOTSTRAP_LOCK:
+        if TASKS_BOOTSTRAPPED:
+            return len(TASKS)
+
+        restored: Dict[str, Dict[str, Any]] = {}
+        if TASK_REGISTRY_FILE.exists():
+            try:
+                raw = json.loads(TASK_REGISTRY_FILE.read_text(encoding="utf-8"))
+                source = raw.get("tasks", {}) if isinstance(raw, dict) else {}
+                if isinstance(source, dict):
+                    for task_id, task_payload in source.items():
+                        tid = str(task_id or "").strip()
+                        if not tid:
+                            continue
+                        if not isinstance(task_payload, dict):
+                            continue
+                        norm_task = _normalize_loaded_task(tid, task_payload)
+                        # 服务重启后，运行中任务转失败，避免“假运行”状态卡死。
+                        if norm_task["status"] in {"pending", "running"}:
+                            norm_task["status"] = "failed"
+                            norm_task["progress"] = 100.0
+                            norm_task["current_stage"] = "失败"
+                            norm_task["message"] = "服务已重启，任务在重启前中断。请重试。"
+                            norm_task["updated_at"] = _utc_now_iso()
+                            module_status = dict(norm_task.get("module_status", {}))
+                            module_status["pipeline"] = {
+                                "status": "failed",
+                                "message": "服务重启导致任务中断",
+                                "updated_at": norm_task["updated_at"],
+                            }
+                            norm_task["module_status"] = module_status
+                        restored[tid] = norm_task
+            except Exception as exc:
+                PERSIST_META["last_error"] = f"load_registry_failed: {exc}"
+
+        with TASKS_LOCK:
+            TASKS.clear()
+            TASKS.update(restored)
+        _trim_task_registry()
+        TASKS_BOOTSTRAPPED = True
+        _persist_tasks_to_disk(force=True)
+        return len(TASKS)
+
+
+def _is_task_cancel_requested(task_id: str) -> bool:
+    snap = _task_snapshot(task_id)
+    return bool(snap.get("cancel_requested"))
+
+
+def _ensure_not_cancelled(task_id: str) -> None:
+    if _is_task_cancel_requested(task_id):
+        raise TaskCancelled("任务已取消")
 
 
 def _progress_ratio_to_range(ratio: float, start: float, end: float) -> float:
