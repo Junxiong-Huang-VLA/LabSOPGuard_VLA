@@ -2,7 +2,7 @@ param(
     [string]$PythonExe = "C:\Users\Win10\miniconda3\envs\LabSOPGuard\python.exe",
     [string]$DatasetYaml = "data\dataset\dataset.yaml",
     [string]$Model = "yolo26s.pt",
-    [int]$Epochs = 150,
+    [int]$Epochs = 200,
     [int]$ImgSize = 640,
     [int]$Batch = 16,
     [string]$Device = "0",
@@ -41,7 +41,8 @@ Write-Host "[INFO] Training ..."
     --project outputs\training `
     --name $RunName
 
-$weights = "outputs/training/$RunName/weights/best.pt"
+
+    $weights = "outputs/training/$RunName/weights/best.pt"
 if (!(Test-Path $weights)) {
     throw "best.pt not found: $weights"
 }

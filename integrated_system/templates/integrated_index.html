@@ -96,12 +96,41 @@
     }
     .keyframes {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
     }
-    .kf { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fafcff; }
-    .kf img { width: 100%; height: 95px; object-fit: cover; display: block; }
-    .kf .cap { font-size: 12px; color: var(--muted); padding: 4px 6px; }
+    .kf {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fafcff;
+      box-shadow: 0 2px 10px rgba(13, 44, 82, 0.04);
+    }
+    .kf.top-rank {
+      border-color: #e6a155;
+      box-shadow: 0 6px 16px rgba(180, 106, 5, 0.16);
+      background: linear-gradient(180deg, #fff8ec 0%, #ffffff 28%);
+    }
+    .kf img { width: 100%; height: 118px; object-fit: cover; display: block; }
+    .kf.top-rank img { height: 180px; }
+    .kf-placeholder {
+      height: 118px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #eef3fb;
+      color: #6b7f93;
+      font-size: 12px;
+    }
+    .kf.top-rank .kf-placeholder {
+      height: 180px;
+    }
+    .kf .cap {
+      font-size: 13px;
+      color: #21364d;
+      padding: 7px 8px 2px;
+      font-weight: 600;
+    }
     .toast {
       position: fixed;
       right: 16px;
@@ -156,6 +185,631 @@
       color: var(--muted);
       margin-bottom: 10px;
     }
+    .upload-meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .runtime-log {
+      margin-top: 10px;
+      max-height: 150px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7faff;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .runtime-log div { margin-bottom: 4px; }
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .module-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fbfdff;
+      font-size: 13px;
+    }
+    .module-item .name { font-weight: 600; margin-bottom: 6px; }
+    .module-item .detail { color: var(--muted); }
+    .module-badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      margin-left: 6px;
+    }
+    .module-badge.completed {
+      color: var(--ok);
+      border-color: #9fd9be;
+      background: #edf9f2;
+    }
+    .module-badge.skipped {
+      color: var(--warn);
+      border-color: #efcf92;
+      background: #fff8ec;
+    }
+    .module-badge.failed {
+      color: var(--err);
+      border-color: #f2a2ab;
+      background: #fff1f3;
+    }
+    .alarm-list {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7faff;
+      padding: 8px 10px;
+      font-size: 13px;
+      max-height: 180px;
+      overflow: auto;
+    }
+    .alarm-list div { margin-bottom: 4px; }
+    .stage-banner {
+      margin-top: 10px;
+      border-radius: 12px;
+      border: 1px solid #c4d5ef;
+      background: linear-gradient(90deg, #f4f9ff, #eef8ff);
+      padding: 10px 12px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .stage-banner.running {
+      border-color: #efcf92;
+      background: linear-gradient(90deg, #fff8ec, #fffaf2);
+      color: #7a4f07;
+    }
+    .stage-banner.completed {
+      border-color: #9fd9be;
+      background: linear-gradient(90deg, #edf9f2, #f3fcf7);
+      color: #0e8f4c;
+    }
+    .stage-banner.failed {
+      border-color: #f2a2ab;
+      background: linear-gradient(90deg, #fff1f3, #fff6f7);
+      color: #bd1f2f;
+    }
+    .progress-meta {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .mini-module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .mini-module {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdff;
+      padding: 8px;
+      font-size: 12px;
+    }
+    .mini-module .m-name { font-weight: 600; }
+    .mini-module .m-status { margin-top: 4px; color: var(--muted); }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .overview-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfdff;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .overview-card h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+    .overview-kv {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 6px;
+      margin-bottom: 6px;
+      align-items: center;
+    }
+    .overview-kv .k { color: var(--muted); }
+    .overview-chip {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      background: #f6f9ff;
+      margin-bottom: 8px;
+    }
+    .overview-chip.success {
+      color: var(--ok);
+      border-color: #9fd9be;
+      background: #edf9f2;
+    }
+    .overview-chip.partial {
+      color: var(--warn);
+      border-color: #efcf92;
+      background: #fff8ec;
+    }
+    .overview-chip.failed {
+      color: var(--err);
+      border-color: #f2a2ab;
+      background: #fff1f3;
+    }
+    .overview-chip.running {
+      color: #0f67cb;
+      border-color: #b8d2f3;
+      background: #edf5ff;
+    }
+    .overview-chip.risk-none {
+      color: #0e8f4c;
+      border-color: #9fd9be;
+      background: #edf9f2;
+    }
+    .overview-chip.risk-low {
+      color: #7a5a00;
+      border-color: #e9d28d;
+      background: #fff8e8;
+    }
+    .overview-chip.risk-high {
+      color: #9e1d2b;
+      border-color: #e99ba6;
+      background: #ffeff2;
+    }
+    .overview-chip.risk-medium {
+      color: #a25d00;
+      border-color: #efc98f;
+      background: #fff6e8;
+    }
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      padding: 1px 8px;
+      background: #f6f9ff;
+      color: var(--text);
+    }
+    .tag.skip {
+      background: #fff8ec;
+      border-color: #efcf92;
+      color: #7a4f07;
+    }
+    .tag.risk {
+      background: #ffeff2;
+      border-color: #e99ba6;
+      color: #9e1d2b;
+    }
+    .tag.high-risk {
+      background: #ffe9ec;
+      border-color: #ec9aa3;
+      color: #a92030;
+      font-weight: 600;
+    }
+    .tag.dense {
+      background: #edf9f2;
+      border-color: #9fd9be;
+      color: #0f7d45;
+    }
+    .tag.ai {
+      background: #edf5ff;
+      border-color: #b8d2f3;
+      color: #0f67cb;
+    }
+    .tag.stage {
+      background: #edf5ff;
+      border-color: #b8d2f3;
+      color: #0f67cb;
+    }
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .download-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 8px 10px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .download-item .name { color: var(--text); font-weight: 600; }
+    .download-item .state { color: var(--muted); font-size: 12px; }
+    .download-item.ready .state { color: var(--ok); }
+    .download-item .go {
+      border: 0;
+      border-radius: 8px;
+      background: #2d5f96;
+      color: #fff;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .download-item .go:disabled { opacity: 0.5; cursor: not-allowed; }
+    .kf .meta {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 0 8px 4px;
+    }
+    .kf .reason {
+      font-size: 12px;
+      color: #334a63;
+      line-height: 1.45;
+      padding: 0 8px 7px;
+      min-height: 50px;
+    }
+    .kf .score {
+      font-size: 11px;
+      color: #5a6f84;
+      padding: 0 8px 6px;
+    }
+    .kf .ai {
+      font-size: 11px;
+      color: #39516b;
+      line-height: 1.35;
+      padding: 0 8px 7px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 44px;
+    }
+    .frame-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 0 8px 6px;
+    }
+    .frame-tags .tag {
+      font-size: 11px;
+      padding: 1px 6px;
+    }
+    .exec-narrative {
+      margin-top: 8px;
+      border: 1px solid #f0d8b0;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #fff9ef, #fffdf8);
+      color: #6e4712;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .metric-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7fbff;
+      padding: 8px 10px;
+    }
+    .metric-card .k {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .metric-card .v {
+      font-size: 20px;
+      font-weight: 700;
+      color: #153553;
+      line-height: 1.2;
+    }
+    .metric-card.risk .v { color: #a92030; }
+    .metric-card.warn .v { color: #a25d00; }
+    .metric-card.ok .v { color: #0e8f4c; }
+    .severity-stack {
+      margin-top: 8px;
+    }
+    .severity-bar {
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #d6deea;
+      display: flex;
+      background: #eef3fb;
+    }
+    .severity-seg {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .severity-seg.high { background: #d33f51; }
+    .severity-seg.medium { background: #f1a64b; }
+    .severity-seg.low { background: #f0cf72; }
+    .severity-seg.none { background: #d6dfeb; }
+    .timeline-wrap {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f8fbff;
+      padding: 10px;
+    }
+    .timeline-band {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 3px;
+      margin-bottom: 9px;
+    }
+    .timeline-bucket {
+      height: 12px;
+      border-radius: 4px;
+      border: 1px solid #d4deeb;
+      background: #edf3fc;
+      position: relative;
+      overflow: hidden;
+    }
+    .timeline-bucket.low { background: #fff4dc; border-color: #f1d39a; }
+    .timeline-bucket.medium { background: #ffe8c7; border-color: #efc68e; }
+    .timeline-bucket.high { background: #ffd7dd; border-color: #ecadb6; }
+    .timeline-bucket span {
+      position: absolute;
+      right: 2px;
+      top: -2px;
+      font-size: 10px;
+      color: #5d6f82;
+    }
+    .timeline-track {
+      position: relative;
+      height: 34px;
+      margin-top: 2px;
+      border-radius: 8px;
+      background: #f2f6fd;
+      border: 1px solid #d8e2ef;
+    }
+    .timeline-line {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 16px;
+      height: 2px;
+      background: linear-gradient(90deg, #cfdcee, #a8c0dd, #cfdcee);
+      border-radius: 999px;
+    }
+    .timeline-marker {
+      position: absolute;
+      top: 9px;
+      width: 8px;
+      height: 14px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      border: 1px solid #ffffff;
+      box-shadow: 0 0 0 1px rgba(45, 95, 150, 0.2);
+      cursor: pointer;
+    }
+    .timeline-marker.keyframe { background: #2f72bd; }
+    .timeline-marker.stage { background: #92570d; height: 18px; top: 7px; }
+    .timeline-marker.low { background: #f4ce78; }
+    .timeline-marker.medium { background: #eea148; }
+    .timeline-marker.high { background: #cf394d; }
+    .timeline-axis {
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .timeline-legend {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .timeline-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 1px 6px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .legend-dot.high { background: #cf394d; }
+    .legend-dot.medium { background: #eea148; }
+    .legend-dot.low { background: #f4ce78; }
+    .legend-dot.stage { background: #92570d; }
+    .legend-dot.frame { background: #2f72bd; }
+    .timeline-focus {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #5a2e06;
+      background: #fff5e8;
+      border: 1px solid #f0d5a8;
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+    .focus-filter-row {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .focus-filter-row .pill {
+      font-weight: 600;
+    }
+    .focus-filter-row .pill.active {
+      border-color: #7fb2ea;
+      background: #e9f3ff;
+      color: #0f67cb;
+    }
+    .focus-filter-row .muted b {
+      color: #1a3f6a;
+    }
+    .single-frame-row {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .single-frame-row .pill.active {
+      border-color: #e0b06f;
+      background: #fff4e6;
+      color: #8a5206;
+      font-weight: 600;
+    }
+    .alarm-item {
+      border: 1px solid #d8e3f1;
+      border-radius: 9px;
+      background: #fcfeff;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .alarm-item .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .alarm-item.high {
+      border-color: #efb3bb;
+      background: #fff3f5;
+    }
+    .alarm-item.medium {
+      border-color: #f0cf9d;
+      background: #fff8ee;
+    }
+    .timeline-bucket.jumpable {
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .timeline-bucket.jumpable:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(26, 63, 106, 0.12);
+    }
+    .jump-link {
+      margin-top: 4px;
+      border: 1px solid #b8d2f3;
+      background: #edf5ff;
+      color: #0f67cb;
+      border-radius: 999px;
+      font-size: 11px;
+      padding: 2px 8px;
+      display: inline-block;
+      cursor: pointer;
+    }
+    .jump-link:hover {
+      border-color: #7fb2ea;
+      background: #e4f0ff;
+    }
+    .focus-hit {
+      box-shadow: 0 0 0 2px rgba(15, 103, 203, 0.5), 0 6px 16px rgba(15, 103, 203, 0.12) !important;
+      border-color: #79aee8 !important;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .top-evidence-wrap {
+      margin-bottom: 10px;
+    }
+    .top-evidence-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .top-evidence-wrap .title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #7a4b09;
+      margin-bottom: 0;
+    }
+    .frame-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .frame-nav .nav-btn {
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-size: 12px;
+    }
+    .frame-nav .nav-info {
+      min-width: 82px;
+      text-align: center;
+      font-size: 12px;
+      color: #415972;
+    }
+    .evidence-note {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #5a6f84;
+    }
+    @media (max-width: 760px) {
+      .kf.top-rank img { height: 145px; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .keyframes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .module-badge.pending {
+      color: #3f5d80;
+      border-color: #cdd8e8;
+      background: #f2f6fc;
+    }
+    .module-badge.running {
+      color: #0f67cb;
+      border-color: #b8d2f3;
+      background: #edf5ff;
+    }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 20, 35, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+      padding: 20px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-inner {
+      max-width: 88vw;
+      max-height: 88vh;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid #d8e3f1;
+    }
+    .lightbox-inner img {
+      display: block;
+      max-width: 84vw;
+      max-height: 72vh;
+      border-radius: 8px;
+    }
+    .lightbox-caption {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
@@ -171,6 +825,7 @@
         <input id="videoInput" type="file" accept="video/*" />
         <span id="videoName" class="muted">尚未选择视频</span>
       </div>
+      <div id="uploadMeta" class="upload-meta">上传状态：未上传</div>
       <div class="grid">
         <label class="opt"><input id="enableHand" type="checkbox" checked /> 手部检测</label>
         <label class="opt"><input id="enableAI" type="checkbox" checked /> AI 分析</label>
@@ -187,57 +842,180 @@
     <div class="card">
       <h2>2. 进度与状态</h2>
       <div class="progress"><div id="bar" class="bar"></div></div>
+      <div id="stageBanner" class="stage-banner">等待任务开始</div>
       <div class="row" style="margin-top: 8px;">
         <div>进度: <b id="progressText">0%</b></div>
         <div>当前阶段: <b id="stageText">-</b></div>
         <div>状态: <b id="statusText">idle</b></div>
       </div>
+      <div id="progressMeta" class="progress-meta">当前模块：-</div>
       <div id="messageText" class="muted" style="margin-top: 6px;">等待任务开始</div>
+      <div id="failureHint" class="status-failed" style="margin-top: 6px; display:none;"></div>
+      <div id="processModuleGrid" class="mini-module-grid"></div>
+      <div id="runtimeLog" class="runtime-log">
+        <div class="muted">暂无运行日志</div>
+      </div>
     </div>
 
-    <div class="card">
-      <h2>3. 结果展示</h2>
-      <div class="grid-2">
-        <div>
-          <div class="row" style="margin-bottom: 6px;">
-            <b>标注视频</b>
-            <span id="videoStatus" class="pill warn">未生成</span>
-          </div>
-          <video id="annotatedVideo" controls style="display:none;"></video>
-          <div id="videoEmpty" class="muted">分析完成后显示标注视频预览</div>
+    <div class="card" id="resultsCard">
+      <h2>3. 分析结论</h2>
+      <div class="row">
+        <b>结论总览 / Executive Summary</b>
+        <span id="resultOverview" class="muted">等待分析结果</span>
+      </div>
+      <div id="executiveNarrative" class="exec-narrative">等待分析结果，系统将自动生成结论、风险判断与证据链说明。</div>
+      <div id="summaryMetrics" class="metric-grid">
+        <div class="metric-card risk">
+          <div class="k">异常总数</div>
+          <div id="metricAlarmTotal" class="v">-</div>
         </div>
-        <div>
-          <div class="row" style="margin-bottom: 6px;">
-            <b>文本总结</b>
-            <span id="pdfStatus" class="pill warn">PDF 未知</span>
-            <span id="alarmStatus" class="pill warn">alarm_log 未知</span>
-          </div>
-          <pre id="summaryBox">暂无摘要</pre>
+        <div class="metric-card warn">
+          <div class="k">高风险异常</div>
+          <div id="metricHighCount" class="v">-</div>
+        </div>
+        <div class="metric-card ok">
+          <div class="k">关键证据帧</div>
+          <div id="metricFrameCount" class="v">-</div>
+        </div>
+        <div class="metric-card">
+          <div class="k">阶段数 / 模块完成度</div>
+          <div id="metricStageCount" class="v">-</div>
         </div>
       </div>
-      <div style="margin-top: 12px;">
+      <div class="overview-grid">
+        <div class="overview-card">
+          <h3>任务结果</h3>
+          <div id="taskOutcomeChip" class="overview-chip running">未开始</div>
+          <div id="riskLevelChip" class="overview-chip running">风险待评估</div>
+          <div class="overview-kv"><div class="k">task_id</div><div><code id="overviewTaskId">-</code></div></div>
+          <div class="overview-kv"><div class="k">总耗时</div><div id="overviewDuration">-</div></div>
+          <div class="overview-kv"><div class="k">启用模块</div><div id="enabledModules">-</div></div>
+          <div class="overview-kv"><div class="k">跳过模块</div><div id="skippedModules">-</div></div>
+        </div>
+        <div class="overview-card">
+          <h3>核心发现（最多3条）</h3>
+          <div id="findingList" class="alarm-list" style="max-height: none;">
+            <div class="muted">完成分析后显示核心结论</div>
+          </div>
+          <div class="muted" style="margin-top:8px;">模块执行概览</div>
+          <div id="execModuleBadges" class="tag-list" style="margin-top:6px;"></div>
+        </div>
+      </div>
+
+      <div class="overview-card" style="margin-top: 10px;">
+        <h3>风险摘要</h3>
+        <div class="row">
+          <span id="riskVerdictText" class="pill warn">风险判断待评估</span>
+          <span id="alarmSummary" class="muted">报警信息：暂无</span>
+        </div>
+        <div class="single-frame-row">
+          <span id="singleFrameState" class="pill">单帧讲解：未启用</span>
+          <button id="clearSingleFrameBtn" class="secondary" style="padding:4px 10px;font-size:12px;" disabled>退出单帧讲解</button>
+        </div>
+        <div id="severityDist" class="muted" style="margin-top: 8px;">严重程度分布: high 0 / medium 0 / low 0</div>
+        <div class="severity-stack">
+          <div id="severityBar" class="severity-bar">
+            <div class="severity-seg none" style="width:100%;"></div>
+          </div>
+        </div>
+        <div id="riskFocusText" class="timeline-focus">风险时间分布待生成</div>
+        <div id="alarmList" class="alarm-list" style="margin-top:10px;">
+          <div class="muted">未检测到明显步骤异常</div>
+        </div>
+      </div>
+
+      <div class="overview-card" style="margin-top: 12px;">
+        <h3>风险时间线 / 阶段时间感</h3>
+        <div id="timelineSummary" class="muted">分析完成后将展示风险出现时段与关键节点。</div>
+        <div class="focus-filter-row">
+          <span id="evidenceFilterState" class="pill">证据视角：全时段</span>
+          <span id="evidenceFilterStats" class="muted">当前显示 报警 <b>0</b> / 关键帧 <b>0</b></span>
+          <button id="clearEvidenceFilterBtn" class="secondary" style="padding:5px 10px;font-size:12px;" disabled>恢复全时段</button>
+        </div>
+        <div class="timeline-wrap">
+          <div id="timelineBand" class="timeline-band"></div>
+          <div id="timelineTrack" class="timeline-track">
+            <div class="timeline-line"></div>
+          </div>
+          <div id="timelineAxis" class="timeline-axis">
+            <span>开始</span>
+            <span>中段</span>
+            <span>结束</span>
+          </div>
+          <div class="timeline-legend">
+            <span><i class="legend-dot high"></i>高风险异常</span>
+            <span><i class="legend-dot medium"></i>中风险异常</span>
+            <span><i class="legend-dot low"></i>低风险异常</span>
+            <span><i class="legend-dot stage"></i>阶段切换</span>
+            <span><i class="legend-dot frame"></i>证据帧</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview-card" style="margin-top: 12px;">
         <div class="row" style="margin-bottom: 6px;">
-          <b>关键帧预览</b>
+          <b>标注视频</b>
+          <span id="videoStatus" class="pill warn">未生成</span>
+          <button id="previewVideoBtn" class="secondary" style="padding:6px 10px;font-size:12px;" disabled>打开预览</button>
+          <button id="downloadVideoBtn" class="secondary" style="padding:6px 10px;font-size:12px;" disabled>下载</button>
+        </div>
+        <video id="annotatedVideo" controls style="display:none;"></video>
+        <div id="videoEmpty" class="muted">分析完成后显示标注视频预览</div>
+        <div id="videoSummary" class="muted" style="margin-top:6px;">标注视频用于演示手部检测与过程可视化。</div>
+      </div>
+
+      <div class="overview-card" style="margin-top: 12px;">
+        <div class="row" style="margin-bottom: 6px;">
+          <b>关键证据帧</b>
           <span id="keyframeCount" class="muted">0 帧</span>
+          <span class="muted">按风险与解释价值优先展示</span>
+        </div>
+        <div class="top-evidence-wrap">
+          <div class="top-evidence-head">
+            <div id="topEvidenceTitle" class="title">首要证据帧（优先复核）</div>
+            <div class="frame-nav">
+              <button id="prevFrameBtn" type="button" class="secondary nav-btn" disabled>上一帧</button>
+              <span id="frameNavInfo" class="nav-info">0/0</span>
+              <button id="nextFrameBtn" type="button" class="secondary nav-btn" disabled>下一帧</button>
+            </div>
+          </div>
+          <div id="topEvidence"></div>
         </div>
         <div id="keyframeGrid" class="keyframes"></div>
+        <div id="evidenceHint" class="evidence-note">证据帧会显示“为何重要”的一句解释。</div>
+        <div id="keyframeLinks" class="file-links"></div>
+      </div>
+
+      <div class="overview-card" style="margin-top: 12px;">
+        <div class="row" style="margin-bottom: 6px;">
+          <b>文本总结</b>
+          <span id="pdfStatus" class="pill warn">PDF 未知</span>
+          <span id="alarmStatus" class="pill warn">alarm_log 未知</span>
+        </div>
+        <pre id="summaryBox">暂无摘要</pre>
       </div>
     </div>
 
     <div class="card">
-      <h2>4. 下载</h2>
+      <h2>4. 导出结果</h2>
+      <div class="muted">按用途导出分析产物：演示视频、PDF报告、风险日志与结构化数据。</div>
+      <div id="downloadGrid" class="download-grid"></div>
       <div class="downloads">
-        <button class="secondary" data-type="annotated_video">下载标注视频</button>
-        <button class="secondary" data-type="pdf">下载 PDF</button>
-        <button class="secondary" data-type="keyframes_json">下载关键帧 JSON</button>
-        <button class="secondary" data-type="analysis_json">下载 AI 分析 JSON</button>
-        <button class="secondary" data-type="summary_txt">下载总结 TXT</button>
-        <button class="secondary" data-type="alarm_log">下载 alarm_log.json</button>
-        <button id="bundleBtn" class="secondary">一键下载 ZIP</button>
+        <button class="secondary" data-type="annotated_video">导出标注视频</button>
+        <button class="secondary" data-type="pdf">导出 PDF 报告</button>
+        <button class="secondary" data-type="summary">导出文字总结</button>
+        <button class="secondary" data-type="alarm_log">导出报警日志</button>
+        <button class="secondary" data-type="keyframe_json">导出关键帧数据</button>
+        <button class="secondary" data-type="analysis_json">导出AI分析详情</button>
+        <button id="bundleBtn" class="secondary">一键导出 ZIP</button>
       </div>
       <div id="fileHint" class="file-hint">暂无可下载文件</div>
       <div id="fileLinks" class="file-links"></div>
-      <pre id="resultBox">暂无结果</pre>
+      <details class="overview-card" style="margin-top:10px;">
+        <summary style="cursor:pointer;font-weight:600;">技术细节（模块状态与原始结果）</summary>
+        <div id="moduleGrid" class="module-grid" style="margin-top:10px;"></div>
+        <pre id="resultBox" style="margin-top:10px;">暂无结果</pre>
+      </details>
     </div>
 
     <div class="card">
@@ -274,6 +1052,12 @@
   </div>
 
   <div id="toast" class="toast"></div>
+  <div id="lightbox" class="lightbox">
+    <div class="lightbox-inner">
+      <img id="lightboxImg" src="" alt="preview" />
+      <div id="lightboxCaption" class="lightbox-caption"></div>
+    </div>
+  </div>
 
   <script>
     let currentTaskId = "";
@@ -285,24 +1069,81 @@
     const historyLimit = 12;
     let historyHasMore = false;
     let lastStatus = "idle";
+    const runtimeLogs = [];
+    const maxRuntimeLogs = 80;
+    const runtimeLogDedupe = {
+      lastKey: "",
+      lastAt: 0,
+      progressMarks: new Map(),
+      recentKeys: new Map()
+    };
+    let evidenceFilter = {
+      active: false,
+      startSec: null,
+      endSec: null,
+      label: "全时段",
+      source: "系统默认"
+    };
+    let singleFrameExplain = {
+      active: false,
+      image: "",
+      time: null,
+      caption: "",
+      source: "关键帧"
+    };
+    let lastArtifactRenderState = {
+      artifacts: {},
+      details: null,
+      status: "pending"
+    };
+    let singleFrameKeyframeList = [];
+    let singleFrameKeyframeIndex = -1;
 
     const FILE_TYPE_TO_OUTPUT_KEY = {
       annotated_video: "annotated_video",
       pdf: "report",
-      keyframes_json: "part1_keyframes",
+      keyframe_json: "part1_keyframes",
       analysis_json: "analysis_json",
-      summary_txt: "overall_summary",
+      summary: "overall_summary",
       alarm_log: "alarm_log"
     };
 
     const FILE_LABEL = {
-      annotated_video: "标注视频",
-      pdf: "PDF 报告",
-      keyframes_json: "关键帧 JSON",
-      analysis_json: "AI 分析 JSON",
-      summary_txt: "总结 TXT",
-      alarm_log: "alarm_log.json"
+      annotated_video: "标注视频(演示)",
+      pdf: "PDF 报告(正式)",
+      keyframe_json: "关键帧数据(JSON)",
+      analysis_json: "AI 分析详情(JSON)",
+      summary: "文字总结(TXT)",
+      alarm_log: "报警日志(JSON)"
     };
+
+    const MODULE_ORDER = [
+      { id: "hand_detection", label: "hand_detection", option: "enable_hand_detection" },
+      { id: "keyframe_extraction", label: "keyframe_analysis", option: null },
+      { id: "ai_analysis", label: "ai_analysis", option: "enable_ai_analysis" },
+      { id: "step_check", label: "step_check", option: "enable_step_check" },
+      { id: "pdf_generation", label: "pdf_generation", option: "enable_pdf" }
+    ];
+
+    const MODULE_ALIAS = {
+      hand_detection: "hand_detection",
+      keyframe_extract: "keyframe_extraction",
+      keyframe_extraction: "keyframe_extraction",
+      ai_analysis: "ai_analysis",
+      step_check: "step_check",
+      pdf: "pdf_generation",
+      pdf_generation: "pdf_generation"
+    };
+
+    const STAGE_MODULE_HINT = [
+      { words: ["手部检测"], id: "hand_detection" },
+      { words: ["关键帧"], id: "keyframe_extraction" },
+      { words: ["AI分析", "AI 分析"], id: "ai_analysis" },
+      { words: ["步骤检查"], id: "step_check" },
+      { words: ["PDF"], id: "pdf_generation" }
+    ];
+
+    const detailCache = new Map();
 
     const $ = (id) => document.getElementById(id);
 
@@ -315,10 +1156,157 @@
         .replaceAll("'", "&#39;");
     }
 
+    function formatBytes(bytes) {
+      const num = Number(bytes || 0);
+      if (!Number.isFinite(num) || num <= 0) return "0 B";
+      if (num < 1024) return `${num.toFixed(0)} B`;
+      if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
+      if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(2)} MB`;
+      return `${(num / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+
+    function nowClock() {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+    }
+
+    function parseIsoDate(v) {
+      const s = String(v || "").trim();
+      if (!s) return null;
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return null;
+      return d;
+    }
+
+    function formatDuration(ms) {
+      const safeMs = Math.max(0, Number(ms || 0));
+      const totalSec = Math.floor(safeMs / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+      return `${m}m ${String(s).padStart(2, "0")}s`;
+    }
+
+    function shortText(v, maxLen = 92) {
+      const s = String(v || "").replace(/\s+/g, " ").trim();
+      if (s.length <= maxLen) return s;
+      return `${s.slice(0, maxLen - 1)}…`;
+    }
+
+    function normalizeSeverity(v) {
+      const s = String(v || "").trim().toLowerCase();
+      if (s === "high" || s === "critical") return "high";
+      if (s === "medium" || s === "mid") return "medium";
+      if (s === "low") return "low";
+      return "low";
+    }
+
+    function severityWeight(level) {
+      if (level === "high") return 3;
+      if (level === "medium") return 2;
+      return 1;
+    }
+
+    function pushRuntimeLog(message, stage = "", status = "") {
+      const msg = String(message || "").trim();
+      if (!msg) return;
+      const stageText = String(stage || "").trim();
+      const statusText = String(status || "").trim();
+      const nowMs = Date.now();
+
+      // 压缩进度采样类重复日志：同阶段同计数不重复展示。
+      const sampledMatch = msg.match(/已采样\s*(\d+)\s*帧/);
+      if (sampledMatch) {
+        const sampleValue = Number(sampledMatch[1]);
+        const sampleKey = `${stageText}|${statusText}|sampled`;
+        const prevSample = runtimeLogDedupe.progressMarks.get(sampleKey);
+        if (Number.isFinite(prevSample) && sampleValue <= prevSample) return;
+        const totalMatch = msg.match(/源帧总数\s*(\d+)/);
+        let minDelta = 120;
+        if (totalMatch) {
+          const totalValue = Number(totalMatch[1]);
+          if (Number.isFinite(totalValue) && totalValue > 0) {
+            minDelta = Math.max(120, Math.floor(totalValue * 0.012));
+          }
+        }
+        const terminalSampleMsg = msg.includes("已跳过") || msg.includes("完成");
+        if (
+          Number.isFinite(prevSample) &&
+          !terminalSampleMsg &&
+          (sampleValue - prevSample) < minDelta
+        ) {
+          return;
+        }
+        runtimeLogDedupe.progressMarks.set(sampleKey, sampleValue);
+      }
+      const extractedMatch = msg.match(/当前已提取\s*(\d+)\s*帧/);
+      if (extractedMatch) {
+        const extractedValue = Number(extractedMatch[1]);
+        const extractedKey = `${stageText}|${statusText}|extracted`;
+        const prevExtracted = runtimeLogDedupe.progressMarks.get(extractedKey);
+        if (Number.isFinite(prevExtracted) && extractedValue <= prevExtracted) return;
+        runtimeLogDedupe.progressMarks.set(extractedKey, extractedValue);
+      }
+
+      // 同阶段同状态同消息短时间内去重，避免轮询和SSE双通道重复刷屏。
+      const dedupeKey = `${stageText}|${statusText}|${msg}`;
+      const prevAt = runtimeLogDedupe.recentKeys.get(dedupeKey);
+      if (Number.isFinite(prevAt) && (nowMs - prevAt) < 30000) return;
+      runtimeLogDedupe.recentKeys.set(dedupeKey, nowMs);
+      for (const [k, at] of runtimeLogDedupe.recentKeys.entries()) {
+        if (!Number.isFinite(at) || (nowMs - at) > 90000) {
+          runtimeLogDedupe.recentKeys.delete(k);
+        }
+      }
+      if (runtimeLogDedupe.lastKey === dedupeKey && (nowMs - runtimeLogDedupe.lastAt) < 15000) return;
+      runtimeLogDedupe.lastKey = dedupeKey;
+      runtimeLogDedupe.lastAt = nowMs;
+
+      const text = `[${nowClock()}] ${stageText ? `[${stageText}] ` : ""}${msg}${statusText ? ` (${statusText})` : ""}`;
+      runtimeLogs.push(text);
+      if (runtimeLogs.length > maxRuntimeLogs) {
+        runtimeLogs.splice(0, runtimeLogs.length - maxRuntimeLogs);
+      }
+      const html = runtimeLogs.map((x) => `<div>${escapeHtml(x)}</div>`).join("");
+      $("runtimeLog").innerHTML = html || '<div class="muted">暂无运行日志</div>';
+    }
+
+    function resetRuntimeLogDedupe() {
+      runtimeLogDedupe.lastKey = "";
+      runtimeLogDedupe.lastAt = 0;
+      runtimeLogDedupe.progressMarks.clear();
+      runtimeLogDedupe.recentKeys.clear();
+    }
+
+    function setRunningState(running) {
+      $("startBtn").disabled = !!running;
+      $("startBtn").textContent = running ? "分析进行中..." : "开始分析";
+    }
+
+    function updateUploadMeta(upload, statusText = "") {
+      const up = upload || {};
+      const filename = up.filename || "-";
+      const sizeText = up.size_bytes ? formatBytes(up.size_bytes) : "-";
+      const status = statusText || "未上传";
+      $("uploadMeta").textContent = `上传状态：${status} | 文件：${filename} | 大小：${sizeText}`;
+    }
+
     function setProgress(progressValue) {
       const pct = Math.max(0, Math.min(100, Number(progressValue || 0)));
       $("bar").style.width = pct + "%";
       $("progressText").textContent = pct.toFixed(1) + "%";
+    }
+
+    function setStageBanner(stage, status, message) {
+      const banner = $("stageBanner");
+      banner.className = "stage-banner";
+      if (status === "running" || status === "pending") banner.classList.add("running");
+      if (status === "completed") banner.classList.add("completed");
+      if (status === "failed") banner.classList.add("failed");
+      const stageText = String(stage || "-");
+      const msg = String(message || "").trim();
+      banner.textContent = msg ? `${stageText} · ${shortText(msg, 72)}` : stageText;
     }
 
     function setStatusClass(status) {
@@ -336,7 +1324,409 @@
       setTimeout(() => t.classList.remove("show"), 2800);
     }
 
-    function setDownloadEnabled(enabled, outputs) {
+    function parseSeekSeconds(raw) {
+      const num = Number(raw);
+      if (!Number.isFinite(num) || num < 0) return null;
+      return num;
+    }
+
+    function clearFocusHits() {
+      document.querySelectorAll(".focus-hit").forEach((n) => n.classList.remove("focus-hit"));
+    }
+
+    function markNearestByTime(selector, seconds) {
+      const nodes = Array.from(document.querySelectorAll(selector));
+      let best = null;
+      let bestGap = Number.POSITIVE_INFINITY;
+      nodes.forEach((n) => {
+        const t = parseSeekSeconds(n.getAttribute("data-time"));
+        if (t === null) return;
+        const gap = Math.abs(t - seconds);
+        if (gap < bestGap) {
+          bestGap = gap;
+          best = n;
+        }
+      });
+      if (best) {
+        best.classList.add("focus-hit");
+        best.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+      }
+      return best;
+    }
+
+    function seekVideoTo(seconds, autoPlay = false) {
+      const sec = parseSeekSeconds(seconds);
+      if (sec === null) return false;
+      const video = $("annotatedVideo");
+      if (!video || !video.src) return false;
+      const applySeek = () => {
+        try {
+          video.currentTime = sec;
+        } catch (_) {
+          // ignore seek error
+        }
+      };
+      if (video.readyState >= 1) {
+        applySeek();
+      } else {
+        video.addEventListener("loadedmetadata", applySeek, { once: true });
+      }
+      if (autoPlay) {
+        video.play().catch(() => {});
+      }
+      return true;
+    }
+
+    function focusEvidenceAt(seconds, source = "时间线") {
+      const sec = parseSeekSeconds(seconds);
+      if (sec === null) return;
+      clearFocusHits();
+      const frameHit = markNearestByTime(".kf[data-time]", sec);
+      const alarmHit = markNearestByTime(".alarm-item[data-time]", sec);
+      const hasVideo = seekVideoTo(sec, false);
+      if (hasVideo) {
+        $("annotatedVideo").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      const hitText = frameHit || alarmHit ? "并高亮了对应证据" : "但未匹配到对应证据卡";
+      const videoText = hasVideo ? "并已定位标注视频" : "（标注视频不可用）";
+      showToast(`${source}定位到 ${sec.toFixed(2)}s，${hitText}${videoText}`);
+    }
+
+    function buildTimeWindowLabel(startSec, endSec) {
+      const s = parseSeekSeconds(startSec);
+      const e = parseSeekSeconds(endSec);
+      if (s === null || e === null || e < s) return "全时段";
+      return `${s.toFixed(1)}s ~ ${e.toFixed(1)}s`;
+    }
+
+    function normalizeEvidenceFilter(raw) {
+      const f = raw && typeof raw === "object" ? raw : {};
+      const startSec = parseSeekSeconds(f.startSec);
+      const endSec = parseSeekSeconds(f.endSec);
+      const active = !!f.active && startSec !== null && endSec !== null && endSec >= startSec;
+      return {
+        active,
+        startSec: active ? startSec : null,
+        endSec: active ? endSec : null,
+        label: active ? buildTimeWindowLabel(startSec, endSec) : "全时段",
+        source: active ? String(f.source || "时间线") : "系统默认"
+      };
+    }
+
+    function deriveEvidenceFilterFromNode(node) {
+      if (!(node instanceof HTMLElement)) return null;
+      const startAttr = parseSeekSeconds(node.getAttribute("data-filter-start"));
+      const endAttr = parseSeekSeconds(node.getAttribute("data-filter-end"));
+      const source = String(node.getAttribute("data-seek-source") || "时间线");
+      if (startAttr !== null && endAttr !== null && endAttr >= startAttr) {
+        return normalizeEvidenceFilter({
+          active: true,
+          startSec: startAttr,
+          endSec: endAttr,
+          source
+        });
+      }
+      const center = parseSeekSeconds(node.getAttribute("data-seek"));
+      if (center === null) return null;
+      const windowSecRaw = Number(node.getAttribute("data-window"));
+      const windowSec = Number.isFinite(windowSecRaw) && windowSecRaw > 0 ? windowSecRaw : 4;
+      const startSec = Math.max(0, center - windowSec / 2);
+      const endSec = center + windowSec / 2;
+      return normalizeEvidenceFilter({
+        active: true,
+        startSec,
+        endSec,
+        source
+      });
+    }
+
+    function filterListByEvidenceWindow(list, getTimeValue) {
+      const arr = Array.isArray(list) ? list : [];
+      if (!evidenceFilter.active) return arr.slice();
+      const startSec = parseSeekSeconds(evidenceFilter.startSec);
+      const endSec = parseSeekSeconds(evidenceFilter.endSec);
+      if (startSec === null || endSec === null || endSec < startSec) return arr.slice();
+
+      let timedCount = 0;
+      arr.forEach((item) => {
+        const t = parseSeekSeconds(getTimeValue(item));
+        if (t !== null) timedCount += 1;
+      });
+      if (timedCount === 0) return arr.slice();
+
+      return arr.filter((item) => {
+        const t = parseSeekSeconds(getTimeValue(item));
+        return t !== null && t >= startSec && t <= endSec;
+      });
+    }
+
+    function updateEvidenceFilterPanel(status, alarmShown, alarmTotal, frameShown, frameTotal) {
+      const stateNode = $("evidenceFilterState");
+      const statsNode = $("evidenceFilterStats");
+      const clearBtn = $("clearEvidenceFilterBtn");
+      if (!stateNode || !statsNode || !clearBtn) return;
+
+      if (status === "pending" || status === "running") {
+        stateNode.className = "pill";
+        stateNode.textContent = "证据视角：全时段";
+        statsNode.innerHTML = "当前显示 报警 <b>-</b> / 关键帧 <b>-</b>";
+        clearBtn.disabled = true;
+        return;
+      }
+
+      if (evidenceFilter.active) {
+        stateNode.className = "pill active";
+        stateNode.textContent = `证据视角：${evidenceFilter.label}（${evidenceFilter.source}）`;
+      } else {
+        stateNode.className = "pill";
+        stateNode.textContent = "证据视角：全时段";
+      }
+      statsNode.innerHTML = `当前显示 报警 <b>${Math.max(0, Number(alarmShown) || 0)}</b> / ${Math.max(0, Number(alarmTotal) || 0)} · 关键帧 <b>${Math.max(0, Number(frameShown) || 0)}</b> / ${Math.max(0, Number(frameTotal) || 0)}`;
+      clearBtn.disabled = !evidenceFilter.active;
+    }
+
+    function rerenderArtifactsFromSnapshot() {
+      if (!lastArtifactRenderState || !lastArtifactRenderState.artifacts) return;
+      renderArtifacts(
+        lastArtifactRenderState.artifacts,
+        lastArtifactRenderState.details,
+        lastArtifactRenderState.status
+      );
+    }
+
+    function resetEvidenceFilter(rerender = false) {
+      evidenceFilter = normalizeEvidenceFilter({ active: false });
+      if (rerender) {
+        rerenderArtifactsFromSnapshot();
+      }
+    }
+
+    function normalizeSingleFrameExplain(raw) {
+      const x = raw && typeof raw === "object" ? raw : {};
+      const image = String(x.image || "").trim();
+      const time = parseSeekSeconds(x.time);
+      const caption = String(x.caption || "").trim();
+      const active = !!x.active && (!!image || time !== null);
+      return {
+        active,
+        image: active ? image : "",
+        time: active ? time : null,
+        caption: active ? caption : "",
+        source: active ? String(x.source || "关键帧") : "关键帧"
+      };
+    }
+
+    function alarmMatchesSingleFrame(alarm) {
+      if (!singleFrameExplain.active) return true;
+      const frameImage = String(singleFrameExplain.image || "");
+      const alarmImage = String((alarm && alarm.evidence && alarm.evidence.image) || "");
+      if (frameImage && alarmImage && frameImage === alarmImage) return true;
+      const ft = parseSeekSeconds(singleFrameExplain.time);
+      const at = parseSeekSeconds(alarm && alarm.timestamp);
+      if (ft !== null && at !== null && Math.abs(ft - at) <= 1.6) return true;
+      return false;
+    }
+
+    function updateSingleFramePanel(status, matchCount = 0, totalCount = 0) {
+      const stateNode = $("singleFrameState");
+      const clearBtn = $("clearSingleFrameBtn");
+      if (!stateNode || !clearBtn) return;
+      if (status === "pending" || status === "running") {
+        stateNode.className = "pill";
+        stateNode.textContent = "单帧讲解：未启用";
+        clearBtn.disabled = true;
+        return;
+      }
+      if (!singleFrameExplain.active) {
+        stateNode.className = "pill";
+        stateNode.textContent = "单帧讲解：未启用";
+        clearBtn.disabled = true;
+        return;
+      }
+      const label = shortText(
+        singleFrameExplain.caption || singleFrameExplain.image || timeText(singleFrameExplain.time),
+        24
+      );
+      stateNode.className = "pill active";
+      stateNode.textContent = `单帧讲解：${label}（${matchCount}/${totalCount}）`;
+      clearBtn.disabled = false;
+    }
+
+    function setSingleFrameExplain(raw, rerender = false) {
+      singleFrameExplain = normalizeSingleFrameExplain(raw);
+      if (rerender) {
+        rerenderArtifactsFromSnapshot();
+      }
+    }
+
+    function resetSingleFrameExplain(rerender = false) {
+      singleFrameExplain = normalizeSingleFrameExplain({ active: false });
+      if (rerender) {
+        rerenderArtifactsFromSnapshot();
+      }
+    }
+
+    function frameToSingleFrameExplain(frame, source = "关键帧") {
+      if (!frame || typeof frame !== "object") {
+        return normalizeSingleFrameExplain({ active: false });
+      }
+      return normalizeSingleFrameExplain({
+        active: true,
+        image: String(frame.image || "").trim(),
+        time: parseSeekSeconds(frame.timestamp),
+        caption: String(frame.title || "").trim(),
+        source
+      });
+    }
+
+    function findSingleFrameIndex(list, explain) {
+      const arr = Array.isArray(list) ? list : [];
+      if (!arr.length || !explain || !explain.active) return -1;
+      const image = String(explain.image || "").trim();
+      if (image) {
+        const byImage = arr.findIndex((x) => String((x && x.image) || "").trim() === image);
+        if (byImage >= 0) return byImage;
+      }
+      const t = parseSeekSeconds(explain.time);
+      if (t === null) return -1;
+      let bestIndex = -1;
+      let bestGap = Number.POSITIVE_INFINITY;
+      arr.forEach((x, idx) => {
+        const ft = parseSeekSeconds(x && x.timestamp);
+        if (ft === null) return;
+        const gap = Math.abs(ft - t);
+        if (gap < bestGap) {
+          bestGap = gap;
+          bestIndex = idx;
+        }
+      });
+      return bestIndex;
+    }
+
+    function syncSingleFrameList(frames) {
+      const arr = Array.isArray(frames) ? frames.slice() : [];
+      singleFrameKeyframeList = arr;
+      if (!arr.length) {
+        singleFrameKeyframeIndex = -1;
+        return -1;
+      }
+      let idx = singleFrameKeyframeIndex;
+      if (idx < 0 || idx >= arr.length) {
+        idx = findSingleFrameIndex(arr, singleFrameExplain);
+      }
+      if (idx < 0) idx = 0;
+      singleFrameKeyframeIndex = idx;
+      return idx;
+    }
+
+    function navigateSingleFrameByKey(step) {
+      const delta = Number(step);
+      if (!singleFrameExplain.active) return false;
+      if (!Array.isArray(singleFrameKeyframeList) || singleFrameKeyframeList.length === 0) return false;
+      if (!Number.isFinite(delta) || delta === 0) return false;
+
+      const total = singleFrameKeyframeList.length;
+      let idx = Number(singleFrameKeyframeIndex);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= total) idx = findSingleFrameIndex(singleFrameKeyframeList, singleFrameExplain);
+      if (!Number.isFinite(idx) || idx < 0) idx = 0;
+      const nextIndex = (idx + (delta > 0 ? 1 : -1) + total) % total;
+      const nextFrame = singleFrameKeyframeList[nextIndex];
+      if (!nextFrame) return false;
+
+      singleFrameKeyframeIndex = nextIndex;
+      setSingleFrameExplain(frameToSingleFrameExplain(nextFrame, "键盘切换"), true);
+      const nextTime = parseSeekSeconds(nextFrame.timestamp);
+      if (nextTime !== null) {
+        focusEvidenceAt(nextTime, "键盘切换");
+      } else {
+        showToast(`已切换到关键帧 ${nextIndex + 1}/${total}`);
+      }
+
+      if ($("lightbox").classList.contains("open") && nextFrame.url) {
+        $("lightboxImg").src = nextFrame.url;
+        $("lightboxCaption").textContent = `关键帧${String(nextIndex + 1).padStart(3, "0")}`;
+      }
+      return true;
+    }
+
+    function getDownloadMeta(fileType, outputs, artifacts, status) {
+      const readyMap = (artifacts && artifacts.download_ready) || {};
+      const key = FILE_TYPE_TO_OUTPUT_KEY[fileType];
+      const hasOutput = !!(outputs && key && outputs[key]);
+      const terminal = status === "completed" || status === "failed";
+
+      if (fileType === "pdf") {
+        const hasPdf = !!readyMap.pdf || !!(artifacts && artifacts.pdf_generated);
+        const hasFallbackTxt = !hasPdf && (
+          !!(artifacts && artifacts.pdf_fallback_txt) ||
+          (!!(artifacts && artifacts.report_path) && hasOutput)
+        );
+        if (hasPdf) {
+          return {
+            ready: true,
+            stateText: "可下载",
+            label: FILE_LABEL.pdf || "PDF 报告(正式)",
+            buttonText: "下载"
+          };
+        }
+        if (hasFallbackTxt) {
+          return {
+            ready: true,
+            stateText: "仅TXT降级",
+            label: "分析报告(TXT降级)",
+            buttonText: "下载TXT"
+          };
+        }
+        return {
+          ready: false,
+          stateText: terminal ? "未生成" : "待生成",
+          label: FILE_LABEL.pdf || "PDF 报告(正式)",
+          buttonText: "下载"
+        };
+      }
+
+      const ready = !!readyMap[fileType] || hasOutput;
+      return {
+        ready,
+        stateText: ready ? "可下载" : (terminal ? "未生成" : "待生成"),
+        label: FILE_LABEL[fileType] || fileType,
+        buttonText: "下载"
+      };
+    }
+
+    function updateSingleFrameNavControls(status, totalFrames = 0) {
+      const prevBtn = $("prevFrameBtn");
+      const nextBtn = $("nextFrameBtn");
+      const info = $("frameNavInfo");
+      if (!prevBtn || !nextBtn || !info) return;
+
+      const total = Math.max(0, Number(totalFrames) || 0);
+      if (status === "pending" || status === "running" || total <= 0) {
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        info.textContent = "0/0";
+        return;
+      }
+
+      let idx = Number(singleFrameKeyframeIndex);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= total) {
+        idx = findSingleFrameIndex(singleFrameKeyframeList, singleFrameExplain);
+      }
+      if (!Number.isFinite(idx) || idx < 0 || idx >= total) idx = 0;
+
+      const canMove = total > 1;
+      prevBtn.disabled = !canMove;
+      nextBtn.disabled = !canMove;
+      info.textContent = `${idx + 1}/${total}`;
+    }
+
+    function setDownloadEnabled(enabled, outputs, artifacts) {
+      const pdfBtn = document.querySelector('.downloads button[data-type="pdf"]');
+      if (pdfBtn) {
+        const pdfMeta = getDownloadMeta("pdf", outputs, artifacts, enabled ? "completed" : "pending");
+        pdfBtn.textContent = pdfMeta.stateText === "仅TXT降级" ? "导出TXT报告(降级)" : "导出 PDF 报告";
+      }
+
       document.querySelectorAll(".downloads button").forEach((btn) => {
         if (btn.id === "bundleBtn") return;
         if (!enabled) {
@@ -344,12 +1734,15 @@
           return;
         }
         const fileType = btn.getAttribute("data-type");
-        const key = FILE_TYPE_TO_OUTPUT_KEY[fileType];
-        btn.disabled = !(outputs && key && outputs[key]);
+        const meta = getDownloadMeta(fileType, outputs, artifacts, "completed");
+        btn.disabled = !meta.ready;
       });
 
       const bundleBtn = $("bundleBtn");
-      const hasAny = outputs && Object.values(FILE_TYPE_TO_OUTPUT_KEY).some((k) => outputs[k]);
+      const hasAny = Object.keys(FILE_TYPE_TO_OUTPUT_KEY).some((fileType) => {
+        const meta = getDownloadMeta(fileType, outputs, artifacts, "completed");
+        return meta.ready;
+      });
       bundleBtn.disabled = !(enabled && hasAny);
     }
 
@@ -359,8 +1752,517 @@
       p.textContent = ok ? okText : badText;
     }
 
-    function renderArtifacts(artifacts) {
+    function stageToModuleId(stageText) {
+      const s = String(stageText || "");
+      for (const item of STAGE_MODULE_HINT) {
+        if (item.words.some((w) => s.includes(w))) {
+          return item.id;
+        }
+      }
+      return "";
+    }
+
+    function normalizeModuleStates(data) {
+      const moduleStatus = data && data.module_status && typeof data.module_status === "object" ? data.module_status : {};
+      const options = data && data.options && typeof data.options === "object" ? data.options : {};
+      const result = {};
+      MODULE_ORDER.forEach((m) => {
+        result[m.id] = {
+          id: m.id,
+          label: m.label,
+          status: "pending",
+          message: "等待执行",
+          source: "default"
+        };
+        if (m.option && options[m.option] === false) {
+          result[m.id].status = "skipped";
+          result[m.id].message = "已在开关中关闭";
+        }
+      });
+
+      Object.entries(moduleStatus).forEach(([rawName, meta]) => {
+        const id = MODULE_ALIAS[rawName] || "";
+        if (!id || !result[id]) return;
+        const st = String((meta && meta.status) || "").toLowerCase();
+        const msg = String((meta && meta.message) || "").trim();
+        if (["pending", "running", "completed", "skipped", "failed"].includes(st)) {
+          result[id].status = st;
+        }
+        if (msg) result[id].message = msg;
+        result[id].source = rawName;
+      });
+
+      const runningModule = stageToModuleId(data ? data.current_stage : "");
+      if ((data && (data.status === "running" || data.status === "pending")) && runningModule && result[runningModule]) {
+        if (result[runningModule].status === "pending") {
+          result[runningModule].status = "running";
+        }
+        if (!result[runningModule].message || result[runningModule].message === "等待执行") {
+          result[runningModule].message = String(data.message || "正在执行");
+        }
+      }
+      return result;
+    }
+
+    function renderModuleCards(moduleMap, moduleNotes) {
+      const grid = $("moduleGrid");
+      const processGrid = $("processModuleGrid");
+      const list = MODULE_ORDER.map((m) => moduleMap[m.id]);
+
+      const resultHtml = list.map((m) => `
+        <div class="module-item">
+          <div class="name">${escapeHtml(m.label)} <span class="module-badge ${escapeHtml(m.status)}">${escapeHtml(m.status)}</span></div>
+          <div class="detail">${escapeHtml(m.message || "-")}</div>
+        </div>
+      `).join("");
+
+      const processHtml = list.map((m) => `
+        <div class="mini-module">
+          <div class="m-name">${escapeHtml(m.label)}</div>
+          <div class="m-status"><span class="module-badge ${escapeHtml(m.status)}">${escapeHtml(m.status)}</span></div>
+        </div>
+      `).join("");
+
+      grid.innerHTML = resultHtml || '<div class="muted">暂无模块状态</div>';
+      processGrid.innerHTML = processHtml || '<div class="muted">暂无模块状态</div>';
+    }
+
+    function safeTimestamp(v) {
+      const t = Number(v);
+      return Number.isFinite(t) && t >= 0 ? t : null;
+    }
+
+    function timeText(v) {
+      const t = safeTimestamp(v);
+      return t === null ? "-" : `${t.toFixed(2)}s`;
+    }
+
+    function computeRiskProfile(data, details) {
+      const status = String((data && data.status) || "pending");
+      if (status === "pending" || status === "running") {
+        return {
+          total: 0,
+          count: { high: 0, medium: 0, low: 0 },
+          level: "none",
+          text: "风险判断待评估"
+        };
+      }
+      const alarms = details && Array.isArray(details.alarms) ? details.alarms : [];
+      const count = { high: 0, medium: 0, low: 0 };
+      alarms.forEach((a) => {
+        count[normalizeSeverity(a && a.severity)] += 1;
+      });
+      const total = alarms.length;
+      let level = "none";
+      let text = "未发现明显异常";
+      if (count.high > 0) {
+        level = "high";
+        text = "发现高风险异常";
+      } else if (count.medium > 0) {
+        level = "medium";
+        text = "发现中等风险异常";
+      } else if (count.low > 0) {
+        level = "low";
+        text = "发现轻微异常";
+      }
+      if (String((data && data.status) || "") === "failed" && total === 0) {
+        text = "分析失败，风险判断受限";
+      }
+      return { total, count, level, text };
+    }
+
+    function buildTimelineModel(details) {
+      const keyframes = details && Array.isArray(details.keyframes) ? details.keyframes : [];
+      const alarms = details && Array.isArray(details.alarms) ? details.alarms : [];
+      const frameEvents = keyframes.map((x, idx) => ({
+        ...x,
+        idx,
+        time: safeTimestamp(x && x.timestamp)
+      }));
+      const alarmEvents = alarms.map((x, idx) => ({
+        ...x,
+        idx,
+        severity: normalizeSeverity(x && x.severity),
+        time: safeTimestamp(x && x.timestamp)
+      }));
+
+      let maxTs = 0;
+      frameEvents.forEach((x) => { if (x.time !== null && x.time > maxTs) maxTs = x.time; });
+      alarmEvents.forEach((x) => { if (x.time !== null && x.time > maxTs) maxTs = x.time; });
+      if (maxTs <= 0) {
+        maxTs = Math.max(0, frameEvents.length - 1, alarmEvents.length - 1);
+      }
+      const hasTime = maxTs > 0;
+      const durationSec = hasTime ? maxTs : 0;
+
+      function toPos(timeVal, idx, total) {
+        if (durationSec > 0 && timeVal !== null) {
+          return Math.max(0, Math.min(1, timeVal / durationSec));
+        }
+        const d = Math.max(1, total + 1);
+        return (idx + 1) / d;
+      }
+
+      const orderedFrames = frameEvents
+        .map((x) => ({ ...x, pos: toPos(x.time, x.idx, frameEvents.length) }))
+        .sort((a, b) => a.pos - b.pos);
+      const orderedAlarms = alarmEvents
+        .map((x) => ({ ...x, pos: toPos(x.time, x.idx, alarmEvents.length) }))
+        .sort((a, b) => a.pos - b.pos);
+
+      const stageSwitches = [];
+      for (let i = 1; i < orderedFrames.length; i += 1) {
+        const prev = orderedFrames[i - 1];
+        const cur = orderedFrames[i];
+        const gapByTime = prev.time !== null && cur.time !== null && (cur.time - prev.time >= 2.5);
+        const gapByPos = cur.pos - prev.pos >= 0.18;
+        if (gapByTime || gapByPos) {
+          stageSwitches.push({
+            time: cur.time,
+            pos: cur.pos,
+            gap: prev.time !== null && cur.time !== null ? (cur.time - prev.time) : null
+          });
+        }
+      }
+
+      const bucketCount = 10;
+      const buckets = Array.from({ length: bucketCount }, (_, idx) => ({
+        idx,
+        start: durationSec > 0 ? (durationSec * idx / bucketCount) : null,
+        end: durationSec > 0 ? (durationSec * (idx + 1) / bucketCount) : null,
+        alarms: 0,
+        risk: 0,
+        high: 0,
+        medium: 0,
+        low: 0
+      }));
+
+      orderedAlarms.forEach((a) => {
+        const bucketIdx = Math.max(0, Math.min(bucketCount - 1, Math.floor(a.pos * bucketCount)));
+        const b = buckets[bucketIdx];
+        b.alarms += 1;
+        const w = severityWeight(a.severity);
+        b.risk += w;
+        b[a.severity] += 1;
+      });
+
+      let topBucket = null;
+      buckets.forEach((b) => {
+        if (!topBucket || b.risk > topBucket.risk) topBucket = b;
+      });
+      const hasRiskFocus = !!topBucket && topBucket.risk > 0;
+      let focusText = "未检测到异常聚集时段";
+      if (hasRiskFocus && topBucket) {
+        if (durationSec > 0 && topBucket.start !== null && topBucket.end !== null) {
+          focusText = `风险主要集中在 ${topBucket.start.toFixed(1)}s ~ ${topBucket.end.toFixed(1)}s`;
+        } else {
+          const n = topBucket.idx + 1;
+          focusText = `风险主要集中在第 ${n}/${bucketCount} 时间段`;
+        }
+      }
+
+      const sampleLimit = 14;
+      const sampledFrames = [];
+      if (orderedFrames.length > 0) {
+        const step = Math.max(1, Math.ceil(orderedFrames.length / sampleLimit));
+        for (let i = 0; i < orderedFrames.length; i += step) {
+          sampledFrames.push(orderedFrames[i]);
+        }
+        const lastFrame = orderedFrames[orderedFrames.length - 1];
+        if (sampledFrames.length === 0 || sampledFrames[sampledFrames.length - 1] !== lastFrame) {
+          sampledFrames.push(lastFrame);
+        }
+      }
+
+      return {
+        durationSec,
+        hasTime,
+        frameCount: orderedFrames.length,
+        alarmCount: orderedAlarms.length,
+        stageCount: Math.max(1, stageSwitches.length + (orderedFrames.length > 0 ? 1 : 0)),
+        stageSwitches,
+        buckets,
+        focusText,
+        markers: {
+          frames: sampledFrames,
+          alarms: orderedAlarms.slice(0, 30),
+          stages: stageSwitches.slice(0, 12)
+        }
+      };
+    }
+
+    function renderSeverityBar(risk) {
+      const bar = $("severityBar");
+      if (!bar) return;
+      const total = Number(risk && risk.total) || 0;
+      if (total <= 0) {
+        bar.innerHTML = '<div class="severity-seg none" style="width:100%;"></div>';
+        return;
+      }
+      const high = Math.max(0, Number(risk.count && risk.count.high) || 0);
+      const medium = Math.max(0, Number(risk.count && risk.count.medium) || 0);
+      const low = Math.max(0, Number(risk.count && risk.count.low) || 0);
+      const pHigh = (high / total) * 100;
+      const pMedium = (medium / total) * 100;
+      const pLow = Math.max(0, 100 - pHigh - pMedium);
+      bar.innerHTML = `
+        <div class="severity-seg high" style="width:${pHigh.toFixed(2)}%;"></div>
+        <div class="severity-seg medium" style="width:${pMedium.toFixed(2)}%;"></div>
+        <div class="severity-seg low" style="width:${pLow.toFixed(2)}%;"></div>
+      `;
+    }
+
+    function extractSummarySentence(summaryText) {
+      const raw = String(summaryText || "").replace(/\r/g, "");
+      const chunks = raw.split(/[。！？\n]/).map((x) => x.trim()).filter((x) => x.length > 8);
+      return chunks.length ? shortText(chunks[0], 70) : "";
+    }
+
+    function buildExecutiveNarrative(status, risk, timeline, moduleMap, details) {
+      if (status === "pending" || status === "running") {
+        return "系统正在分析视频并构建证据链，完成后将给出风险结论与关键依据。";
+      }
+      const aiState = moduleMap.ai_analysis ? moduleMap.ai_analysis.status : "pending";
+      const hasAi = aiState === "completed";
+      const summarySentence = extractSummarySentence(details && details.summaryText ? details.summaryText : "");
+
+      if (status === "failed") {
+        if (risk.total > 0) {
+          return `任务未完全成功，但已识别 ${risk.total} 条异常，${timeline.focusText}，建议优先复核首要证据帧。`;
+        }
+        return "任务执行失败，当前结论基于已产出的部分结果，建议结合关键帧手动复核。";
+      }
+      if (risk.level === "high") {
+        return `${timeline.focusText}，存在高风险异常，建议优先复核首要证据帧与报警详情。`;
+      }
+      if (risk.level === "medium" || risk.level === "low") {
+        return `${timeline.focusText}，检测到流程异常，整体为${risk.level === "medium" ? "中等" : "轻微"}风险。`;
+      }
+      if (summarySentence) {
+        return `未发现明显高风险异常，整体流程较完整。${summarySentence}`;
+      }
+      if (!hasAi) {
+        return "未发现明显高风险异常，结论主要基于关键帧与步骤检查结果。";
+      }
+      return "未发现明显高风险异常，流程整体平稳，结果可用于演示复核。";
+    }
+
+    function generateFindings(data, moduleMap, details, risk, timeline) {
+      const status = String((data && data.status) || "pending");
+      if (status === "pending" || status === "running") {
+        return [
+          "系统正在生成结论，完成后将自动汇总关键发现。",
+          "风险时间线会展示异常集中时段与关键节点。",
+          "首要证据帧会标注“为何重要”的解释。"
+        ];
+      }
+
+      const findings = [];
+      const frameCount = details && Array.isArray(details.keyframes) ? details.keyframes.length : Number(((data || {}).artifacts || {}).keyframe_count || 0);
+      if (risk.total > 0) {
+        findings.push(`检测到 ${risk.total} 条异常（high ${risk.count.high} / medium ${risk.count.medium} / low ${risk.count.low}），${timeline.focusText.replace("风险主要", "重点") }。`);
+      } else {
+        findings.push("未检测到明显步骤异常，关键阶段衔接总体平稳。");
+      }
+      findings.push(`共提取 ${frameCount || 0} 张关键证据帧，已按风险与解释价值排序展示。`);
+
+      const summaryText = details && details.summaryText ? details.summaryText : "";
+      const sentence = extractSummarySentence(summaryText);
+      if (sentence) {
+        findings.push(`综合总结：${sentence}`);
+      } else {
+        const statuses = Object.values(moduleMap);
+        const active = statuses.filter((x) => x.status !== "skipped").length;
+        const completed = statuses.filter((x) => x.status === "completed").length;
+        findings.push(`模块完成度 ${completed}/${Math.max(active, 1)}，结论基于已完成模块生成。`);
+      }
+      return findings.slice(0, 3);
+    }
+
+    function renderTaskOverview(data, moduleMap, details) {
+      const status = String((data && data.status) || "pending");
+      const createdAt = parseIsoDate(data ? data.created_at : "");
+      const updatedAt = parseIsoDate(data ? data.updated_at : "");
+      const endRef = (status === "completed" || status === "failed") ? updatedAt : new Date();
+      const durationMs = createdAt && endRef ? (endRef.getTime() - createdAt.getTime()) : 0;
+      $("overviewDuration").textContent = durationMs > 0 ? formatDuration(durationMs) : "-";
+      $("overviewTaskId").textContent = currentTaskId || "-";
+
+      const enabled = [];
+      const skipped = [];
+      MODULE_ORDER.forEach((m) => {
+        const s = moduleMap[m.id] ? moduleMap[m.id].status : "pending";
+        if (s === "skipped") {
+          skipped.push(m.label);
+        } else {
+          enabled.push(m.label);
+        }
+      });
+      $("enabledModules").innerHTML = enabled.length
+        ? `<div class="tag-list">${enabled.map((x) => `<span class="tag">${escapeHtml(x)}</span>`).join("")}</div>`
+        : "-";
+      $("skippedModules").innerHTML = skipped.length
+        ? `<div class="tag-list">${skipped.map((x) => `<span class="tag skip">${escapeHtml(x)}</span>`).join("")}</div>`
+        : "无";
+
+      const chip = $("taskOutcomeChip");
+      chip.className = "overview-chip running";
+      let text = "进行中";
+      if (status === "failed") {
+        chip.className = "overview-chip failed";
+        text = "失败";
+      } else if (status === "completed") {
+        const hasIssue = Object.values(moduleMap).some((x) => x.status === "failed" || x.status === "skipped");
+        if (hasIssue) {
+          chip.className = "overview-chip partial";
+          text = "部分成功";
+        } else {
+          chip.className = "overview-chip success";
+          text = "成功";
+        }
+      }
+      chip.textContent = text;
+
+      const risk = computeRiskProfile(data, details);
+      const timeline = buildTimelineModel(details);
+      const riskChip = $("riskLevelChip");
+      const riskVerdict = $("riskVerdictText");
+      riskChip.className = "overview-chip risk-none";
+      riskVerdict.className = "pill";
+      if (risk.level === "high") {
+        riskChip.className = "overview-chip risk-high";
+        riskVerdict.className = "pill warn";
+      } else if (risk.level === "medium") {
+        riskChip.className = "overview-chip risk-medium";
+        riskVerdict.className = "pill warn";
+      } else if (risk.level === "low") {
+        riskChip.className = "overview-chip risk-low";
+        riskVerdict.className = "pill warn";
+      } else {
+        riskChip.className = "overview-chip risk-none";
+        riskVerdict.className = "pill ok";
+      }
+      riskChip.textContent = risk.text;
+      riskVerdict.textContent = risk.text;
+      $("severityDist").textContent = `严重程度分布: high ${risk.count.high} / medium ${risk.count.medium} / low ${risk.count.low}`;
+      renderSeverityBar(risk);
+      $("riskFocusText").textContent = (status === "pending" || status === "running") ? "风险时间分布待生成" : timeline.focusText;
+
+      const findings = generateFindings(data, moduleMap, details, risk, timeline);
+      $("findingList").innerHTML = findings.map((x, i) => `<div>${i + 1}. ${escapeHtml(x)}</div>`).join("");
+
+      $("execModuleBadges").innerHTML = MODULE_ORDER.map((m) => {
+        const info = moduleMap[m.id];
+        return `<span class="module-badge ${escapeHtml(info.status)}">${escapeHtml(info.label)}:${escapeHtml(info.status)}</span>`;
+      }).join("");
+
+      const metricFrameCount = timeline.frameCount || Number(((data || {}).artifacts || {}).keyframe_count || 0) || 0;
+      const statuses = Object.values(moduleMap);
+      const activeModuleCount = statuses.filter((x) => x.status !== "skipped").length;
+      const completedModuleCount = statuses.filter((x) => x.status === "completed").length;
+      $("metricAlarmTotal").textContent = String(risk.total);
+      $("metricHighCount").textContent = String(risk.count.high);
+      $("metricFrameCount").textContent = (status === "pending" || status === "running") ? "-" : String(metricFrameCount);
+      $("metricStageCount").textContent = (status === "pending" || status === "running")
+        ? "- / -"
+        : `${timeline.stageCount} / ${completedModuleCount}/${Math.max(activeModuleCount, 1)}`;
+
+      $("executiveNarrative").textContent = buildExecutiveNarrative(status, risk, timeline, moduleMap, details);
+
+      if (status === "failed") {
+        $("resultOverview").textContent = "任务执行失败，已给出可用结论与证据";
+      } else if (text === "部分成功") {
+        $("resultOverview").textContent = "任务部分成功，结论基于已完成模块";
+      } else if (text === "成功") {
+        $("resultOverview").textContent = "任务执行成功，结论与证据完整";
+      } else {
+        $("resultOverview").textContent = "任务进行中，结论将实时更新";
+      }
+    }
+
+    function renderDownloadOverview(status, outputs, artifacts) {
+      const grid = $("downloadGrid");
+      const html = Object.keys(FILE_TYPE_TO_OUTPUT_KEY).map((fileType) => {
+        const meta = getDownloadMeta(fileType, outputs, artifacts, status);
+        return `
+          <div class="download-item ${meta.ready ? "ready" : ""}">
+            <div>
+              <div class="name">${escapeHtml(meta.label)}</div>
+              <div class="state">${escapeHtml(meta.stateText)}</div>
+            </div>
+            <button class="go" data-download="${escapeHtml(fileType)}" ${meta.ready ? "" : "disabled"}>${escapeHtml(meta.buttonText)}</button>
+          </div>
+        `;
+      }).join("");
+      grid.innerHTML = html;
+    }
+
+    function renderRiskTimeline(details, status) {
+      const timelineSummary = $("timelineSummary");
+      const timelineBand = $("timelineBand");
+      const timelineTrack = $("timelineTrack");
+      const timelineAxis = $("timelineAxis");
+      if (!timelineSummary || !timelineBand || !timelineTrack || !timelineAxis) return;
+
+      const risk = computeRiskProfile({ status }, details);
+      const model = buildTimelineModel(details);
+      if (status === "pending" || status === "running") {
+        timelineSummary.textContent = "分析进行中，时间线将在结果产出后展示风险位置与阶段切换。";
+        timelineBand.innerHTML = Array.from({ length: 10 }).map(() => '<div class="timeline-bucket"></div>').join("");
+        timelineTrack.innerHTML = '<div class="timeline-line"></div>';
+        timelineAxis.innerHTML = "<span>开始</span><span>中段</span><span>结束</span>";
+        return;
+      }
+
+      timelineSummary.textContent = model.hasTime
+        ? `时间覆盖 0s ~ ${model.durationSec.toFixed(1)}s，关键证据帧 ${model.frameCount} 个，异常 ${risk.total} 条。可点击时间线节点定位证据。`
+        : `时间戳不足，按相对阶段展示（关键帧 ${model.frameCount} 个，异常 ${risk.total} 条）。可点击节点联动证据。`;
+
+      timelineBand.innerHTML = model.buckets.map((b) => {
+        let cls = "timeline-bucket";
+        if (b.high > 0 || b.risk >= 5) cls += " high";
+        else if (b.medium > 0 || b.risk >= 3) cls += " medium";
+        else if (b.risk > 0) cls += " low";
+        const midTime = (b.start !== null && b.end !== null) ? ((b.start + b.end) / 2) : null;
+        const jumpable = midTime !== null || b.risk > 0;
+        if (jumpable) cls += " jumpable";
+        const badge = b.alarms > 0 ? `<span>${b.alarms}</span>` : "";
+        const filterRangeAttr = (b.start !== null && b.end !== null)
+          ? ` data-filter-start="${b.start.toFixed(3)}" data-filter-end="${b.end.toFixed(3)}" data-window="${Math.max(1, b.end - b.start).toFixed(3)}"`
+          : "";
+        const seekAttr = jumpable
+          ? ` data-seek="${midTime !== null ? midTime.toFixed(3) : (b.idx + 0.5)}" data-seek-source="风险时间段"${filterRangeAttr}`
+          : "";
+        const title = jumpable ? `异常 ${b.alarms} 条，点击定位` : `异常 ${b.alarms} 条`;
+        return `<div class="${cls}"${seekAttr} title="${escapeHtml(title)}">${badge}</div>`;
+      }).join("");
+
+      const markerHtml = ['<div class="timeline-line"></div>'];
+      model.markers.alarms.forEach((a) => {
+        const seek = a.time !== null ? a.time.toFixed(3) : (a.pos * (model.durationSec || 1)).toFixed(3);
+        markerHtml.push(`<span class="timeline-marker ${escapeHtml(a.severity)}" data-seek="${seek}" data-window="2.2" data-seek-source="异常节点" style="left:${(a.pos * 100).toFixed(2)}%;" title="${escapeHtml(`${a.alarm_type || "alarm"} | ${timeText(a.time)} | 点击定位`)}"></span>`);
+      });
+      model.markers.stages.forEach((s, idx) => {
+        const seek = s.time !== null ? s.time.toFixed(3) : (s.pos * (model.durationSec || 1)).toFixed(3);
+        markerHtml.push(`<span class="timeline-marker stage" data-seek="${seek}" data-window="3.5" data-seek-source="阶段切换点" style="left:${(s.pos * 100).toFixed(2)}%;" title="${escapeHtml(`阶段切换 ${idx + 1} | ${timeText(s.time)} | 点击定位`)}"></span>`);
+      });
+      model.markers.frames.forEach((f, idx) => {
+        const seek = f.time !== null ? f.time.toFixed(3) : (f.pos * (model.durationSec || 1)).toFixed(3);
+        markerHtml.push(`<span class="timeline-marker keyframe" data-seek="${seek}" data-window="2.0" data-seek-source="关键帧节点" style="left:${(f.pos * 100).toFixed(2)}%;" title="${escapeHtml(`关键帧 ${idx + 1} | ${timeText(f.time)} | 点击定位`)}"></span>`);
+      });
+      timelineTrack.innerHTML = markerHtml.join("");
+
+      if (model.hasTime) {
+        timelineAxis.innerHTML = `<span>0.0s</span><span>${(model.durationSec / 2).toFixed(1)}s</span><span>${model.durationSec.toFixed(1)}s</span>`;
+      } else {
+        timelineAxis.innerHTML = "<span>前段</span><span>中段</span><span>后段</span>";
+      }
+    }
+
+    function renderArtifacts(artifacts, details = null, status = "pending") {
       const a = artifacts || {};
+      const d = details || {};
+      lastArtifactRenderState = { artifacts: a, details: d, status };
       const video = $("annotatedVideo");
       const empty = $("videoEmpty");
 
@@ -381,50 +2283,448 @@
       const pdfExists = !!a.pdf_exists;
       setPill("pdfStatus", pdfGenerated, "PDF 已生成", pdfExists ? "仅生成 TXT 报告" : "PDF 未生成");
 
-      const summary = String(a.summary_text || "").trim();
+      const summary = String(d.summaryText || a.summary_text || a.summary_excerpt || "").trim();
       $("summaryBox").textContent = summary || "暂无摘要";
 
-      const urls = Array.isArray(a.keyframe_image_urls) ? a.keyframe_image_urls : [];
-      $("keyframeCount").textContent = `${urls.length} 帧`;
-      const grid = $("keyframeGrid");
-      grid.innerHTML = "";
+      const alarmItems = Array.isArray(d.alarms) ? d.alarms : [];
+      const alarmCount = alarmItems.length > 0 ? alarmItems.length : Number(a.alarm_count || 0);
+      if (singleFrameExplain.active) {
+        $("alarmSummary").textContent = `单帧讲解模式：仅显示与当前关键帧关联的报警`;
+      } else {
+        $("alarmSummary").textContent = a.alarm_log_exists
+          ? (alarmCount > 0 ? `检测到报警：${alarmCount} 条` : "未检测到报警")
+          : ((status === "pending" || status === "running") ? "报警结果生成中" : "报警日志未生成");
+      }
 
-      if (urls.length === 0) {
+      const sortedAlarms = alarmItems.slice().sort((x, y) => {
+        const sw = severityWeight(normalizeSeverity(y && y.severity)) - severityWeight(normalizeSeverity(x && x.severity));
+        if (sw !== 0) return sw;
+        const xt = safeTimestamp(x && x.timestamp);
+        const yt = safeTimestamp(y && y.timestamp);
+        return (xt === null ? Number.MAX_VALUE : xt) - (yt === null ? Number.MAX_VALUE : yt);
+      });
+      const frameMatchedAlarms = singleFrameExplain.active
+        ? sortedAlarms.filter((x) => alarmMatchesSingleFrame(x))
+        : sortedAlarms;
+      const visibleAlarms = filterListByEvidenceWindow(frameMatchedAlarms, (x) => (x ? x.timestamp : null));
+      const topAlarms = visibleAlarms.slice(0, 5);
+      if (topAlarms.length > 0) {
+        $("alarmList").innerHTML = topAlarms.map((x, idx) => {
+          const sev = normalizeSeverity(x && x.severity);
+          const typ = shortText(x.alarm_type || "unknown", 26);
+          const step = shortText(x.stage || x.sop_step || (x.evidence && x.evidence.sop_step) || "-", 20);
+          const desc = shortText(x.description || "", 72);
+          const ts = safeTimestamp(x && x.timestamp);
+          const seekAttr = ts !== null ? ` data-seek="${ts.toFixed(3)}" data-seek-source="报警条目"` : "";
+          const timeAttr = ts !== null ? ` data-time="${ts.toFixed(3)}"` : "";
+          return `
+            <div class="alarm-item ${escapeHtml(sev)}"${timeAttr}>
+              <div class="top">
+                <b>${idx + 1}. ${escapeHtml(typ)}</b>
+                <span class="tag ${sev === "high" ? "high-risk" : (sev === "medium" ? "risk" : "")}">${escapeHtml(sev.toUpperCase())}</span>
+              </div>
+              <div>时间/阶段: ${escapeHtml(timeText(x.timestamp))} · ${escapeHtml(step)}</div>
+              <div>${escapeHtml(desc || "异常详情缺失")}</div>
+              ${ts !== null ? `<button class="jump-link" type="button"${seekAttr}>定位到该异常时间</button>` : ""}
+            </div>
+          `;
+        }).join("");
+      } else if (singleFrameExplain.active) {
+        $("alarmList").innerHTML = '<div class="muted">当前关键帧未关联到报警条目，可退出单帧讲解查看完整报警列表。</div>';
+      } else if (evidenceFilter.active && sortedAlarms.length > 0) {
+        $("alarmList").innerHTML = `<div class="muted">当前筛选时段（${escapeHtml(evidenceFilter.label)}）未检测到报警，点击“恢复全时段”查看完整结果。</div>`;
+      } else {
+        $("alarmList").innerHTML = '<div class="muted">未检测到明显步骤异常</div>';
+      }
+
+      renderRiskTimeline(d, status);
+
+      const keyframes = Array.isArray(d.keyframes) ? d.keyframes : [];
+      const fallbackUrls = Array.isArray(a.keyframe_image_urls) ? a.keyframe_image_urls : [];
+      const rawFrames = keyframes.length > 0
+        ? keyframes
+        : fallbackUrls.map((url, idx) => ({
+            index: idx + 1,
+            url,
+            timestamp: null,
+            summary: "",
+            image: `keyframe_${String(idx + 1).padStart(3, "0")}.jpg`,
+            score: null
+          }));
+
+      const scoreSeries = rawFrames
+        .map((x) => Number(x && x.score))
+        .filter((x) => Number.isFinite(x) && x > 0)
+        .sort((a, b) => a - b);
+      const denseThreshold = scoreSeries.length > 0 ? scoreSeries[Math.max(0, Math.floor(scoreSeries.length * 0.7) - 1)] : Number.POSITIVE_INFINITY;
+
+      const frameWithIndex = rawFrames.map((frame, idx) => ({
+        ...frame,
+        _idx: idx,
+        _time: safeTimestamp(frame && frame.timestamp)
+      }));
+      const orderedByTime = frameWithIndex.slice().sort((a, b) => {
+        if (a._time === null && b._time === null) return a._idx - b._idx;
+        if (a._time === null) return 1;
+        if (b._time === null) return -1;
+        return a._time - b._time;
+      });
+      const stageSwitchMap = new Map();
+      for (let i = 1; i < orderedByTime.length; i += 1) {
+        const prev = orderedByTime[i - 1];
+        const cur = orderedByTime[i];
+        const gapByTime = prev._time !== null && cur._time !== null && (cur._time - prev._time >= 2.5);
+        const gapByIndex = prev._time === null && cur._time === null && (cur._idx - prev._idx >= 2);
+        if (gapByTime || gapByIndex) {
+          stageSwitchMap.set(cur._idx, prev._time !== null && cur._time !== null ? (cur._time - prev._time) : null);
+        }
+      }
+
+      const renderList = frameWithIndex.map((frame, idx) => {
+        const matched = sortedAlarms.filter((alarm) => {
+          const evidenceImage = String((alarm && alarm.evidence && alarm.evidence.image) || "");
+          const byImage = evidenceImage && evidenceImage === String(frame.image || "");
+          const at = safeTimestamp(alarm && alarm.timestamp);
+          const ft = safeTimestamp(frame.timestamp);
+          const byTime = at !== null && ft !== null && Math.abs(at - ft) <= 1.5;
+          return byImage || byTime;
+        }).sort((x, y) => severityWeight(normalizeSeverity(y && y.severity)) - severityWeight(normalizeSeverity(x && x.severity)));
+        const bestAlarm = matched.length > 0 ? matched[0] : null;
+        const sev = normalizeSeverity(bestAlarm && bestAlarm.severity);
+        const hasAi = String(frame.summary || "").trim().length > 0;
+        const hasStageSwitch = stageSwitchMap.has(idx);
+        const score = Number(frame.score);
+        const isDense = Number.isFinite(score) && score > 0 && score >= denseThreshold;
+
+        const tags = [];
+        let importance = 0;
+        if (bestAlarm) {
+          tags.push(sev === "high" ? "高风险" : "风险证据");
+          importance += 4 + severityWeight(sev);
+        }
+        if (hasAi) {
+          tags.push("AI解释");
+          importance += 2.8;
+        }
+        if (hasStageSwitch) {
+          tags.push("阶段切换");
+          importance += 2;
+        }
+        if (isDense) {
+          tags.push("手部操作密集");
+          importance += 1.6;
+        }
+
+        let reason = "";
+        if (hasAi) {
+          reason = `AI解释：${shortText(frame.summary, 58)}`;
+        } else if (bestAlarm) {
+          reason = `关联${sev.toUpperCase()}异常：${shortText(bestAlarm.description || bestAlarm.alarm_type || "步骤异常", 56)}`;
+        } else if (hasStageSwitch) {
+          const gap = stageSwitchMap.get(idx);
+          reason = gap !== null
+            ? `位于阶段切换点（与上一帧间隔 ${gap.toFixed(1)}s）`
+            : "位于阶段切换位置，代表流程节点变化。";
+        } else if (Number.isFinite(score)) {
+          reason = `关键帧评分 ${score.toFixed(2)}，在排序中优先用于支撑结论。`;
+        } else {
+          reason = "该帧被选为代表性证据，用于支撑整体结论。";
+        }
+
+        const title = tags.includes("高风险")
+          ? "高风险证据帧"
+          : (tags.includes("阶段切换") ? "阶段切换证据帧" : "关键操作证据帧");
+
+        return {
+          ...frame,
+          title,
+          tags: Array.from(new Set(tags)),
+          alarm: bestAlarm,
+          importance,
+          reason
+        };
+      }).sort((x, y) => {
+        if (y.importance !== x.importance) return y.importance - x.importance;
+        const xt = safeTimestamp(x.timestamp);
+        const yt = safeTimestamp(y.timestamp);
+        return (xt === null ? Number.MAX_VALUE : xt) - (yt === null ? Number.MAX_VALUE : yt);
+      });
+      const visibleFrames = filterListByEvidenceWindow(renderList, (x) => (x ? x.timestamp : null));
+
+      if (singleFrameExplain.active) {
+        $("keyframeCount").textContent = `单帧讲解中（可按 ← / → 切换） | 当前范围 ${visibleFrames.length} 帧`;
+      } else {
+        $("keyframeCount").textContent = evidenceFilter.active
+          ? `${visibleFrames.length}/${renderList.length} 帧（当前时段）`
+          : `${renderList.length} 帧`;
+      }
+      const grid = $("keyframeGrid");
+      const topWrap = $("topEvidence");
+      const topTitle = $("topEvidenceTitle");
+      const links = $("keyframeLinks");
+      grid.innerHTML = "";
+      topWrap.innerHTML = "";
+      links.innerHTML = "";
+      if (topTitle) {
+        topTitle.textContent = singleFrameExplain.active
+          ? "当前讲解帧（已固定）"
+          : (evidenceFilter.active ? "当前时段首要证据帧" : "首要证据帧（优先复核）");
+      }
+      $("previewVideoBtn").disabled = !a.annotated_video_url;
+      $("downloadVideoBtn").disabled = !a.annotated_video_exists;
+      $("videoSummary").textContent = a.annotated_video_exists
+        ? "标注视频已生成，可直接播放演示手部检测效果。"
+        : ((status === "pending" || status === "running")
+          ? "分析进行中，标注视频将在完成后可预览。"
+          : "标注视频未生成，可查看关键帧与文本结果。");
+
+      if (renderList.length === 0) {
+        singleFrameKeyframeList = [];
+        singleFrameKeyframeIndex = -1;
+        topWrap.innerHTML = '<div class="muted">暂无可展示的关键证据帧</div>';
         grid.innerHTML = '<div class="muted">暂无关键帧</div>';
+        $("evidenceHint").textContent = "暂无关键证据帧说明。";
+        updateSingleFramePanel(status, 0, sortedAlarms.length);
+        updateEvidenceFilterPanel(status, visibleAlarms.length, sortedAlarms.length, 0, 0);
+        updateSingleFrameNavControls(status, 0);
         return;
       }
 
-      urls.slice(0, 24).forEach((url, i) => {
-        const d = document.createElement("div");
-        d.className = "kf";
-        const idx = String(i + 1).padStart(3, "0");
-        d.innerHTML = `<img src="${url}" alt="keyframe_${idx}"><div class="cap">keyframe_${idx}</div>`;
-        grid.appendChild(d);
+      if (visibleFrames.length === 0) {
+        singleFrameKeyframeList = [];
+        singleFrameKeyframeIndex = -1;
+        topWrap.innerHTML = `<div class="muted">当前筛选时段（${escapeHtml(evidenceFilter.label)}）无关键证据帧。</div>`;
+        grid.innerHTML = '<div class="muted">点击“恢复全时段”查看全部关键证据帧。</div>';
+        $("evidenceHint").textContent = "当前时段未匹配关键证据帧，可恢复全时段继续查看。";
+        updateSingleFramePanel(status, 0, sortedAlarms.length);
+        updateEvidenceFilterPanel(status, visibleAlarms.length, sortedAlarms.length, 0, renderList.length);
+        updateSingleFrameNavControls(status, 0);
+        return;
+      }
+
+      function tagClass(tag) {
+        if (tag === "高风险") return "high-risk";
+        if (tag === "风险证据") return "risk";
+        if (tag === "阶段切换") return "stage";
+        if (tag === "AI解释") return "ai";
+        if (tag === "手部操作密集") return "dense";
+        return "";
+      }
+
+      function buildCardHtml(item, rank, topCard = false) {
+        const rankText = String(rank).padStart(3, "0");
+        const imgUrl = String(item.url || "");
+        const imageName = String(item.image || "");
+        const ts = safeTimestamp(item && item.timestamp);
+        const timeAttr = ts !== null ? ` data-time="${ts.toFixed(3)}"` : "";
+        const seekAttr = ts !== null ? ` data-seek="${ts.toFixed(3)}" data-seek-source="关键证据帧"` : "";
+        const frameAttr = ` data-frame-image="${escapeHtml(imageName)}" data-frame-time="${ts !== null ? ts.toFixed(3) : ""}" data-frame-caption="${escapeHtml(item.title || `关键帧${rankText}`)}"`;
+        const tags = item.tags && item.tags.length ? item.tags : ["关键证据"];
+        const tagHtml = tags.map((t) => `<span class="tag ${tagClass(t)}">${escapeHtml(t)}</span>`).join("");
+        const summaryText = shortText(item.summary || (item.alarm && item.alarm.description) || "", 90);
+        const scoreVal = Number(item.score);
+        const scoreText = Number.isFinite(scoreVal) ? `排序评分: ${scoreVal.toFixed(2)} | 证据得分: ${item.importance.toFixed(1)}` : `证据得分: ${item.importance.toFixed(1)}`;
+        const mediaHtml = imgUrl
+          ? `<a href="${imgUrl}" class="kf-link" data-url="${imgUrl}" data-caption="证据帧${rankText}" ${seekAttr}${frameAttr} target="_blank" rel="noopener"><img src="${imgUrl}" alt="evidence_${rankText}"></a>`
+          : '<div class="kf-placeholder">暂无缩略图</div>';
+        return `
+          <div class="kf ${topCard ? "top-rank" : ""}"${timeAttr}>
+            ${mediaHtml}
+            <div class="cap">${escapeHtml(item.title || `关键帧${rankText}`)}</div>
+            <div class="meta">时间点: ${escapeHtml(timeText(item.timestamp))}</div>
+            <div class="frame-tags">${tagHtml}</div>
+            <div class="reason">${escapeHtml(shortText(item.reason || "该帧被选为关键证据", 92))}</div>
+            <div class="score">${escapeHtml(scoreText)}</div>
+            <div class="ai">${escapeHtml(summaryText || "暂无 AI 摘要")}</div>
+            ${ts !== null ? `<button class="jump-link" type="button"${seekAttr}${frameAttr}>定位到该证据时间</button>` : ""}
+          </div>
+        `;
+      }
+
+      let selectedIndex = singleFrameExplain.active
+        ? findSingleFrameIndex(visibleFrames, singleFrameExplain)
+        : 0;
+      if (selectedIndex < 0) selectedIndex = 0;
+      const pinnedFrame = visibleFrames[selectedIndex];
+      if (singleFrameExplain.active) {
+        singleFrameExplain = frameToSingleFrameExplain(pinnedFrame, singleFrameExplain.source || "关键帧");
+      }
+
+      singleFrameKeyframeList = visibleFrames.slice();
+      singleFrameKeyframeIndex = selectedIndex;
+
+      topWrap.innerHTML = buildCardHtml(pinnedFrame, selectedIndex + 1, true);
+      if (singleFrameExplain.active) {
+        $("evidenceHint").textContent = `单帧讲解中，可用顶部上一帧/下一帧按钮或 ←/→ 切换。当前第 ${selectedIndex + 1}/${visibleFrames.length} 帧：${shortText(pinnedFrame.reason || "", 70)}`;
+      } else if (evidenceFilter.active) {
+        $("evidenceHint").textContent = `当前聚焦 ${evidenceFilter.label}：首要证据帧说明：${shortText(pinnedFrame.reason || "", 76)}`;
+      } else {
+        $("evidenceHint").textContent = `首要证据帧说明：${shortText(pinnedFrame.reason || "", 86)}`;
+      }
+
+      const secondaryFrames = visibleFrames
+        .map((item, idx) => ({ item, idx }))
+        .filter((x) => x.idx !== selectedIndex);
+      secondaryFrames.slice(0, 24).forEach(({ item, idx }) => {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = buildCardHtml(item, idx + 1, false).trim();
+        const first = wrapper.firstElementChild;
+        if (first) grid.appendChild(first);
       });
+
+      const linkFrames = [{ item: pinnedFrame, idx: selectedIndex }, ...secondaryFrames];
+      links.innerHTML = linkFrames.filter((x) => x.item.url).slice(0, 12)
+        .map(({ item, idx }) => {
+          const ts = safeTimestamp(item && item.timestamp);
+          const seek = ts !== null ? ` data-seek="${ts.toFixed(3)}" data-seek-source="关键帧链接"` : "";
+          const imageName = String(item.image || "");
+          const rankText = String(idx + 1).padStart(3, "0");
+          const frameAttr = ` data-frame-image="${escapeHtml(imageName)}" data-frame-time="${ts !== null ? ts.toFixed(3) : ""}" data-frame-caption="${escapeHtml(item.title || `关键帧${rankText}`)}"`;
+          return `<a href="${item.url}" class="kf-link" data-url="${item.url}" data-caption="证据帧${rankText}"${seek}${frameAttr} target="_blank" rel="noopener">查看证据帧${rankText}</a>`;
+        })
+        .join("");
+      const refreshedSingleFrameCount = singleFrameExplain.active
+        ? sortedAlarms.filter((x) => alarmMatchesSingleFrame(x)).length
+        : 0;
+      updateSingleFramePanel(status, refreshedSingleFrameCount, sortedAlarms.length);
+      updateEvidenceFilterPanel(status, visibleAlarms.length, sortedAlarms.length, visibleFrames.length, renderList.length);
+      updateSingleFrameNavControls(status, visibleFrames.length);
     }
 
-    function updateFileHint(status, outputs) {
-      if (status !== "completed") {
+    function updateFileHint(status, outputs, artifacts) {
+      if (status !== "completed" && status !== "failed") {
         $("fileHint").innerHTML = '<span class="status-running">任务未完成，下载按钮暂不可用。</span>';
         $("fileLinks").innerHTML = "";
         return;
       }
 
-      const ready = [];
-      Object.entries(FILE_TYPE_TO_OUTPUT_KEY).forEach(([fileType, key]) => {
-        if (outputs && outputs[key]) ready.push(fileType);
-      });
+      const ready = Object.keys(FILE_TYPE_TO_OUTPUT_KEY)
+        .map((fileType) => ({ fileType, meta: getDownloadMeta(fileType, outputs, artifacts, status) }))
+        .filter((x) => x.meta.ready);
 
       if (ready.length === 0) {
-        $("fileHint").innerHTML = '<span class="status-failed">任务已完成，但未检测到可下载文件。</span>';
+        $("fileHint").innerHTML = status === "failed"
+          ? '<span class="status-failed">任务失败，且未检测到可下载文件。</span>'
+          : '<span class="status-failed">任务已完成，但未检测到可下载文件。</span>';
         $("fileLinks").innerHTML = "";
         return;
       }
 
-      $("fileHint").innerHTML = `<span class="status-ok">可下载文件:</span> ${ready.map((x) => FILE_LABEL[x] || x).join("、")}`;
+      const title = status === "failed" ? "失败任务可下载文件:" : "可下载文件:";
+      $("fileHint").innerHTML = `<span class="status-ok">${title}</span> ${ready.map((x) => x.meta.label).join("、")}`;
       $("fileLinks").innerHTML = ready
-        .map((fileType) => `<a href="/api/download/${currentTaskId}/${fileType}" target="_blank" rel="noopener">下载${FILE_LABEL[fileType] || fileType}</a>`)
+        .map(({ fileType, meta }) => {
+          const quickLabel = fileType === "pdf" && meta.stateText === "仅TXT降级"
+            ? "下载TXT报告(降级)"
+            : `下载${meta.label}`;
+          return `<a href="#" class="quick-download-link" data-file-type="${fileType}">${escapeHtml(quickLabel)}</a>`;
+        })
         .join("");
+    }
+
+    function renderFailure(data) {
+      const box = $("failureHint");
+      const failure = data && data.failure ? data.failure : null;
+      if (data && data.status === "failed") {
+        const msg = failure
+          ? `${failure.title} (${failure.category})：${failure.message || data.message || "未知错误"}`
+          : (data.message || "任务失败");
+        box.textContent = msg;
+        box.style.display = "block";
+        return;
+      }
+      box.textContent = "";
+      box.style.display = "none";
+    }
+
+    async function fetchDownloadTextForParse(taskId, fileType) {
+      try {
+        const res = await fetch(`/api/download/${taskId}/${fileType}`);
+        if (!res.ok) return "";
+        return await res.text();
+      } catch (_) {
+        return "";
+      }
+    }
+
+    async function fetchDownloadJsonForParse(taskId, fileType) {
+      const raw = await fetchDownloadTextForParse(taskId, fileType);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function buildKeyframeDetails(taskId, data, keyframeJson, analysisJson) {
+      const artifacts = (data && data.artifacts) || {};
+      const itemMap = new Map();
+      const artifactItems = Array.isArray(artifacts.keyframe_items) ? artifacts.keyframe_items : [];
+      artifactItems.forEach((x) => {
+        if (x && x.image) itemMap.set(String(x.image), x);
+      });
+      const analysisMap = new Map();
+      const analyses = analysisJson && Array.isArray(analysisJson.analyses) ? analysisJson.analyses : [];
+      analyses.forEach((x) => {
+        if (!x || !x.image) return;
+        analysisMap.set(String(x.image), String(x.summary || ""));
+      });
+
+      const keyframes = keyframeJson && Array.isArray(keyframeJson.keyframes) ? keyframeJson.keyframes : [];
+      if (keyframes.length > 0) {
+        return keyframes.map((kf, idx) => {
+          const image = String(kf.image || `keyframe_${String(idx + 1).padStart(3, "0")}.jpg`);
+          const fromArtifact = itemMap.get(image) || {};
+          const url = fromArtifact.url || `/api/artifact/${taskId}?path=keyframes/${encodeURIComponent(image)}`;
+          return {
+            index: idx + 1,
+            image,
+            url,
+            timestamp: Number(kf.timestamp),
+            frame_id: kf.frame_id,
+            score: Number(kf.score),
+            summary: analysisMap.get(image) || ""
+          };
+        });
+      }
+
+      const fallbackUrls = Array.isArray(artifacts.keyframe_image_urls) ? artifacts.keyframe_image_urls : [];
+      return fallbackUrls.map((url, idx) => ({
+        index: idx + 1,
+        image: `keyframe_${String(idx + 1).padStart(3, "0")}.jpg`,
+        url,
+        timestamp: null,
+        frame_id: null,
+        score: null,
+        summary: ""
+      }));
+    }
+
+    async function ensureDetailedResultData(taskId, data) {
+      if (!taskId) return null;
+      const cached = detailCache.get(taskId);
+      if (cached && cached.loaded) return cached;
+      if (cached && cached.loading) return cached;
+
+      const detail = cached || { loaded: false, loading: true, summaryText: "", keyframes: [], alarms: [] };
+      detail.loading = true;
+      detailCache.set(taskId, detail);
+
+      const [summaryTextRaw, keyframeJson, analysisJson, alarmJson] = await Promise.all([
+        fetchDownloadTextForParse(taskId, "summary"),
+        fetchDownloadJsonForParse(taskId, "keyframe_json"),
+        fetchDownloadJsonForParse(taskId, "analysis_json"),
+        fetchDownloadJsonForParse(taskId, "alarm_log")
+      ]);
+
+      detail.summaryText = String(summaryTextRaw || "").trim() || String((data.artifacts || {}).summary_text || "");
+      detail.keyframes = buildKeyframeDetails(taskId, data, keyframeJson, analysisJson);
+      detail.alarms = alarmJson && Array.isArray(alarmJson.alarms) ? alarmJson.alarms : [];
+      detail.loaded = true;
+      detail.loading = false;
+      detailCache.set(taskId, detail);
+      return detail;
     }
 
     async function refreshHealth() {
@@ -435,12 +2735,13 @@
         const moduleText = Object.entries(modules)
           .map(([k, v]) => `${k}:${v ? "ok" : "missing"}`)
           .join(" | ");
+        const ffmpegText = data.ffmpeg_available ? "ok" : "missing";
         const degraded = Array.isArray(data.degraded_reasons) && data.degraded_reasons.length
           ? ` | 降级: ${data.degraded_reasons.join(", ")}`
           : "";
 
         $("healthText").innerHTML =
-          `状态: <b class="status-ok">${data.status}</b> | API Key: <b>${data.api_key_configured ? "已配置" : "未配置(会跳过AI)"}</b> | 模块: ${moduleText} | 任务数: ${data.task_count}${degraded}`;
+          `状态: <b class="status-ok">${data.status}</b> | API Key: <b>${data.api_key_configured ? "已配置" : "未配置(会跳过AI)"}</b> | FFmpeg: <b>${ffmpegText}</b> | 模块: ${moduleText} | 任务数: ${data.task_count}${degraded}`;
       } catch (err) {
         $("healthText").innerHTML = `<span class="status-failed">健康检查失败: ${err}</span>`;
       }
@@ -449,7 +2750,11 @@
     function activateTask(taskId) {
       if (!taskId) return;
       currentTaskId = taskId;
+      resetEvidenceFilter(false);
+      resetSingleFrameExplain(false);
+      clearFocusHits();
       $("taskIdText").textContent = `task_id: ${currentTaskId}`;
+      setRunningState(true);
       connectSSE();
       if (pollingTimer) clearInterval(pollingTimer);
       pollingTimer = setInterval(fetchStatus, 1500);
@@ -553,6 +2858,8 @@
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error || "重试提交失败");
         showToast(`已创建重试任务: ${data.task_id}`);
+        pushRuntimeLog(`已创建重试任务 ${data.task_id}`, data.current_stage || "上传完成", data.status || "pending");
+        updateUploadMeta(data.upload || {}, "重试任务创建成功");
         activateTask(String(data.task_id || ""));
         await refreshTaskHistory(true);
       } catch (err) {
@@ -562,35 +2869,63 @@
 
     async function fetchStatus() {
       if (!currentTaskId) return;
+      try {
+        const res = await fetch(`/api/status/${currentTaskId}`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "状态获取失败");
 
-      const res = await fetch(`/api/status/${currentTaskId}`);
-      const data = await res.json();
-      if (!data.ok) return;
+        setProgress(data.progress);
+        $("stageText").textContent = data.current_stage || "-";
+        $("statusText").textContent = data.status || "-";
+        setStatusClass(data.status);
+        setStageBanner(data.current_stage || "-", data.status || "pending", data.message || "");
+        $("messageText").textContent = data.message || "";
+        $("progressMeta").textContent = `当前模块：${stageToModuleId(data.current_stage || "-") || "-"} | 说明：${shortText(data.message || "-", 88)}`;
+        $("resultBox").textContent = JSON.stringify(data, null, 2);
+        renderFailure(data);
+        const moduleMap = normalizeModuleStates(data);
+        renderModuleCards(moduleMap, data.module_notes || []);
+        renderDownloadOverview(data.status, data.outputs || {}, data.artifacts || {});
 
-      setProgress(data.progress);
-      $("stageText").textContent = data.current_stage || "-";
-      $("statusText").textContent = data.status || "-";
-      setStatusClass(data.status);
-      $("messageText").textContent = data.message || "";
-      $("resultBox").textContent = JSON.stringify(data, null, 2);
-
-      renderArtifacts(data.artifacts || {});
-      setDownloadEnabled(data.status === "completed", data.outputs || {});
-      updateFileHint(data.status, data.outputs || {});
-
-      if (lastStatus !== "completed" && data.status === "completed") {
-        showToast("任务已完成，可预览并下载结果");
-      }
-      if (lastStatus !== "failed" && data.status === "failed") {
-        showToast("任务失败，请查看结果区错误信息");
-      }
-      lastStatus = data.status || lastStatus;
-
-      if (data.status === "completed" || data.status === "failed") {
-        if (pollingTimer) {
-          clearInterval(pollingTimer);
-          pollingTimer = null;
+        let detail = detailCache.get(currentTaskId) || null;
+        if (data.status === "completed" || data.status === "failed") {
+          detail = await ensureDetailedResultData(currentTaskId, data);
         }
+        renderTaskOverview(data, moduleMap, detail);
+        renderArtifacts(data.artifacts || {}, detail, data.status || "pending");
+        setDownloadEnabled(data.status === "completed" || data.status === "failed", data.outputs || {}, data.artifacts || {});
+        updateFileHint(data.status, data.outputs || {}, data.artifacts || {});
+        updateUploadMeta(
+          data.upload || {},
+          data.status === "pending" || data.status === "running" ? "上传成功，分析中" : "上传成功"
+        );
+        pushRuntimeLog(data.message || "", data.current_stage || "", data.status || "");
+
+        const running = data.status === "pending" || data.status === "running";
+        setRunningState(running);
+
+        if (lastStatus !== "completed" && data.status === "completed") {
+          showToast("任务已完成，可预览并下载结果");
+          $("resultsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (lastStatus !== "failed" && data.status === "failed") {
+          showToast("任务失败，请查看失败原因");
+          $("resultsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        lastStatus = data.status || lastStatus;
+
+        if (data.status === "completed" || data.status === "failed") {
+          if (pollingTimer) {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+          }
+          if (sse) {
+            sse.close();
+            sse = null;
+          }
+        }
+      } catch (err) {
+        pushRuntimeLog(`状态拉取失败: ${err}`);
       }
     }
 
@@ -604,8 +2939,15 @@
           const d = JSON.parse(evt.data || "{}");
           if (d.type === "heartbeat") return;
           setProgress(d.progress);
-          $("stageText").textContent = d.current_stage || "-";
-          $("messageText").textContent = d.message || "";
+          if (d.current_stage) $("stageText").textContent = d.current_stage;
+          if (d.status) {
+            $("statusText").textContent = d.status;
+            setStatusClass(d.status);
+          }
+          if (d.message) $("messageText").textContent = d.message;
+          setStageBanner(d.current_stage || "-", d.status || "running", d.message || "");
+          $("progressMeta").textContent = `当前模块：${stageToModuleId(d.current_stage || "-") || "-"} | 说明：${shortText(d.message || "-", 88)}`;
+          pushRuntimeLog(d.message || "", d.current_stage || "", d.status || "");
         } catch (_) {
           // ignore parse errors
         }
@@ -616,9 +2958,84 @@
       };
     }
 
+    function parseFilenameFromHeaders(headers, fallbackName) {
+      const disposition = headers.get("content-disposition") || "";
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+      const raw = match ? (match[1] || match[2] || "").trim() : "";
+      if (!raw) return fallbackName;
+      try {
+        return decodeURIComponent(raw);
+      } catch (_) {
+        return raw;
+      }
+    }
+
+    async function triggerDownload(fileType) {
+      if (!currentTaskId) {
+        alert("请先运行任务");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/download/${currentTaskId}/${fileType}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `下载失败(${res.status})`);
+        }
+        const blob = await res.blob();
+        const fallback = `${currentTaskId}_${fileType}`;
+        const filename = parseFilenameFromHeaders(res.headers, fallback);
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = href;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(href);
+        pushRuntimeLog(`下载成功：${fileType}`);
+      } catch (err) {
+        showToast(`下载失败: ${err}`);
+        pushRuntimeLog(`下载失败：${fileType}，${err}`);
+      }
+    }
+
+    async function triggerBundleDownload() {
+      if (!currentTaskId) {
+        alert("请先运行任务");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/download_bundle/${currentTaskId}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `打包下载失败(${res.status})`);
+        }
+        const blob = await res.blob();
+        const filename = parseFilenameFromHeaders(res.headers, `${currentTaskId}_bundle.zip`);
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = href;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(href);
+        pushRuntimeLog("一键打包下载成功");
+      } catch (err) {
+        showToast(`打包下载失败: ${err}`);
+        pushRuntimeLog(`打包下载失败：${err}`);
+      }
+    }
+
     $("videoInput").addEventListener("change", () => {
       const file = $("videoInput").files[0];
-      $("videoName").textContent = file ? `已选择: ${file.name}` : "尚未选择视频";
+      if (!file) {
+        $("videoName").textContent = "尚未选择视频";
+        updateUploadMeta({}, "未上传");
+        return;
+      }
+      $("videoName").textContent = `已选择: ${file.name} (${formatBytes(file.size)})`;
+      updateUploadMeta({ filename: file.name, size_bytes: file.size }, "待上传");
     });
 
     $("startBtn").addEventListener("click", async () => {
@@ -636,13 +3053,29 @@
       form.append("enable_step_check", $("enableStep").checked ? "1" : "0");
       form.append("enable_video_export", $("enableVideo").checked ? "1" : "0");
 
-      $("startBtn").disabled = true;
-      setDownloadEnabled(false, null);
-      renderArtifacts({});
-      updateFileHint("running", null);
+      currentTaskId = "";
+      resetRuntimeLogDedupe();
+      runtimeLogs.length = 0;
+      $("runtimeLog").innerHTML = '<div class="muted">暂无运行日志</div>';
+      resetEvidenceFilter(false);
+      resetSingleFrameExplain(false);
+      clearFocusHits();
+      $("taskIdText").textContent = "";
+      setRunningState(true);
+      setDownloadEnabled(false, null, null);
+      renderArtifacts({}, null, "pending");
+      renderModuleCards(normalizeModuleStates({ status: "pending", options: {} }), []);
+      renderTaskOverview({ status: "pending", created_at: "", updated_at: "", options: {} }, normalizeModuleStates({ status: "pending", options: {} }));
+      renderDownloadOverview("pending", {}, {});
+      updateFileHint("running", null, null);
+      $("failureHint").style.display = "none";
+      setStageBanner("上传完成", "pending", "任务提交中");
+      $("progressMeta").textContent = "当前模块：- | 说明：任务提交中";
       $("messageText").textContent = "任务提交中...";
       $("resultBox").textContent = "任务已提交，等待后端执行...";
       setProgress(0);
+      updateUploadMeta({ filename: file.name, size_bytes: file.size }, "上传中");
+      pushRuntimeLog("开始提交任务", "上传完成", "pending");
 
       try {
         const res = await fetch("/api/analyze", { method: "POST", body: form });
@@ -654,6 +3087,8 @@
         $("taskIdText").textContent = `task_id: ${currentTaskId}`;
         $("statusText").textContent = data.status || "pending";
         setStatusClass(data.status || "pending");
+        updateUploadMeta(data.upload || { filename: file.name, size_bytes: file.size }, "上传成功");
+        pushRuntimeLog(data.message || "任务已受理", data.current_stage || "上传完成", data.status || "pending");
 
         connectSSE();
         if (pollingTimer) clearInterval(pollingTimer);
@@ -662,37 +3097,199 @@
         await refreshTaskHistory();
       } catch (err) {
         $("messageText").textContent = `提交失败: ${err}`;
-      } finally {
-        $("startBtn").disabled = false;
+        $("failureHint").textContent = `提交失败：${err}`;
+        $("failureHint").style.display = "block";
+        setRunningState(false);
       }
     });
 
     document.querySelectorAll(".downloads button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (!currentTaskId) {
-          alert("请先运行任务");
-          return;
-        }
+      btn.addEventListener("click", async () => {
         if (btn.id === "bundleBtn") {
-          window.open(`/api/download_bundle/${currentTaskId}`, "_blank");
+          await triggerBundleDownload();
           return;
         }
         const t = btn.getAttribute("data-type");
-        window.open(`/api/download/${currentTaskId}/${t}`, "_blank");
+        if (!t) return;
+        await triggerDownload(t);
       });
     });
 
     document.addEventListener("click", (evt) => {
       const target = evt.target;
       if (!(target instanceof HTMLElement)) return;
-      if (target.classList.contains("history-view-btn")) {
-        const taskId = target.getAttribute("data-task-id") || "";
+
+      const downloadNode = target.closest("[data-download]");
+      const quickDownload = downloadNode instanceof HTMLElement ? downloadNode.getAttribute("data-download") : "";
+      if (quickDownload) {
+        evt.preventDefault();
+        triggerDownload(quickDownload);
+        return;
+      }
+
+      const quickLink = target.closest(".quick-download-link");
+      if (quickLink instanceof HTMLElement) {
+        evt.preventDefault();
+        const fileType = quickLink.getAttribute("data-file-type") || "";
+        if (fileType) triggerDownload(fileType);
+        return;
+      }
+
+      const kfLink = target.closest(".kf-link");
+      if (kfLink instanceof HTMLElement) {
+        const url = kfLink.getAttribute("data-url") || kfLink.getAttribute("href") || "";
+        const seek = parseSeekSeconds(kfLink.getAttribute("data-seek"));
+        const frameImage = String(kfLink.getAttribute("data-frame-image") || "").trim();
+        const frameTime = parseSeekSeconds(kfLink.getAttribute("data-frame-time"));
+        const frameCaption = String(kfLink.getAttribute("data-frame-caption") || kfLink.getAttribute("data-caption") || "").trim();
+        if (frameImage || frameTime !== null) {
+          resetEvidenceFilter(false);
+          setSingleFrameExplain({
+            active: true,
+            image: frameImage,
+            time: frameTime,
+            caption: frameCaption,
+            source: "关键帧点击"
+          }, true);
+        }
+        if (seek !== null) {
+          focusEvidenceAt(seek, kfLink.getAttribute("data-seek-source") || "关键帧");
+        }
+        if (url) {
+          evt.preventDefault();
+          $("lightboxImg").src = url;
+          $("lightboxCaption").textContent = kfLink.getAttribute("data-caption") || "关键帧预览";
+          $("lightbox").classList.add("open");
+        }
+        return;
+      }
+
+      const seekNode = target.closest("[data-seek]");
+      if (seekNode instanceof HTMLElement) {
+        const seek = parseSeekSeconds(seekNode.getAttribute("data-seek"));
+        if (seek !== null) {
+          evt.preventDefault();
+          let needRerender = false;
+          const frameImage = String(seekNode.getAttribute("data-frame-image") || "").trim();
+          const frameTime = parseSeekSeconds(seekNode.getAttribute("data-frame-time"));
+          const frameCaption = String(seekNode.getAttribute("data-frame-caption") || seekNode.getAttribute("data-caption") || "").trim();
+          if (frameImage || frameTime !== null) {
+            singleFrameExplain = normalizeSingleFrameExplain({
+              active: true,
+              image: frameImage,
+              time: frameTime,
+              caption: frameCaption,
+              source: "关键帧定位"
+            });
+            needRerender = true;
+          }
+          const isTimelineNode = seekNode.classList.contains("timeline-marker") || seekNode.classList.contains("timeline-bucket");
+          if (isTimelineNode) {
+            const nextFilter = deriveEvidenceFilterFromNode(seekNode);
+            if (nextFilter) {
+              evidenceFilter = nextFilter;
+              needRerender = true;
+            }
+          }
+          if (needRerender) {
+            rerenderArtifactsFromSnapshot();
+          }
+          focusEvidenceAt(seek, seekNode.getAttribute("data-seek-source") || "时间线");
+        }
+        return;
+      }
+
+      const historyViewBtn = target.closest(".history-view-btn");
+      if (historyViewBtn instanceof HTMLElement) {
+        const taskId = historyViewBtn.getAttribute("data-task-id") || "";
         activateTask(taskId);
         return;
       }
-      if (target.classList.contains("history-retry-btn")) {
-        const sourceTaskId = target.getAttribute("data-task-id") || "";
+
+      const historyRetryBtn = target.closest(".history-retry-btn");
+      if (historyRetryBtn instanceof HTMLElement) {
+        const sourceTaskId = historyRetryBtn.getAttribute("data-task-id") || "";
         retryTask(sourceTaskId);
+      }
+    });
+
+    $("previewVideoBtn").addEventListener("click", () => {
+      const video = $("annotatedVideo");
+      if (!video || !video.src) return;
+      $("resultsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+      video.focus();
+      video.play().catch(() => {});
+    });
+
+    $("downloadVideoBtn").addEventListener("click", () => {
+      triggerDownload("annotated_video");
+    });
+
+    $("clearEvidenceFilterBtn").addEventListener("click", () => {
+      if (!evidenceFilter.active) return;
+      resetEvidenceFilter(true);
+      clearFocusHits();
+      showToast("已恢复全时段证据视图");
+    });
+
+    $("clearSingleFrameBtn").addEventListener("click", () => {
+      if (!singleFrameExplain.active) return;
+      resetSingleFrameExplain(true);
+      clearFocusHits();
+      showToast("已退出单帧讲解模式");
+    });
+
+    $("prevFrameBtn").addEventListener("click", () => {
+      if (!Array.isArray(singleFrameKeyframeList) || singleFrameKeyframeList.length === 0) return;
+      if (!singleFrameExplain.active) {
+        const idx = Number.isFinite(Number(singleFrameKeyframeIndex)) && singleFrameKeyframeIndex >= 0
+          ? singleFrameKeyframeIndex
+          : 0;
+        const seed = singleFrameKeyframeList[Math.min(idx, singleFrameKeyframeList.length - 1)];
+        if (!seed) return;
+        setSingleFrameExplain(frameToSingleFrameExplain(seed, "顶部按钮"), false);
+      }
+      navigateSingleFrameByKey(-1);
+    });
+
+    $("nextFrameBtn").addEventListener("click", () => {
+      if (!Array.isArray(singleFrameKeyframeList) || singleFrameKeyframeList.length === 0) return;
+      if (!singleFrameExplain.active) {
+        const idx = Number.isFinite(Number(singleFrameKeyframeIndex)) && singleFrameKeyframeIndex >= 0
+          ? singleFrameKeyframeIndex
+          : 0;
+        const seed = singleFrameKeyframeList[Math.min(idx, singleFrameKeyframeList.length - 1)];
+        if (!seed) return;
+        setSingleFrameExplain(frameToSingleFrameExplain(seed, "顶部按钮"), false);
+      }
+      navigateSingleFrameByKey(1);
+    });
+
+    $("lightbox").addEventListener("click", (evt) => {
+      const target = evt.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.id === "lightbox" || target.id === "lightboxCaption" || target.id === "lightboxImg") {
+        $("lightbox").classList.remove("open");
+      }
+    });
+
+    document.addEventListener("keydown", (evt) => {
+      if (evt.key === "Escape") {
+        $("lightbox").classList.remove("open");
+        return;
+      }
+      if ((evt.key === "ArrowLeft" || evt.key === "ArrowRight")) {
+        const target = evt.target;
+        if (
+          target instanceof HTMLElement &&
+          (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        ) {
+          return;
+        }
+        const moved = navigateSingleFrameByKey(evt.key === "ArrowRight" ? 1 : -1);
+        if (moved) {
+          evt.preventDefault();
+        }
       }
     });
 
@@ -708,9 +3305,17 @@
       refreshTaskHistory(false);
     });
 
-    setDownloadEnabled(false, null);
-    renderArtifacts({});
-    updateFileHint("idle", null);
+    setRunningState(false);
+    setDownloadEnabled(false, null, null);
+    renderArtifacts({}, null, "pending");
+    const initModules = normalizeModuleStates({ status: "pending", options: {} });
+    renderModuleCards(initModules, []);
+    renderTaskOverview({ status: "pending", created_at: "", updated_at: "", options: {} }, initModules);
+    renderDownloadOverview("pending", {}, {});
+    updateFileHint("idle", null, null);
+    updateUploadMeta({}, "未上传");
+    setStageBanner("等待任务开始", "pending", "");
+    $("progressMeta").textContent = "当前模块：- | 说明：等待任务开始";
     refreshHealth();
     refreshTaskHistory(true);
     setInterval(refreshHealth, 10000);

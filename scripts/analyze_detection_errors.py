@@ -134,10 +134,14 @@ def main() -> int:
 
     cfg = yaml.safe_load(dataset_yaml.read_text(encoding="utf-8"))
     root = Path(cfg["path"])
-    val_images_dir = root / str(cfg["val"])
+    val_rel = Path(str(cfg["val"]).replace("\\", "/"))
+    val_images_dir = val_rel if val_rel.is_absolute() else (root / val_rel)
     names_raw = cfg.get("names", {})
     names: Dict[int, str] = {int(k): str(v) for k, v in names_raw.items()}
-    labels_dir = root / "labels" / "val"
+    val_split = val_rel.parts[-1] if val_rel.parts else "val"
+    labels_dir = root / "labels" / val_split
+    if not labels_dir.exists() and (root / "labels" / "val").exists():
+        labels_dir = root / "labels" / "val"
     image_paths = sorted([p for p in val_images_dir.glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}])
     if args.max_images > 0:
         image_paths = image_paths[: args.max_images]

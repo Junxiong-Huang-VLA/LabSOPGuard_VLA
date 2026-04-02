@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -30,6 +30,7 @@ def extract_keyframes_by_diff(
     diff_threshold: float,
     min_interval_sec: float,
     max_keyframes: int,
+    progress_callback: Optional[Callable[[int, int, int, str], None]] = None,
 ) -> Tuple[List[Dict[str, Any]], List[Path]]:
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -37,6 +38,9 @@ def extract_keyframes_by_diff(
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     fps = fps if fps and fps > 0 else 25.0
+    total_frames_raw = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    total_frames = total_frames_raw if total_frames_raw > 0 else 0
+    progress_interval = max(8, int(round(fps)))
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,6 +55,7 @@ def extract_keyframes_by_diff(
         if not ok:
             break
         frame_id += 1
+        processed = frame_id + 1
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -63,6 +68,8 @@ def extract_keyframes_by_diff(
                 saved_paths.append(out)
                 keyframes_meta.append({"frame_id": frame_id, "timestamp": t, "score": 1.0, "image": out.name})
                 last_saved_t = t
+            if progress_callback:
+                progress_callback(processed, total_frames, len(saved_paths), "关键帧提取中：正在处理视频帧。")
             if len(saved_paths) >= max_keyframes:
                 break
             continue
@@ -81,8 +88,18 @@ def extract_keyframes_by_diff(
                     break
 
         prev_gray = gray
+        if progress_callback and (processed % progress_interval == 0):
+            progress_callback(processed, total_frames, len(saved_paths), "关键帧提取中：正在扫描视频变化。")
 
     cap.release()
+    if progress_callback:
+        final_processed = max(frame_id + 1, 0)
+        progress_callback(
+            final_processed if final_processed > 0 else total_frames,
+            total_frames,
+            len(saved_paths),
+            f"关键帧提取完成：共提取 {len(saved_paths)} 帧。",
+        )
     return keyframes_meta, saved_paths
 
 
@@ -95,6 +112,8 @@ def run_keyframe_ai_pipeline(
     enable_ai_analysis: bool,
     ai_model: str,
     ai_base_url: str,
+    extraction_progress_callback: Optional[Callable[[int, int, int, str], None]] = None,
+    ai_progress_callback: Optional[Callable[[int, int, str], None]] = None,
 ) -> Dict[str, Any]:
     keyframe_dir = output_dir / "keyframes"
     keyframe_meta, keyframe_paths = extract_keyframes_by_diff(
@@ -103,6 +122,7 @@ def run_keyframe_ai_pipeline(
         diff_threshold=diff_threshold,
         min_interval_sec=min_interval_sec,
         max_keyframes=max_keyframes,
+        progress_callback=extraction_progress_callback,
     )
 
     part1 = {
@@ -120,8 +140,11 @@ def run_keyframe_ai_pipeline(
             image_paths=keyframe_paths,
             model=ai_model,
             base_url=ai_base_url,
+            progress_callback=ai_progress_callback,
         )
     else:
+        if ai_progress_callback:
+            ai_progress_callback(0, len(keyframe_paths), "AI 分析已跳过：开关关闭。")
         ai_result = {
             "enabled": False,
             "reason": "disabled_by_option",
@@ -152,4 +175,3 @@ def run_keyframe_ai_pipeline(
         "keyframes": keyframe_meta,
         "analysis": ai_result,
     }
-
