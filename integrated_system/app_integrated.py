@@ -16,6 +16,8 @@ import time
 import traceback
 import uuid
 import zipfile
+import urllib.request
+import urllib.error
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -44,10 +46,16 @@ TASKS_BOOTSTRAP_LOCK = threading.Lock()
 TASKS_BOOTSTRAPPED = False
 PERSIST_META: Dict[str, Any] = {"last_saved_at": "", "last_error": ""}
 PERSIST_INTERVAL_SEC = 1.0
+AUDIT_LOCK = threading.Lock()
+ALERT_NOTIFY_LOCK = threading.Lock()
+AUDIT_BUFFER: List[Dict[str, Any]] = []
+ALERT_NOTIFY_STATE: Dict[str, str] = {}
 
 SETTINGS = load_settings()
 EXECUTOR = ThreadPoolExecutor(max_workers=SETTINGS.max_workers, thread_name_prefix="integrated-worker")
 TASK_REGISTRY_FILE = SETTINGS.outputs_root / SETTINGS.task_registry_filename
+AUDIT_LOG_FILE = SETTINGS.outputs_root / SETTINGS.audit_log_filename
+ALERT_STATE_FILE = SETTINGS.outputs_root / SETTINGS.alert_state_filename
 
 VALID_TASK_STATUS = {"pending", "running", "completed", "failed"}
 
@@ -81,7 +89,7 @@ def _safe_message(message: Any, default: str = "") -> str:
 
 
 def _utc_now_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _parse_utc_iso(value: Any) -> Optional[datetime]:
@@ -170,6 +178,56 @@ def _normalize_loaded_task(task_id: str, task: Dict[str, Any]) -> Dict[str, Any]
     return task_norm
 
 
+def _scan_tasks_from_outputs(max_items: int = 300) -> Dict[str, Dict[str, Any]]:
+    root = SETTINGS.outputs_root
+    if not root.exists() or not root.is_dir():
+        return {}
+    restored: Dict[str, Dict[str, Any]] = {}
+    candidates = [d for d in root.iterdir() if d.is_dir()]
+    candidates.sort(key=lambda d: d.name, reverse=True)
+    for d in candidates:
+        task_file = d / "task_result.json"
+        if not task_file.exists() or not task_file.is_file():
+            continue
+        try:
+            payload = json.loads(task_file.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        tid = str(payload.get("task_id") or d.name.split("_")[-1]).strip()
+        if not tid:
+            continue
+        task = _normalize_loaded_task(tid, payload)
+        task["output_dir"] = _safe_rel(d)
+        outputs = dict(task.get("outputs", {}))
+        known_files = {
+            "annotated_video": d / "hand_annotated.mp4",
+            "report": d / "integrated_analysis_report.pdf",
+            "part1_keyframes": d / "part1_keyframes.json",
+            "analysis_json": d / "keyframe_ai_analysis.json",
+            "overall_summary": d / "overall_summary.txt",
+            "alarm_log": d / "alarm_log.json",
+            "task_result": d / "task_result.json",
+        }
+        report_txt = d / "integrated_analysis_report.txt"
+        if not known_files["report"].exists() and report_txt.exists():
+            known_files["report"] = report_txt
+        for key, path in known_files.items():
+            if path.exists() and path.is_file():
+                outputs[key] = _safe_rel(path)
+        task["outputs"] = outputs
+
+        if not str(task.get("video_path", "")).strip():
+            input_candidates = sorted(d.glob("input.*"))
+            if input_candidates:
+                task["video_path"] = _safe_rel(input_candidates[0])
+        restored[tid] = task
+        if len(restored) >= max_items:
+            break
+    return restored
+
+
 def _bootstrap_tasks_from_disk() -> int:
     global TASKS_BOOTSTRAPPED
     with TASKS_BOOTSTRAP_LOCK:
@@ -206,6 +264,9 @@ def _bootstrap_tasks_from_disk() -> int:
                         restored[tid] = norm_task
             except Exception as exc:
                 PERSIST_META["last_error"] = f"load_registry_failed: {exc}"
+
+        if not restored:
+            restored = _scan_tasks_from_outputs(max_items=SETTINGS.max_history_tasks)
 
         with TASKS_LOCK:
             TASKS.clear()
@@ -261,14 +322,15 @@ def _set_task_module_status(
         payload: Dict[str, Any] = {
             "status": status_norm,
             "message": _safe_message(message, "no details"),
-            "updated_at": datetime.utcnow().isoformat() + "Z",
+            "updated_at": _utc_now_iso(),
         }
         if details:
             payload["details"] = details
         module_status[module_name] = payload
         task["module_status"] = module_status
-        task["updated_at"] = datetime.utcnow().isoformat() + "Z"
+        task["updated_at"] = _utc_now_iso()
         TASKS[task_id] = task
+    _persist_tasks_to_disk(force=status_norm in {"failed"})
 
 
 def _set_task_runtime_state(
@@ -295,10 +357,11 @@ def _set_task_runtime_state(
                 "progress": progress_value,
                 "current_stage": stage_text,
                 "message": message_text,
-                "updated_at": datetime.utcnow().isoformat() + "Z",
+                "updated_at": _utc_now_iso(),
             }
         )
         TASKS[task_id] = task
+    _persist_tasks_to_disk(force=status_norm in {"completed", "failed"})
     if emit_event:
         _emit_progress(task_id, progress_value, stage_text, message_text, status=status_norm)
 
@@ -339,7 +402,7 @@ def _emit_progress(task_id: str, progress: float, stage: str, message: str, stat
         "progress": _clamp_progress(progress),
         "current_stage": _safe_message(stage, "处理中"),
         "message": _safe_message(message, "处理中"),
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": _utc_now_iso(),
     }
     with PROGRESS_COND:
         PROGRESS_EVENTS.append(event)
@@ -352,8 +415,10 @@ def _update_task(task_id: str, **kwargs: Any) -> None:
     with TASKS_LOCK:
         task = TASKS.get(task_id, {})
         task.update(kwargs)
-        task["updated_at"] = datetime.utcnow().isoformat() + "Z"
+        task["updated_at"] = _utc_now_iso()
         TASKS[task_id] = task
+    force = _normalize_task_status(kwargs.get("status"), default="running") in {"completed", "failed"}
+    _persist_tasks_to_disk(force=force)
 
 
 def _update_task_outputs(task_id: str, outputs: Dict[str, str]) -> None:
@@ -372,6 +437,240 @@ def _safe_rel(path: str | Path) -> str:
         return str(p.relative_to(PROJECT_ROOT)).replace("\\", "/")
     except Exception:
         return str(p).replace("\\", "/")
+
+
+def _monitor_level_rank(level: str) -> int:
+    level_norm = str(level or "").strip().lower()
+    if level_norm == "high":
+        return 3
+    if level_norm == "medium":
+        return 2
+    return 1
+
+
+def _normalize_monitor_level(level: Any, default: str = "low") -> str:
+    s = str(level or "").strip().lower()
+    if s in {"high", "medium", "low"}:
+        return s
+    return default
+
+
+def _load_alert_notify_state() -> None:
+    with ALERT_NOTIFY_LOCK:
+        ALERT_NOTIFY_STATE.clear()
+        if not ALERT_STATE_FILE.exists() or not ALERT_STATE_FILE.is_file():
+            return
+        try:
+            raw = json.loads(ALERT_STATE_FILE.read_text(encoding="utf-8"))
+            sent = raw.get("last_sent", {}) if isinstance(raw, dict) else {}
+            if isinstance(sent, dict):
+                for k, v in sent.items():
+                    ALERT_NOTIFY_STATE[str(k)] = str(v)
+        except Exception:
+            return
+
+
+def _save_alert_notify_state() -> None:
+    with ALERT_NOTIFY_LOCK:
+        try:
+            SETTINGS.outputs_root.mkdir(parents=True, exist_ok=True)
+            payload = {"version": 1, "saved_at": _utc_now_iso(), "last_sent": ALERT_NOTIFY_STATE}
+            tmp = ALERT_STATE_FILE.with_suffix(".tmp")
+            tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp.replace(ALERT_STATE_FILE)
+        except Exception:
+            return
+
+
+def _append_audit_event(
+    action: str,
+    *,
+    task_id: str = "",
+    level: str = "info",
+    status: str = "",
+    message: str = "",
+    detail: Optional[Dict[str, Any]] = None,
+    actor: str = "system",
+) -> None:
+    event = {
+        "ts": _utc_now_iso(),
+        "action": _safe_message(action, "unknown_action"),
+        "task_id": _safe_message(task_id, ""),
+        "level": _normalize_monitor_level(level, default="low"),
+        "status": _safe_message(status, ""),
+        "message": _safe_message(message, ""),
+        "actor": _safe_message(actor, "system"),
+        "detail": detail or {},
+    }
+    with AUDIT_LOCK:
+        AUDIT_BUFFER.append(event)
+        max_keep = max(100, int(SETTINGS.audit_max_entries))
+        if len(AUDIT_BUFFER) > max_keep:
+            del AUDIT_BUFFER[: len(AUDIT_BUFFER) - max_keep]
+        try:
+            SETTINGS.outputs_root.mkdir(parents=True, exist_ok=True)
+            with AUDIT_LOG_FILE.open("a", encoding="utf-8") as fp:
+                fp.write(json.dumps(event, ensure_ascii=False) + "\n")
+        except Exception:
+            return
+
+
+def _load_audit_events_from_disk(max_items: int = 800) -> None:
+    with AUDIT_LOCK:
+        AUDIT_BUFFER.clear()
+        if not AUDIT_LOG_FILE.exists() or not AUDIT_LOG_FILE.is_file():
+            return
+        try:
+            lines = AUDIT_LOG_FILE.read_text(encoding="utf-8", errors="replace").splitlines()
+        except Exception:
+            return
+        for ln in lines[-max_items:]:
+            raw = ln.strip()
+            if not raw:
+                continue
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    AUDIT_BUFFER.append(data)
+            except Exception:
+                continue
+        max_keep = max(100, int(SETTINGS.audit_max_entries))
+        if len(AUDIT_BUFFER) > max_keep:
+            del AUDIT_BUFFER[: len(AUDIT_BUFFER) - max_keep]
+
+
+def _query_audit_events(
+    *,
+    limit: int = 40,
+    offset: int = 0,
+    action: str = "",
+    level: str = "",
+    task_id: str = "",
+) -> Dict[str, Any]:
+    with AUDIT_LOCK:
+        events = list(AUDIT_BUFFER)
+    action_q = str(action or "").strip().lower()
+    level_q = _normalize_monitor_level(level, default="") if str(level or "").strip() else ""
+    task_q = str(task_id or "").strip().lower()
+
+    filtered = []
+    for e in events:
+        if action_q and str(e.get("action", "")).strip().lower() != action_q:
+            continue
+        if level_q and str(e.get("level", "")).strip().lower() != level_q:
+            continue
+        if task_q and str(e.get("task_id", "")).strip().lower() != task_q:
+            continue
+        filtered.append(e)
+    filtered.sort(key=lambda x: str(x.get("ts", "")), reverse=True)
+    total = len(filtered)
+    sliced = filtered[offset : offset + limit]
+    return {
+        "ok": True,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": (offset + len(sliced)) < total,
+        "events": sliced,
+    }
+
+
+def _build_task_queue_payload() -> Dict[str, Any]:
+    with TASKS_LOCK:
+        items = [(tid, dict(task)) for tid, task in TASKS.items()]
+    pending = []
+    running = []
+    for tid, task in items:
+        status = _normalize_task_status(task.get("status"), default="failed")
+        if status not in {"pending", "running"}:
+            continue
+        data = {
+            "task_id": tid,
+            "status": status,
+            "progress": _clamp_progress(task.get("progress", 0.0)),
+            "current_stage": _safe_message(task.get("current_stage", "等待执行"), "等待执行"),
+            "message": _safe_message(task.get("message", ""), ""),
+            "created_at": task.get("created_at"),
+            "updated_at": task.get("updated_at"),
+            "cancel_requested": bool(task.get("cancel_requested")),
+        }
+        if status == "running":
+            running.append(data)
+        else:
+            pending.append(data)
+    pending.sort(key=lambda x: str(x.get("created_at", "")))
+    running.sort(key=lambda x: str(x.get("created_at", "")))
+    for idx, item in enumerate(pending, start=1):
+        item["queue_position"] = idx
+    return {
+        "ok": True,
+        "running_count": len(running),
+        "pending_count": len(pending),
+        "max_workers": SETTINGS.max_workers,
+        "running": running[:50],
+        "pending": pending[:100],
+    }
+
+
+def _maybe_send_monitor_webhooks(settings: IntegratedSettings, monitor_payload: Dict[str, Any]) -> Dict[str, Any]:
+    webhook_url = str(settings.monitor_webhook_url or "").strip()
+    if not webhook_url:
+        return {"enabled": False, "sent": 0}
+
+    min_level = _normalize_monitor_level(settings.monitor_webhook_min_level or "high", default="high")
+    cooldown_sec = max(60, int(settings.monitor_webhook_cooldown_sec))
+    alerts = list(monitor_payload.get("alerts", []) if isinstance(monitor_payload.get("alerts"), list) else [])
+    eligible = [
+        a
+        for a in alerts
+        if _monitor_level_rank(str(a.get("level", "low"))) >= _monitor_level_rank(min_level)
+    ]
+    if not eligible:
+        return {"enabled": True, "sent": 0, "min_level": min_level}
+
+    sent_count = 0
+    skipped = 0
+    now = datetime.now(timezone.utc)
+    with ALERT_NOTIFY_LOCK:
+        for alert in eligible:
+            signature = f"{alert.get('type','unknown')}|{alert.get('task_id','')}"
+            last_sent_iso = ALERT_NOTIFY_STATE.get(signature, "")
+            last_sent_dt = _parse_utc_iso(last_sent_iso)
+            if last_sent_dt and (now - last_sent_dt).total_seconds() < cooldown_sec:
+                skipped += 1
+                continue
+            body = {
+                "service": "integrated_system",
+                "event": "monitor_alert",
+                "sent_at": _utc_now_iso(),
+                "alert": alert,
+                "task_stats": monitor_payload.get("task_stats", {}),
+            }
+            req = urllib.request.Request(
+                webhook_url,
+                data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=4.0) as resp:
+                    if int(getattr(resp, "status", 200)) >= 400:
+                        continue
+                ALERT_NOTIFY_STATE[signature] = _utc_now_iso()
+                sent_count += 1
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+                continue
+    if sent_count > 0:
+        _save_alert_notify_state()
+        _append_audit_event(
+            "monitor_webhook",
+            level="medium",
+            status="ok",
+            message=f"webhook sent {sent_count} alert(s)",
+            detail={"min_level": min_level, "skipped": skipped},
+            actor="system",
+        )
+    return {"enabled": True, "sent": sent_count, "skipped": skipped, "min_level": min_level}
 
 
 def _safe_read_text(path: Path, limit: int = 8000) -> str:
@@ -517,6 +816,7 @@ def _task_public_payload(task_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
         "upload": task.get("upload", {}),
         "created_at": task.get("created_at"),
         "updated_at": task.get("updated_at"),
+        "cancel_requested": bool(task.get("cancel_requested")),
         "options": task.get("options", {}),
         "error": task.get("error"),
         "failure": _classify_failure(task),
@@ -559,7 +859,17 @@ def _classify_failure(task: Dict[str, Any]) -> Optional[Dict[str, str]]:
     title = "Runtime Failure"
     hint = "Inspect traceback and stage logs, then retry the task."
 
-    if "permissionerror" in blob or "access is denied" in blob or "拒绝访问" in blob:
+    if "任务已取消" in message or "cancelled" in blob or "canceled" in blob:
+        category = "cancelled"
+        level = "P3"
+        title = "Task Cancelled"
+        hint = "Task was cancelled by user or operator."
+    elif "服务已重启" in message:
+        category = "service_restart"
+        level = "P2"
+        title = "Interrupted By Restart"
+        hint = "Service restarted while task was running. Retry this task."
+    elif "permissionerror" in blob or "access is denied" in blob or "拒绝访问" in blob:
         category = "permission_error"
         level = "P0"
         title = "Permission Denied"
@@ -650,6 +960,164 @@ def _probe_modules() -> Dict[str, bool]:
     return modules
 
 
+def _task_duration_sec(task: Dict[str, Any]) -> Optional[float]:
+    created = _parse_utc_iso(task.get("created_at"))
+    updated = _parse_utc_iso(task.get("updated_at"))
+    if created is None or updated is None:
+        return None
+    return max(0.0, (updated - created).total_seconds())
+
+
+def _build_monitor_payload(settings: IntegratedSettings) -> Dict[str, Any]:
+    with TASKS_LOCK:
+        tasks = [(tid, dict(task)) for tid, task in TASKS.items()]
+
+    now_utc = datetime.now(timezone.utc)
+    counts: Dict[str, int] = {"pending": 0, "running": 0, "completed": 0, "failed": 0}
+    running_items: List[Dict[str, Any]] = []
+    completed_durations: List[float] = []
+    failed_recent: List[Dict[str, Any]] = []
+    high_risk_items: List[Dict[str, Any]] = []
+    alerts: List[Dict[str, Any]] = []
+
+    failure_window = timedelta(seconds=max(60, int(settings.monitor_failure_window_sec)))
+    stale_window = timedelta(seconds=max(60, int(settings.monitor_long_running_sec)))
+
+    for tid, task in tasks:
+        status = _normalize_task_status(task.get("status"), default="failed")
+        counts[status] = counts.get(status, 0) + 1
+        created_dt = _parse_utc_iso(task.get("created_at"))
+        updated_dt = _parse_utc_iso(task.get("updated_at"))
+        duration = _task_duration_sec(task)
+
+        if status in {"completed", "failed"} and duration is not None:
+            completed_durations.append(duration)
+
+        if status == "running":
+            elapsed = None
+            if created_dt is not None:
+                elapsed = max(0.0, (now_utc - created_dt).total_seconds())
+            item = {
+                "task_id": tid,
+                "elapsed_sec": elapsed,
+                "progress": _clamp_progress(task.get("progress", 0.0)),
+                "current_stage": _safe_message(task.get("current_stage", "运行中"), "运行中"),
+                "message": _safe_message(task.get("message", ""), ""),
+            }
+            running_items.append(item)
+            if elapsed is not None and elapsed >= stale_window.total_seconds():
+                alerts.append(
+                    {
+                        "level": "medium",
+                        "type": "task_stalled",
+                        "task_id": tid,
+                        "title": "长时间运行任务",
+                        "message": f"任务运行 {int(elapsed)} 秒，阶段：{item['current_stage']}",
+                        "created_at": _utc_now_iso(),
+                    }
+                )
+
+        if status == "failed" and updated_dt is not None and (now_utc - updated_dt) <= failure_window:
+            failed_recent.append({"task_id": tid, "updated_at": task.get("updated_at"), "message": task.get("message", "")})
+
+        alarm_count = int(task.get("alarm_count", 0) or 0)
+        if status in {"completed", "failed"} and alarm_count >= 5:
+            high_risk_items.append(
+                {
+                    "task_id": tid,
+                    "alarm_count": alarm_count,
+                    "status": status,
+                    "updated_at": task.get("updated_at"),
+                }
+            )
+
+    if counts.get("running", 0) > settings.max_workers:
+        alerts.append(
+            {
+                "level": "medium",
+                "type": "queue_pressure",
+                "task_id": "",
+                "title": "任务并发压力",
+                "message": f"当前运行任务 {counts.get('running', 0)}，超过 worker 数 {settings.max_workers}",
+                "created_at": _utc_now_iso(),
+            }
+        )
+
+    if len(failed_recent) >= max(1, int(settings.monitor_failure_threshold)):
+        alerts.append(
+            {
+                "level": "high",
+                "type": "recent_failures",
+                "task_id": "",
+                "title": "短时失败任务偏多",
+                "message": f"{int(settings.monitor_failure_window_sec)} 秒内失败任务 {len(failed_recent)} 个",
+                "created_at": _utc_now_iso(),
+            }
+        )
+
+    if high_risk_items:
+        top_risk = sorted(high_risk_items, key=lambda x: x["alarm_count"], reverse=True)[0]
+        alerts.append(
+            {
+                "level": "high",
+                "type": "risk_detected",
+                "task_id": top_risk["task_id"],
+                "title": "检测到高风险任务",
+                "message": f"任务 {top_risk['task_id']} 检测到 {top_risk['alarm_count']} 条异常",
+                "created_at": _utc_now_iso(),
+            }
+        )
+
+    modules = _probe_modules()
+    if not all(bool(v) for v in modules.values()):
+        missing = [k for k, v in modules.items() if not v]
+        alerts.append(
+            {
+                "level": "low",
+                "type": "dependency_degraded",
+                "task_id": "",
+                "title": "环境降级",
+                "message": f"缺少依赖模块: {', '.join(missing)}",
+                "created_at": _utc_now_iso(),
+            }
+        )
+
+    alerts.sort(
+        key=lambda x: (
+            {"high": 3, "medium": 2, "low": 1}.get(str(x.get("level", "low")).lower(), 0),
+            str(x.get("created_at", "")),
+        ),
+        reverse=True,
+    )
+
+    avg_duration_sec = round(sum(completed_durations) / len(completed_durations), 2) if completed_durations else None
+    running_items.sort(key=lambda x: (x.get("elapsed_sec") or 0), reverse=True)
+    failed_recent.sort(key=lambda x: str(x.get("updated_at", "")), reverse=True)
+    high_risk_items.sort(key=lambda x: x["alarm_count"], reverse=True)
+
+    return {
+        "ok": True,
+        "generated_at": _utc_now_iso(),
+        "task_stats": {
+            "total": len(tasks),
+            "pending": counts.get("pending", 0),
+            "running": counts.get("running", 0),
+            "completed": counts.get("completed", 0),
+            "failed": counts.get("failed", 0),
+        },
+        "avg_duration_sec": avg_duration_sec,
+        "running_tasks": running_items[:12],
+        "recent_failed_tasks": failed_recent[:12],
+        "high_risk_tasks": high_risk_items[:12],
+        "alerts": alerts[:20],
+        "persistence": {
+            "registry_path": _safe_rel(TASK_REGISTRY_FILE),
+            "last_saved_at": str(PERSIST_META.get("last_saved_at", "")),
+            "last_error": str(PERSIST_META.get("last_error", "")),
+        },
+    }
+
+
 def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dict[str, Any], settings: IntegratedSettings) -> None:
     outputs: Dict[str, str] = {}
     hand_payload: Dict[str, Any] = {}
@@ -702,6 +1170,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
     ffmpeg_available = bool(_resolve_ffmpeg_executable())
 
     try:
+        _ensure_not_cancelled(task_id)
         input_size_mb = round((video_path.stat().st_size / (1024 * 1024)), 2) if video_path.exists() else 0.0
         _set_task_module_status(
             task_id,
@@ -717,6 +1186,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
             stage="上传完成",
             message=f"上传完成，文件 {video_path.name}（{input_size_mb} MB），开始分析。",
         )
+        _ensure_not_cancelled(task_id)
 
         if options.get("enable_video_export", True) and not ffmpeg_available:
             _append_module_note("FFmpeg 不可用，标注视频将使用 OpenCV 基础导出。")
@@ -743,6 +1213,8 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
             last_hand_emit = {"t": 0.0}
 
             def _hand_progress(processed_frames: int, total_frames: int, sampled_frames: int, msg: str) -> None:
+                if _is_task_cancel_requested(task_id):
+                    raise TaskCancelled("任务已取消")
                 now = time.time()
                 if now - last_hand_emit["t"] < 0.25 and total_frames > 0 and processed_frames < total_frames:
                     return
@@ -807,6 +1279,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                     stage="手部检测中",
                     message=hand_msg,
                 )
+                _ensure_not_cancelled(task_id)
             except Exception as hand_exc:
                 # Hand detection should not kill the whole pipeline.
                 hand_payload = {
@@ -833,6 +1306,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                     stage="手部检测中",
                     message=msg,
                 )
+                _ensure_not_cancelled(task_id)
         else:
             msg = "手部检测已跳过：开关关闭。"
             _set_task_module_status(task_id, "hand_detection", "skipped", msg)
@@ -848,6 +1322,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 stage="手部检测中",
                 message=msg,
             )
+            _ensure_not_cancelled(task_id)
 
         _set_task_runtime_state(
             task_id,
@@ -860,6 +1335,8 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
         last_extract_emit = {"t": 0.0}
 
         def _extract_progress(processed: int, total: int, saved: int, msg: str) -> None:
+            if _is_task_cancel_requested(task_id):
+                raise TaskCancelled("任务已取消")
             now = time.time()
             if now - last_extract_emit["t"] < 0.25 and total > 0 and processed < total:
                 return
@@ -877,6 +1354,8 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
         last_ai_emit = {"t": 0.0}
 
         def _ai_progress(done: int, total: int, msg: str) -> None:
+            if _is_task_cancel_requested(task_id):
+                raise TaskCancelled("任务已取消")
             now = time.time()
             if now - last_ai_emit["t"] < 0.2 and total > 0 and done < total:
                 return
@@ -907,6 +1386,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
         outputs["overall_summary"] = _safe_rel(output_dir / "overall_summary.txt")
         outputs["analysis_json"] = _safe_rel(output_dir / "keyframe_ai_analysis.json")
         _update_task_outputs(task_id, outputs)
+        _ensure_not_cancelled(task_id)
 
         keyframes = keyframe_payload.get("keyframes", []) if isinstance(keyframe_payload.get("keyframes"), list) else []
         keyframe_count = len(keyframes)
@@ -966,6 +1446,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
             rules_cfg = _load_rules_config()
             expected = _read_rules_expected_steps()
             try:
+                _ensure_not_cancelled(task_id)
                 alarm_payload = run_step_check(
                     output_dir=output_dir,
                     keyframe_meta=keyframe_payload.get("keyframes", []),
@@ -985,6 +1466,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                     stage="步骤检查中",
                     message=f"步骤检查完成：检测到 {alarm_count} 条报警。",
                 )
+                _ensure_not_cancelled(task_id)
             except Exception as step_exc:
                 msg = f"步骤检查失败，已跳过：{step_exc}"
                 _set_task_module_status(task_id, "step_check", "failed", msg)
@@ -996,6 +1478,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                     stage="步骤检查中",
                     message=msg,
                 )
+                _ensure_not_cancelled(task_id)
         else:
             msg = "步骤检查未启用。"
             _set_task_module_status(task_id, "step_check", "skipped", msg)
@@ -1007,6 +1490,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 stage="步骤检查中",
                 message=msg,
             )
+            _ensure_not_cancelled(task_id)
 
         if options.get("enable_pdf", True):
             _set_task_runtime_state(
@@ -1017,6 +1501,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 message="正在生成 PDF 报告。",
             )
             try:
+                _ensure_not_cancelled(task_id)
                 report_path = generate_integrated_pdf(
                     {
                         "task_id": task_id,
@@ -1052,6 +1537,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                         stage="PDF生成中",
                         message=msg,
                     )
+                _ensure_not_cancelled(task_id)
             except Exception as pdf_exc:
                 msg = f"PDF 生成失败：{pdf_exc}"
                 _set_task_module_status(task_id, "pdf", "failed", msg)
@@ -1063,6 +1549,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                     stage="PDF生成中",
                     message=msg,
                 )
+                _ensure_not_cancelled(task_id)
         else:
             msg = "PDF 报告未启用。"
             _set_task_module_status(task_id, "pdf", "skipped", msg)
@@ -1074,6 +1561,7 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
                 stage="PDF生成中",
                 message=msg,
             )
+            _ensure_not_cancelled(task_id)
 
         required_outputs = {
             "part1_keyframes": output_dir / "part1_keyframes.json",
@@ -1126,6 +1614,43 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
             stage="已完成",
             message=completion_msg,
         )
+        _append_audit_event(
+            "task_finished",
+            task_id=task_id,
+            level="low",
+            status="completed",
+            message=completion_msg,
+            detail={
+                "alarm_count": final_payload.get("alarm_count", 0),
+                "keyframe_count": final_payload.get("keyframe_count", 0),
+                "degraded_modules": degraded_modules,
+            },
+            actor="system",
+        )
+    except TaskCancelled as cancel_exc:
+        cancel_msg = _safe_message(str(cancel_exc), "任务已取消")
+        _set_task_module_status(task_id, "pipeline", "failed", cancel_msg)
+        _update_task(
+            task_id,
+            status="failed",
+            progress=100.0,
+            current_stage="失败",
+            message=cancel_msg,
+            error=cancel_msg,
+            outputs=dict(outputs),
+            cancelled=True,
+            cancelled_at=_utc_now_iso(),
+            module_notes=list(module_notes),
+        )
+        _emit_progress(task_id, 100.0, "失败", cancel_msg, status="failed")
+        _append_audit_event(
+            "task_finished",
+            task_id=task_id,
+            level="medium",
+            status="cancelled",
+            message=cancel_msg,
+            actor="system",
+        )
     except Exception as exc:
         raw_error = _safe_message(str(exc), "未知错误")
         lowered = raw_error.lower()
@@ -1150,6 +1675,15 @@ def _run_pipeline(task_id: str, video_path: Path, output_dir: Path, options: Dic
             module_notes=list(module_notes),
         )
         _emit_progress(task_id, 100.0, "失败", final_error, status="failed")
+        _append_audit_event(
+            "task_finished",
+            task_id=task_id,
+            level="high",
+            status="failed",
+            message=final_error,
+            detail={"error": traceback.format_exc()[-1200:]},
+            actor="system",
+        )
 
 
 def _normalize_bool(v: Any, default: bool = True) -> bool:
@@ -1163,15 +1697,110 @@ def _normalize_bool(v: Any, default: bool = True) -> bool:
 def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
     cfg = settings or SETTINGS
     app = Flask(__name__, template_folder=str(Path(__file__).resolve().parent / "templates"))
+    restored_count = _bootstrap_tasks_from_disk()
+    _load_alert_notify_state()
+    _load_audit_events_from_disk(max_items=min(1500, max(200, int(cfg.audit_max_entries))))
+
+    def _request_actor() -> str:
+        remote = _safe_message(request.headers.get("X-Forwarded-For", ""), "").split(",")[0].strip()
+        if not remote:
+            remote = _safe_message(request.remote_addr, "unknown")
+        return remote
+
+    _append_audit_event(
+        "service_start",
+        level="low",
+        status="ok",
+        message=f"service bootstrapped, restored tasks: {restored_count}",
+        detail={"restored_tasks": restored_count, "port": cfg.port},
+        actor="system",
+    )
+
+    def _auth_enabled() -> bool:
+        return bool(str(cfg.api_token or "").strip())
+
+    def _extract_request_token() -> str:
+        # Query token is needed for EventSource/video/img since custom headers are limited.
+        query_token = str(request.args.get("token", "") or "").strip()
+        if query_token:
+            return query_token
+        header_token = str(request.headers.get("X-API-Token", "") or "").strip()
+        if header_token:
+            return header_token
+        auth_header = str(request.headers.get("Authorization", "") or "").strip()
+        if auth_header.lower().startswith("bearer "):
+            return auth_header[7:].strip()
+        form_token = str(request.form.get("token", "") or "").strip()
+        if form_token:
+            return form_token
+        return ""
+
+    def _auth_guard(scope: str = "read"):
+        if not _auth_enabled():
+            return None
+        expected = str(cfg.api_token or "").strip()
+        got = _extract_request_token()
+        if got and got == expected:
+            return None
+        _append_audit_event(
+            "auth_failed",
+            level="medium",
+            status="failed",
+            message=f"unauthorized {scope} request",
+            detail={"path": request.path, "method": request.method, "scope": scope},
+            actor=_request_actor(),
+        )
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "unauthorized",
+                    "message": "missing or invalid api token",
+                    "scope": scope,
+                    "auth_enabled": True,
+                }
+            ),
+            401,
+        )
 
     @app.get("/")
     def index():
-        return render_template("integrated_index.html", default_port=cfg.port)
+        return render_template(
+            "integrated_index.html",
+            default_port=cfg.port,
+            auth_enabled=_auth_enabled(),
+        )
+
+    @app.get("/api/auth/status")
+    def auth_status():
+        auth_on = _auth_enabled()
+        expected = str(cfg.api_token or "").strip()
+        current = _extract_request_token()
+        return jsonify(
+            {
+                "ok": True,
+                "auth_enabled": auth_on,
+                "authenticated": (not auth_on) or (current == expected and bool(current)),
+                "token_required_header": "X-API-Token",
+                "token_required_query": "token",
+            }
+        )
 
     @app.post("/api/analyze")
     def analyze():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
         up = request.files.get("video")
         if up is None or not up.filename:
+            _append_audit_event(
+                "analyze_submit",
+                level="low",
+                status="failed",
+                message="missing video file",
+                detail={"path": request.path},
+                actor=_request_actor(),
+            )
             return jsonify({"ok": False, "error": "Missing video file field 'video'."}), 400
 
         task_id = uuid.uuid4().hex[:12]
@@ -1200,8 +1829,8 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
             "outputs": {},
             "output_dir": _safe_rel(out_dir),
             "video_path": _safe_rel(input_video),
-            "created_at": datetime.utcnow().isoformat() + "Z",
-            "updated_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": _utc_now_iso(),
+            "updated_at": _utc_now_iso(),
             "options": options,
             "upload": {
                 "filename": up.filename,
@@ -1212,16 +1841,27 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 "upload": {
                     "status": "completed",
                     "message": f"视频上传完成：{up.filename}",
-                    "updated_at": datetime.utcnow().isoformat() + "Z",
+                    "updated_at": _utc_now_iso(),
                 }
             },
             "module_notes": [],
         }
         with TASKS_LOCK:
             TASKS[task_id] = task
+        _trim_task_registry(max_items=cfg.max_history_tasks)
+        _persist_tasks_to_disk(force=True)
 
         EXECUTOR.submit(_run_pipeline, task_id, input_video, out_dir, options, cfg)
         _emit_progress(task_id, 0, "上传完成", "上传成功，任务排队中。", status="pending")
+        _append_audit_event(
+            "analyze_submit",
+            task_id=task_id,
+            level="low",
+            status="accepted",
+            message="analysis task accepted",
+            detail={"filename": up.filename, "size_bytes": size_bytes, "options": options},
+            actor=_request_actor(),
+        )
 
         return jsonify(
             {
@@ -1239,13 +1879,32 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.post("/api/retry/<task_id>")
     def retry(task_id: str):
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
         source_task = _task_snapshot(task_id)
         if not source_task:
+            _append_audit_event(
+                "task_retry",
+                task_id=task_id,
+                level="low",
+                status="failed",
+                message="source task not found",
+                actor=_request_actor(),
+            )
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
 
         source_video_rel = str(source_task.get("video_path", "")).strip()
         source_video = PROJECT_ROOT / source_video_rel if source_video_rel else None
         if not source_video_rel or source_video is None or not source_video.exists() or not source_video.is_file():
+            _append_audit_event(
+                "task_retry",
+                task_id=task_id,
+                level="low",
+                status="failed",
+                message="source video not found",
+                actor=_request_actor(),
+            )
             return jsonify({"ok": False, "error": "source video not found for retry", "task_id": task_id}), 400
 
         prev_options = source_task.get("options", {}) if isinstance(source_task.get("options"), dict) else {}
@@ -1290,8 +1949,8 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
             "outputs": {},
             "output_dir": _safe_rel(out_dir),
             "video_path": _safe_rel(input_video),
-            "created_at": datetime.utcnow().isoformat() + "Z",
-            "updated_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": _utc_now_iso(),
+            "updated_at": _utc_now_iso(),
             "options": options,
             "retry_of": task_id,
             "upload": {
@@ -1303,16 +1962,27 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 "upload": {
                     "status": "completed",
                     "message": f"重试视频复制完成：{source_video.name}",
-                    "updated_at": datetime.utcnow().isoformat() + "Z",
+                    "updated_at": _utc_now_iso(),
                 }
             },
             "module_notes": [],
         }
         with TASKS_LOCK:
             TASKS[new_task_id] = task
+        _trim_task_registry(max_items=cfg.max_history_tasks)
+        _persist_tasks_to_disk(force=True)
 
         EXECUTOR.submit(_run_pipeline, new_task_id, input_video, out_dir, options, cfg)
         _emit_progress(new_task_id, 0, "上传完成", f"重试任务已排队（来源 {task_id}）。", status="pending")
+        _append_audit_event(
+            "task_retry",
+            task_id=new_task_id,
+            level="low",
+            status="accepted",
+            message=f"retry created from {task_id}",
+            detail={"source_task_id": task_id, "options": options},
+            actor=_request_actor(),
+        )
 
         return jsonify(
             {
@@ -1331,6 +2001,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.get("/api/status/<task_id>")
     def status(task_id: str):
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         task = _task_snapshot(task_id)
         if not task:
             return jsonify(
@@ -1351,6 +2024,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.get("/api/tasks")
     def list_tasks():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         raw_limit = request.args.get("limit", "20").strip()
         raw_offset = request.args.get("offset", "0").strip()
         status_filter = request.args.get("status", "").strip().lower()
@@ -1400,9 +2076,11 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
         items: list[Dict[str, Any]] = []
         for tid, task in sliced:
+            task_status = _normalize_task_status(task.get("status"), default="failed")
+            is_running_like = task_status in {"pending", "running"}
             item = {
                 "task_id": tid,
-                "status": _normalize_task_status(task.get("status"), default="failed"),
+                "status": task_status,
                 "progress": _clamp_progress(task.get("progress", 0.0)),
                 "current_stage": _safe_message(task.get("current_stage", "等待执行"), "等待执行"),
                 "message": _safe_message(task.get("message", ""), ""),
@@ -1410,6 +2088,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 "updated_at": task.get("updated_at"),
                 "output_dir": str(task.get("output_dir", "")),
                 "failure": _classify_failure(task),
+                "cancel_requested": bool(task.get("cancel_requested")),
+                "can_cancel": bool(is_running_like and not bool(task.get("cancel_requested"))),
+                "can_delete": bool(not is_running_like),
                 "can_retry": bool(
                     str(task.get("video_path", "")).strip()
                     and (PROJECT_ROOT / str(task.get("video_path", ""))).exists()
@@ -1431,8 +2112,271 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
             }
         )
 
+    @app.get("/api/queue")
+    def queue_snapshot():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
+        return jsonify(_build_task_queue_payload())
+
+    @app.post("/api/tasks/batch_cancel")
+    def batch_cancel_tasks():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        payload = request.get_json(silent=True) or {}
+        task_ids = payload.get("task_ids", [])
+        if not isinstance(task_ids, list):
+            return jsonify({"ok": False, "error": "task_ids must be a list"}), 400
+        clean_ids = [str(x).strip() for x in task_ids if str(x).strip()]
+        if not clean_ids:
+            return jsonify({"ok": False, "error": "empty task_ids"}), 400
+
+        result = []
+        for tid in clean_ids:
+            task = _task_snapshot(tid)
+            if not task:
+                result.append({"task_id": tid, "ok": False, "error": "not_found"})
+                continue
+            status = _normalize_task_status(task.get("status"), default="failed")
+            if status in {"completed", "failed"}:
+                result.append({"task_id": tid, "ok": True, "accepted": False, "status": status})
+                continue
+            _update_task(
+                tid,
+                cancel_requested=True,
+                cancel_requested_at=_utc_now_iso(),
+                message="已收到取消请求，等待当前步骤安全停止。",
+            )
+            _emit_progress(
+                tid,
+                _clamp_progress(task.get("progress", 0.0)),
+                _safe_message(task.get("current_stage", "运行中"), "运行中"),
+                "已收到取消请求，等待当前步骤安全停止。",
+                status=status,
+            )
+            result.append({"task_id": tid, "ok": True, "accepted": True, "status": status})
+
+        accepted_count = sum(1 for x in result if x.get("accepted"))
+        _append_audit_event(
+            "task_batch_cancel",
+            level="low",
+            status="ok",
+            message=f"batch cancel accepted {accepted_count}/{len(result)}",
+            detail={"items": result[:50]},
+            actor=_request_actor(),
+        )
+        return jsonify({"ok": True, "count": len(result), "accepted": accepted_count, "items": result})
+
+    @app.post("/api/tasks/batch_delete")
+    def batch_delete_tasks():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        payload = request.get_json(silent=True) or {}
+        task_ids = payload.get("task_ids", [])
+        purge = bool(payload.get("purge", True))
+        if not isinstance(task_ids, list):
+            return jsonify({"ok": False, "error": "task_ids must be a list"}), 400
+        clean_ids = [str(x).strip() for x in task_ids if str(x).strip()]
+        if not clean_ids:
+            return jsonify({"ok": False, "error": "empty task_ids"}), 400
+
+        result = []
+        deleted_ids: List[str] = []
+        for tid in clean_ids:
+            task = _task_snapshot(tid)
+            if not task:
+                result.append({"task_id": tid, "ok": False, "error": "not_found"})
+                continue
+            status = _normalize_task_status(task.get("status"), default="failed")
+            if status in {"pending", "running"}:
+                result.append({"task_id": tid, "ok": False, "error": "running_task"})
+                continue
+
+            output_dir_rel = str(task.get("output_dir", "")).strip()
+            output_dir = _resolve_project_file(output_dir_rel) if output_dir_rel else None
+            removed_files = False
+            if purge and output_dir and output_dir.exists():
+                try:
+                    output_dir_resolved = output_dir.resolve()
+                    outputs_root_resolved = SETTINGS.outputs_root.resolve()
+                    output_dir_resolved.relative_to(outputs_root_resolved)
+                    shutil.rmtree(output_dir_resolved)
+                    removed_files = True
+                except Exception as exc:
+                    result.append({"task_id": tid, "ok": False, "error": f"purge_failed:{exc}"})
+                    continue
+            deleted_ids.append(tid)
+            result.append({"task_id": tid, "ok": True, "removed_files": removed_files})
+
+        if deleted_ids:
+            with TASKS_LOCK:
+                for tid in deleted_ids:
+                    TASKS.pop(tid, None)
+            _persist_tasks_to_disk(force=True)
+
+        _append_audit_event(
+            "task_batch_delete",
+            level="medium" if deleted_ids else "low",
+            status="ok",
+            message=f"batch delete removed {len(deleted_ids)}/{len(result)}",
+            detail={"purge": purge, "items": result[:50]},
+            actor=_request_actor(),
+        )
+        return jsonify({"ok": True, "count": len(result), "deleted": len(deleted_ids), "items": result})
+
+    @app.post("/api/tasks/<task_id>/cancel")
+    def cancel_task(task_id: str):
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        task = _task_snapshot(task_id)
+        if not task:
+            _append_audit_event(
+                "task_cancel",
+                task_id=task_id,
+                level="low",
+                status="failed",
+                message="task not found",
+                actor=_request_actor(),
+            )
+            return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
+
+        status = _normalize_task_status(task.get("status"), default="failed")
+        if status in {"completed", "failed"}:
+            _append_audit_event(
+                "task_cancel",
+                task_id=task_id,
+                level="low",
+                status="ignored",
+                message=f"task already finished: {status}",
+                actor=_request_actor(),
+            )
+            return jsonify(
+                {
+                    "ok": True,
+                    "task_id": task_id,
+                    "accepted": False,
+                    "status": status,
+                    "message": "任务已结束，无需取消。",
+                }
+            )
+
+        _update_task(
+            task_id,
+            cancel_requested=True,
+            cancel_requested_at=_utc_now_iso(),
+            message="已收到取消请求，等待当前步骤安全停止。",
+        )
+        _emit_progress(
+            task_id,
+            _clamp_progress(task.get("progress", 0.0)),
+            _safe_message(task.get("current_stage", "运行中"), "运行中"),
+            "已收到取消请求，等待当前步骤安全停止。",
+            status=status,
+        )
+        _append_audit_event(
+            "task_cancel",
+            task_id=task_id,
+            level="low",
+            status="accepted",
+            message="cancel request accepted",
+            actor=_request_actor(),
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "task_id": task_id,
+                "accepted": True,
+                "status": status,
+                "message": "取消请求已受理。",
+            }
+        )
+
+    @app.delete("/api/tasks/<task_id>")
+    def delete_task(task_id: str):
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        purge = str(request.args.get("purge", "0")).strip().lower() in {"1", "true", "yes"}
+
+        with TASKS_LOCK:
+            task = dict(TASKS.get(task_id, {}))
+        if not task:
+            _append_audit_event(
+                "task_delete",
+                task_id=task_id,
+                level="low",
+                status="failed",
+                message="task not found",
+                actor=_request_actor(),
+            )
+            return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
+
+        status = _normalize_task_status(task.get("status"), default="failed")
+        if status in {"pending", "running"}:
+            _append_audit_event(
+                "task_delete",
+                task_id=task_id,
+                level="low",
+                status="failed",
+                message="cannot delete running task",
+                actor=_request_actor(),
+            )
+            return jsonify(
+                {
+                    "ok": False,
+                    "task_id": task_id,
+                    "error": "cannot delete running task; cancel first",
+                }
+            ), 409
+
+        output_dir_rel = str(task.get("output_dir", "")).strip()
+        output_dir = _resolve_project_file(output_dir_rel) if output_dir_rel else None
+        removed_files = False
+        if purge and output_dir and output_dir.exists():
+            try:
+                output_dir_resolved = output_dir.resolve()
+                outputs_root_resolved = SETTINGS.outputs_root.resolve()
+                output_dir_resolved.relative_to(outputs_root_resolved)
+                shutil.rmtree(output_dir_resolved)
+                removed_files = True
+            except Exception as exc:
+                return jsonify(
+                    {
+                        "ok": False,
+                        "task_id": task_id,
+                        "error": f"failed to purge output directory: {exc}",
+                    }
+                ), 500
+
+        with TASKS_LOCK:
+            TASKS.pop(task_id, None)
+        _persist_tasks_to_disk(force=True)
+        _append_audit_event(
+            "task_delete",
+            task_id=task_id,
+            level="medium",
+            status="ok",
+            message="task deleted",
+            detail={"purged": purge, "removed_files": removed_files},
+            actor=_request_actor(),
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "task_id": task_id,
+                "purged": purge,
+                "removed_files": removed_files,
+            }
+        )
+
     @app.get("/api/diagnostic/<task_id>")
     def diagnostic(task_id: str):
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         task = _task_snapshot(task_id)
         if not task:
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
@@ -1476,6 +2420,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.get("/api/progress")
     def progress_sse():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         watch_task = request.args.get("task_id", "").strip()
         start_from = request.args.get("start", "").strip().lower()
 
@@ -1501,7 +2448,7 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                             "task_id": watch_task or "",
                             "status": heartbeat_status,
                             "progress": heartbeat_progress,
-                            "timestamp": datetime.utcnow().isoformat() + "Z",
+                            "timestamp": _utc_now_iso(),
                         }
 
                 if watch_task and event.get("task_id") != watch_task and event.get("type") != "heartbeat":
@@ -1514,6 +2461,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.get("/api/artifact/<task_id>")
     def artifact(task_id: str):
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         task = _task_snapshot(task_id)
         if not task:
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
@@ -1539,6 +2489,9 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
 
     @app.get("/api/download/<task_id>/<file_type>")
     def download(task_id: str, file_type: str):
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         task = _task_snapshot(task_id)
         if not task:
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
@@ -1615,10 +2568,22 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                     "error": f"file not ready: {canonical_type}",
                 }
             ), 404
+        _append_audit_event(
+            "file_download",
+            task_id=task_id,
+            level="low",
+            status="ok",
+            message=f"download {canonical_type}",
+            detail={"file_type": canonical_type, "path": _safe_rel(path)},
+            actor=_request_actor(),
+        )
         return send_file(path, as_attachment=True, download_name=path.name)
 
     @app.get("/api/download_bundle/<task_id>")
     def download_bundle(task_id: str):
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         task = _task_snapshot(task_id)
         if not task:
             return jsonify({"ok": False, "error": "task not found", "task_id": task_id}), 404
@@ -1655,13 +2620,65 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 arcname = _safe_rel(p)
                 zf.write(p, arcname=arcname)
 
+        _append_audit_event(
+            "file_download_bundle",
+            task_id=task_id,
+            level="low",
+            status="ok",
+            message="bundle download ready",
+            detail={"file_count": len(existing_files), "bundle": _safe_rel(bundle_path)},
+            actor=_request_actor(),
+        )
         return send_file(bundle_path, as_attachment=True, download_name=f"{task_id}_bundle.zip")
+
+    @app.get("/api/monitor")
+    def monitor():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
+        payload = _build_monitor_payload(cfg)
+        payload["queue"] = _build_task_queue_payload()
+        payload["webhook"] = _maybe_send_monitor_webhooks(cfg, payload)
+        return jsonify(payload)
+
+    @app.get("/api/audit")
+    def audit_events():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
+        raw_limit = request.args.get("limit", "40").strip()
+        raw_offset = request.args.get("offset", "0").strip()
+        action = request.args.get("action", "").strip()
+        level = request.args.get("level", "").strip()
+        task_id = request.args.get("task_id", "").strip()
+        try:
+            limit = max(1, min(200, int(raw_limit)))
+        except Exception:
+            limit = 40
+        try:
+            offset = max(0, int(raw_offset))
+        except Exception:
+            offset = 0
+        return jsonify(
+            _query_audit_events(
+                limit=limit,
+                offset=offset,
+                action=action,
+                level=level,
+                task_id=task_id,
+            )
+        )
 
     @app.get("/api/health")
     def health():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
         modules = _probe_modules()
         api_ready = _is_openai_key_configured()
         ffmpeg_available = bool(_resolve_ffmpeg_executable())
+        with TASKS_LOCK:
+            task_count = len(TASKS)
         degraded_reasons = []
         if not modules.get("cv2", False):
             degraded_reasons.append("opencv_missing")
@@ -1678,11 +2695,18 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 "status": "ok",
                 "service": "integrated_system",
                 "port": cfg.port,
+                "auth_enabled": bool(str(cfg.api_token or "").strip()),
                 "api_key_configured": api_ready,
+                "monitor_webhook_enabled": bool(str(cfg.monitor_webhook_url or "").strip()),
                 "ffmpeg_available": ffmpeg_available,
                 "available_modules": modules,
-                "task_count": len(TASKS),
+                "task_count": task_count,
                 "degraded_reasons": degraded_reasons,
+                "persistence": {
+                    "registry_path": _safe_rel(TASK_REGISTRY_FILE),
+                    "last_saved_at": str(PERSIST_META.get("last_saved_at", "")),
+                    "last_error": str(PERSIST_META.get("last_error", "")),
+                },
                 "defaults": {
                     "enable_hand_detection": cfg.enable_hand_detection,
                     "enable_ai_analysis": cfg.enable_ai_analysis,

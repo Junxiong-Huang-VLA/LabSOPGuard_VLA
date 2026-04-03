@@ -26,6 +26,20 @@ class IntegratedSettings:
     ai_base_url: str = os.getenv("OPENAI_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
 
     enable_ffmpeg: bool = os.getenv("INTEGRATED_ENABLE_FFMPEG", "0") == "1"
+    api_token: str = os.getenv("INTEGRATED_API_TOKEN", "").strip()
+    task_registry_filename: str = os.getenv("INTEGRATED_TASK_REGISTRY_FILE", "_task_registry.json")
+    max_history_tasks: int = int(os.getenv("INTEGRATED_MAX_HISTORY_TASKS", "600"))
+
+    monitor_long_running_sec: int = int(os.getenv("INTEGRATED_MONITOR_LONG_RUNNING_SEC", "1800"))
+    monitor_failure_window_sec: int = int(os.getenv("INTEGRATED_MONITOR_FAILURE_WINDOW_SEC", "1800"))
+    monitor_failure_threshold: int = int(os.getenv("INTEGRATED_MONITOR_FAILURE_THRESHOLD", "3"))
+    monitor_webhook_url: str = os.getenv("INTEGRATED_MONITOR_WEBHOOK_URL", "").strip()
+    monitor_webhook_min_level: str = os.getenv("INTEGRATED_MONITOR_WEBHOOK_MIN_LEVEL", "high").strip().lower()
+    monitor_webhook_cooldown_sec: int = int(os.getenv("INTEGRATED_MONITOR_WEBHOOK_COOLDOWN_SEC", "900"))
+    alert_state_filename: str = os.getenv("INTEGRATED_ALERT_STATE_FILE", "_alert_state.json")
+
+    audit_log_filename: str = os.getenv("INTEGRATED_AUDIT_LOG_FILE", "_audit_log.jsonl")
+    audit_max_entries: int = int(os.getenv("INTEGRATED_AUDIT_MAX_ENTRIES", "4000"))
 
     @property
     def app_root(self) -> Path:

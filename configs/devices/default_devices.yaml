@@ -1,0 +1,14 @@
+﻿camera:
+  device_id: camera_main
+  mode: mock
+  source: mock
+  depth_source: null
+  target_fps: 10.0
+
+robot:
+  device_id: robot_arm_main
+  adapter: mock
+  enabled: false
+  metadata:
+    vendor: placeholder
+    model: placeholder

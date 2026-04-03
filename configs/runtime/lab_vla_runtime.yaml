@@ -1,0 +1,15 @@
+﻿# Unified runtime config for lab_vla mainline.
+devices_config: configs/devices/default_devices.yaml
+models_config: configs/models/perception.yaml
+calibration_config: configs/calibration/default_calibration.yaml
+task_config: configs/tasks/default_task.yaml
+safety_rules_config: configs/sop/rules.yaml
+robot_bridge_config: configs/robot/bridge.yaml
+
+max_frames: 12
+safety_cooldown_seconds: 1.0
+log_level: INFO
+
+log_file: logs/lab_vla/runtime.log
+trace_jsonl: outputs/runtime/lab_vla_trace.jsonl
+summary_json: outputs/runtime/lab_vla_summary.json

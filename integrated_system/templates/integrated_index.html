@@ -185,6 +185,101 @@
       color: var(--muted);
       margin-bottom: 10px;
     }
+    .auth-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .auth-row input {
+      min-width: 280px;
+      flex: 1 1 280px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 13px;
+      background: #fff;
+      color: var(--text);
+    }
+    .monitor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .monitor-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 8px 10px;
+    }
+    .monitor-card .k {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .monitor-card .v {
+      font-size: 18px;
+      font-weight: 700;
+      color: #173a5e;
+    }
+    .monitor-alert-list {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7faff;
+      padding: 8px 10px;
+      max-height: 240px;
+      overflow: auto;
+    }
+    .monitor-alert {
+      border: 1px solid #d8e3f1;
+      border-radius: 9px;
+      background: #fcfeff;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      line-height: 1.35;
+      font-size: 13px;
+    }
+    .monitor-alert.high {
+      border-color: #efb3bb;
+      background: #fff3f5;
+    }
+    .monitor-alert.medium {
+      border-color: #f0cf9d;
+      background: #fff8ee;
+    }
+    .queue-list, .audit-list {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7faff;
+      padding: 8px 10px;
+      max-height: 260px;
+      overflow: auto;
+    }
+    .queue-item, .audit-item {
+      border: 1px solid #d8e3f1;
+      border-radius: 9px;
+      background: #fcfeff;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .audit-item .meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+    .history-ops {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
     .upload-meta {
       font-size: 13px;
       color: var(--muted);
@@ -820,6 +915,16 @@
     </div>
 
     <div class="card">
+      <h2>0. 访问控制与会话</h2>
+      <div id="authStatusText" class="muted">鉴权状态检查中...</div>
+      <div class="auth-row">
+        <input id="apiTokenInput" type="password" placeholder="可选：输入 API Token（启用鉴权时必填）" />
+        <button id="applyTokenBtn" class="secondary">应用Token</button>
+        <button id="clearTokenBtn" class="secondary">清除Token</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>1. 上传视频与开关</h2>
       <div class="row" style="margin-bottom: 10px;">
         <input id="videoInput" type="file" accept="video/*" />
@@ -1036,6 +1141,14 @@
         </select>
         <button id="historyRefreshBtn" class="secondary">刷新历史</button>
       </div>
+      <div class="history-ops">
+        <button id="batchCancelRunningBtn" class="secondary">取消全部运行中任务</button>
+        <button id="batchDeleteEndedBtn" class="secondary">删除当前列表已结束任务</button>
+        <label class="muted" style="display:flex;align-items:center;gap:6px;">
+          <input id="batchDeletePurge" type="checkbox" checked />
+          同时清理产物目录
+        </label>
+      </div>
       <div id="historyStats" class="history-summary">统计加载中...</div>
       <div id="historyList" class="history-list">
         <div class="muted">暂无历史任务</div>
@@ -1046,7 +1159,31 @@
     </div>
 
     <div class="card">
-      <h2>6. 系统健康</h2>
+      <h2>6. 生产监控</h2>
+      <div id="monitorSummary" class="muted">监控数据加载中...</div>
+      <div id="monitorGrid" class="monitor-grid"></div>
+      <div id="queueSummary" class="muted" style="margin-top:8px;">队列状态加载中...</div>
+      <div id="queueList" class="queue-list">
+        <div class="muted">暂无排队/运行任务</div>
+      </div>
+      <div id="monitorAlerts" class="monitor-alert-list">
+        <div class="muted">暂无监控告警</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>7. 审计日志</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <button id="auditRefreshBtn" class="secondary">刷新审计</button>
+      </div>
+      <div id="auditSummary" class="muted">审计日志加载中...</div>
+      <div id="auditList" class="audit-list">
+        <div class="muted">暂无审计事件</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>8. 系统健康</h2>
       <div id="healthText" class="muted">检查中...</div>
     </div>
   </div>
@@ -1064,10 +1201,13 @@
     let sse = null;
     let pollingTimer = null;
     let historyTimer = null;
+    let monitorTimer = null;
+    let auditTimer = null;
     let historyStatusFilter = "";
     let historyOffset = 0;
     const historyLimit = 12;
     let historyHasMore = false;
+    let latestHistoryTasks = [];
     let lastStatus = "idle";
     const runtimeLogs = [];
     const maxRuntimeLogs = 80;
@@ -1098,6 +1238,10 @@
     };
     let singleFrameKeyframeList = [];
     let singleFrameKeyframeIndex = -1;
+    const TOKEN_STORAGE_KEY = "integrated_system_api_token";
+    let apiToken = "";
+    let authEnabled = false;
+    let authAuthenticated = false;
 
     const FILE_TYPE_TO_OUTPUT_KEY = {
       annotated_video: "annotated_video",
@@ -1146,6 +1290,83 @@
     const detailCache = new Map();
 
     const $ = (id) => document.getElementById(id);
+
+    function normalizeToken(v) {
+      return String(v || "").trim();
+    }
+
+    function loadSavedToken() {
+      try {
+        const raw = localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+        apiToken = normalizeToken(raw);
+      } catch (_) {
+        apiToken = "";
+      }
+      $("apiTokenInput").value = apiToken;
+    }
+
+    function saveToken(token) {
+      apiToken = normalizeToken(token);
+      try {
+        if (apiToken) localStorage.setItem(TOKEN_STORAGE_KEY, apiToken);
+        else localStorage.removeItem(TOKEN_STORAGE_KEY);
+      } catch (_) {
+        // ignore storage failure
+      }
+      $("apiTokenInput").value = apiToken;
+    }
+
+    function withAuthQuery(url) {
+      const raw = String(url || "").trim();
+      if (!raw || !apiToken) return raw;
+      try {
+        const u = new URL(raw, window.location.origin);
+        u.searchParams.set("token", apiToken);
+        return u.pathname + u.search;
+      } catch (_) {
+        const joiner = raw.includes("?") ? "&" : "?";
+        return `${raw}${joiner}token=${encodeURIComponent(apiToken)}`;
+      }
+    }
+
+    async function apiFetch(url, init = {}) {
+      const headers = new Headers(init.headers || {});
+      if (apiToken) headers.set("X-API-Token", apiToken);
+      const res = await fetch(url, { ...init, headers });
+      if (res.status === 401) {
+        authAuthenticated = false;
+        renderAuthStatus();
+      }
+      return res;
+    }
+
+    function renderAuthStatus() {
+      const node = $("authStatusText");
+      if (!node) return;
+      if (!authEnabled) {
+        node.innerHTML = '<span class="status-ok">当前未启用接口鉴权</span>，可直接访问。';
+        return;
+      }
+      if (authAuthenticated) {
+        node.innerHTML = '<span class="status-ok">鉴权已启用，当前Token已通过校验</span>。';
+      } else {
+        node.innerHTML = '<span class="status-failed">鉴权已启用，当前未通过校验</span>，请输入有效Token。';
+      }
+    }
+
+    async function refreshAuthStatus() {
+      try {
+        const res = await apiFetch(withAuthQuery("/api/auth/status"));
+        const data = await res.json();
+        authEnabled = !!data.auth_enabled;
+        authAuthenticated = !!data.authenticated;
+        renderAuthStatus();
+      } catch (err) {
+        authEnabled = false;
+        authAuthenticated = false;
+        $("authStatusText").innerHTML = `<span class="status-failed">鉴权状态获取失败: ${escapeHtml(err)}</span>`;
+      }
+    }
 
     function escapeHtml(v) {
       return String(v || "")
@@ -2267,7 +2488,7 @@
       const empty = $("videoEmpty");
 
       if (a.annotated_video_url) {
-        video.src = a.annotated_video_url;
+        video.src = withAuthQuery(a.annotated_video_url);
         video.style.display = "block";
         empty.style.display = "none";
       } else {
@@ -2345,7 +2566,7 @@
         ? keyframes
         : fallbackUrls.map((url, idx) => ({
             index: idx + 1,
-            url,
+            url: withAuthQuery(url),
             timestamp: null,
             summary: "",
             image: `keyframe_${String(idx + 1).padStart(3, "0")}.jpg`,
@@ -2639,7 +2860,7 @@
 
     async function fetchDownloadTextForParse(taskId, fileType) {
       try {
-        const res = await fetch(`/api/download/${taskId}/${fileType}`);
+        const res = await apiFetch(withAuthQuery(`/api/download/${taskId}/${fileType}`));
         if (!res.ok) return "";
         return await res.text();
       } catch (_) {
@@ -2676,7 +2897,7 @@
         return keyframes.map((kf, idx) => {
           const image = String(kf.image || `keyframe_${String(idx + 1).padStart(3, "0")}.jpg`);
           const fromArtifact = itemMap.get(image) || {};
-          const url = fromArtifact.url || `/api/artifact/${taskId}?path=keyframes/${encodeURIComponent(image)}`;
+          const url = withAuthQuery(fromArtifact.url || `/api/artifact/${taskId}?path=keyframes/${encodeURIComponent(image)}`);
           return {
             index: idx + 1,
             image,
@@ -2729,21 +2950,130 @@
 
     async function refreshHealth() {
       try {
-        const res = await fetch("/api/health");
+        const res = await apiFetch(withAuthQuery("/api/health"));
         const data = await res.json();
+        if (!res.ok || data.ok === false) throw new Error(data.error || `health ${res.status}`);
         const modules = data.available_modules || {};
         const moduleText = Object.entries(modules)
           .map(([k, v]) => `${k}:${v ? "ok" : "missing"}`)
           .join(" | ");
         const ffmpegText = data.ffmpeg_available ? "ok" : "missing";
+        const webhookText = data.monitor_webhook_enabled ? "on" : "off";
+        const persistText = data.persistence && data.persistence.registry_path ? data.persistence.registry_path : "-";
         const degraded = Array.isArray(data.degraded_reasons) && data.degraded_reasons.length
           ? ` | 降级: ${data.degraded_reasons.join(", ")}`
           : "";
 
         $("healthText").innerHTML =
-          `状态: <b class="status-ok">${data.status}</b> | API Key: <b>${data.api_key_configured ? "已配置" : "未配置(会跳过AI)"}</b> | FFmpeg: <b>${ffmpegText}</b> | 模块: ${moduleText} | 任务数: ${data.task_count}${degraded}`;
+          `状态: <b class="status-ok">${data.status}</b> | API Key: <b>${data.api_key_configured ? "已配置" : "未配置(会跳过AI)"}</b> | FFmpeg: <b>${ffmpegText}</b> | Webhook: <b>${webhookText}</b> | 持久化: <b>${escapeHtml(persistText)}</b> | 模块: ${moduleText} | 任务数: ${data.task_count}${degraded}`;
       } catch (err) {
         $("healthText").innerHTML = `<span class="status-failed">健康检查失败: ${err}</span>`;
+      }
+    }
+
+    function renderQueue(payload) {
+      const q = payload && payload.queue ? payload.queue : {};
+      const running = Array.isArray(q.running) ? q.running : [];
+      const pending = Array.isArray(q.pending) ? q.pending : [];
+      const maxWorkers = Number(q.max_workers || 0);
+      $("queueSummary").textContent =
+        `队列：running ${running.length} | pending ${pending.length} | workers ${maxWorkers || "-"}`;
+      const rows = [];
+      running.slice(0, 20).forEach((item, idx) => {
+        rows.push(
+          `<div class="queue-item"><b>RUN-${idx + 1}</b> <code>${escapeHtml(item.task_id || "-")}</code> · ${escapeHtml(shortText(item.current_stage || "-", 30))} · ${Number(item.progress || 0).toFixed(1)}%</div>`
+        );
+      });
+      pending.slice(0, 30).forEach((item) => {
+        rows.push(
+          `<div class="queue-item"><b>P${Number(item.queue_position || 0)}</b> <code>${escapeHtml(item.task_id || "-")}</code> · ${escapeHtml(shortText(item.message || "等待执行", 40))}</div>`
+        );
+      });
+      $("queueList").innerHTML = rows.length ? rows.join("") : '<div class="muted">暂无排队/运行任务</div>';
+    }
+
+    function renderMonitor(data) {
+      const stats = data && data.task_stats ? data.task_stats : {};
+      const total = Number(stats.total || 0);
+      const pending = Number(stats.pending || 0);
+      const running = Number(stats.running || 0);
+      const completed = Number(stats.completed || 0);
+      const failed = Number(stats.failed || 0);
+      const avgSec = Number(data && data.avg_duration_sec);
+      const persistence = data && data.persistence ? data.persistence : {};
+      const alerts = Array.isArray(data && data.alerts) ? data.alerts : [];
+      const highRisk = Array.isArray(data && data.high_risk_tasks) ? data.high_risk_tasks : [];
+      const webhook = data && data.webhook ? data.webhook : {};
+
+      $("monitorSummary").textContent =
+        `任务总数 ${total}，运行中 ${running}，最近高风险任务 ${highRisk.length}，持久化文件 ${persistence.registry_path || "-"}，Webhook发送 ${Number(webhook.sent || 0)} 条`;
+
+      $("monitorGrid").innerHTML = `
+        <div class="monitor-card"><div class="k">pending</div><div class="v">${pending}</div></div>
+        <div class="monitor-card"><div class="k">running</div><div class="v">${running}</div></div>
+        <div class="monitor-card"><div class="k">completed</div><div class="v">${completed}</div></div>
+        <div class="monitor-card"><div class="k">failed</div><div class="v">${failed}</div></div>
+        <div class="monitor-card"><div class="k">平均耗时(秒)</div><div class="v">${Number.isFinite(avgSec) ? avgSec.toFixed(1) : "-"}</div></div>
+        <div class="monitor-card"><div class="k">活跃告警</div><div class="v">${alerts.length}</div></div>
+      `;
+
+      renderQueue(data);
+      if (!alerts.length) {
+        $("monitorAlerts").innerHTML = '<div class="muted">暂无活跃监控告警</div>';
+        return;
+      }
+      $("monitorAlerts").innerHTML = alerts.map((item, idx) => {
+        const level = String(item.level || "low").toLowerCase();
+        const task = String(item.task_id || "").trim();
+        const taskText = task ? ` | task: ${task}` : "";
+        return `
+          <div class="monitor-alert ${escapeHtml(level)}">
+            <div><b>${idx + 1}. [${escapeHtml(level.toUpperCase())}] ${escapeHtml(item.title || "告警")}</b>${escapeHtml(taskText)}</div>
+            <div>${escapeHtml(item.message || "-")}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function refreshMonitor() {
+      try {
+        const res = await apiFetch(withAuthQuery("/api/monitor"));
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || `monitor ${res.status}`);
+        renderMonitor(data);
+      } catch (err) {
+        $("monitorSummary").innerHTML = `<span class="status-failed">监控数据获取失败: ${escapeHtml(err)}</span>`;
+        $("monitorGrid").innerHTML = "";
+        $("queueSummary").innerHTML = '<span class="status-failed">队列数据不可用</span>';
+        $("queueList").innerHTML = '<div class="muted">监控不可用</div>';
+        $("monitorAlerts").innerHTML = '<div class="muted">监控不可用</div>';
+      }
+    }
+
+    async function refreshAudit() {
+      try {
+        const res = await apiFetch(withAuthQuery("/api/audit?limit=40&offset=0"));
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || `audit ${res.status}`);
+        const events = Array.isArray(data.events) ? data.events : [];
+        $("auditSummary").textContent = `审计事件 ${events.length}/${Number(data.total || 0)}`;
+        if (!events.length) {
+          $("auditList").innerHTML = '<div class="muted">暂无审计事件</div>';
+          return;
+        }
+        $("auditList").innerHTML = events.map((e, idx) => {
+          const level = String(e.level || "low").toLowerCase();
+          return `
+            <div class="audit-item">
+              <div><b>${idx + 1}. ${escapeHtml(e.action || "-")}</b> · <span class="tag ${level === "high" ? "high-risk" : (level === "medium" ? "risk" : "")}">${escapeHtml(level.toUpperCase())}</span></div>
+              <div>${escapeHtml(shortText(e.message || "-", 120))}</div>
+              <div class="meta">${escapeHtml(e.ts || "-")} | task: ${escapeHtml(e.task_id || "-")} | actor: ${escapeHtml(e.actor || "-")} | status: ${escapeHtml(e.status || "-")}</div>
+            </div>
+          `;
+        }).join("");
+      } catch (err) {
+        $("auditSummary").innerHTML = `<span class="status-failed">审计日志获取失败: ${escapeHtml(err)}</span>`;
+        $("auditList").innerHTML = '<div class="muted">审计不可用</div>';
       }
     }
 
@@ -2763,24 +3093,30 @@
 
     async function refreshTaskHistory(reset = true) {
       try {
-        if (reset) historyOffset = 0;
+        if (reset) {
+          historyOffset = 0;
+          latestHistoryTasks = [];
+        }
         const qs = new URLSearchParams();
         qs.set("limit", String(historyLimit));
         qs.set("offset", String(historyOffset));
         if (historyStatusFilter) qs.set("status", historyStatusFilter);
         const url = `/api/tasks?${qs.toString()}`;
-        const res = await fetch(url);
+        const res = await apiFetch(withAuthQuery(url));
         const data = await res.json();
+        if (!res.ok || data.ok === false) throw new Error(data.message || data.error || `tasks ${res.status}`);
         const tasks = Array.isArray(data.tasks) ? data.tasks : [];
         const wrap = $("historyList");
         if (reset) wrap.innerHTML = "";
 
         if (reset && tasks.length === 0) {
+          latestHistoryTasks = [];
           wrap.innerHTML = '<div class="muted">暂无历史任务</div>';
           $("historyStats").textContent = "共 0 条任务";
           $("historyMoreBtn").style.display = "none";
           return;
         }
+        latestHistoryTasks = reset ? tasks.slice() : latestHistoryTasks.concat(tasks);
 
         const counts = data.status_counts || {};
         $("historyStats").textContent =
@@ -2795,6 +3131,9 @@
           const updatedAt = String(task.updated_at || "-");
           const fail = task.failure || null;
           const canRetry = !!task.can_retry;
+          const canCancel = !!task.can_cancel;
+          const canDelete = !!task.can_delete;
+          const cancelRequested = !!task.cancel_requested;
           const statusClass =
             status === "completed"
               ? "pill ok"
@@ -2812,15 +3151,27 @@
           const retryBtn = (status === "failed" && canRetry)
             ? `<button class="secondary history-retry-btn" data-task-id="${escapeHtml(id)}">重试</button>`
             : "";
+          const cancelBtn = canCancel
+            ? `<button class="secondary history-cancel-btn" data-task-id="${escapeHtml(id)}">取消</button>`
+            : "";
+          const deleteBtn = canDelete
+            ? `<button class="secondary history-delete-btn" data-task-id="${escapeHtml(id)}">删除</button>`
+            : "";
+          const cancelChip = cancelRequested
+            ? `<span class="pill warn">已请求取消</span>`
+            : "";
           item.innerHTML = `
             <div class="history-top">
               <div>
                 <code>${escapeHtml(id)}</code>
                 <span class="${statusClass}">${escapeHtml(status)}</span>
+                ${cancelChip}
               </div>
               <div>
                 <button class="secondary history-view-btn" data-task-id="${escapeHtml(id)}">${activeLabel}</button>
                 ${retryBtn}
+                ${cancelBtn}
+                ${deleteBtn}
               </div>
             </div>
             <div class="history-meta">阶段: ${escapeHtml(stage)} | 创建: ${escapeHtml(createdAt)} | 更新: ${escapeHtml(updatedAt)}</div>
@@ -2834,6 +3185,7 @@
         historyHasMore = !!data.has_more;
         $("historyMoreBtn").style.display = historyHasMore ? "inline-block" : "none";
       } catch (err) {
+        if (reset) latestHistoryTasks = [];
         $("historyList").innerHTML = `<div class="status-failed">任务历史加载失败: ${escapeHtml(err)}</div>`;
         $("historyMoreBtn").style.display = "none";
       }
@@ -2851,7 +3203,7 @@
           form.append("enable_step_check", $("enableStep").checked ? "1" : "0");
           form.append("enable_video_export", $("enableVideo").checked ? "1" : "0");
         }
-        const res = await fetch(`/api/retry/${sourceTaskId}`, {
+        const res = await apiFetch(withAuthQuery(`/api/retry/${sourceTaskId}`), {
           method: "POST",
           body: useCurrent ? form : undefined,
         });
@@ -2867,10 +3219,109 @@
       }
     }
 
+    async function cancelTask(taskId) {
+      if (!taskId) return;
+      try {
+        const res = await apiFetch(withAuthQuery(`/api/tasks/${taskId}/cancel`), { method: "POST" });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "取消失败");
+        showToast(data.message || "取消请求已提交");
+        pushRuntimeLog(data.message || "取消请求已提交", "任务控制", "running");
+        await refreshTaskHistory(true);
+        if (currentTaskId === taskId) {
+          await fetchStatus();
+        }
+      } catch (err) {
+        showToast(`取消失败: ${err}`);
+      }
+    }
+
+    async function deleteTask(taskId) {
+      if (!taskId) return;
+      const purge = !!$("batchDeletePurge").checked;
+      const yes = window.confirm(`确认删除任务 ${taskId} 吗？${purge ? "将同时删除该任务产物文件。" : "仅删除任务记录，保留产物。"}`);
+      if (!yes) return;
+      try {
+        const res = await apiFetch(withAuthQuery(`/api/tasks/${taskId}?purge=${purge ? 1 : 0}`), { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "删除失败");
+        showToast(`任务 ${taskId} 已删除`);
+        pushRuntimeLog(`任务 ${taskId} 已删除`, "任务控制", "completed");
+        detailCache.delete(taskId);
+        if (currentTaskId === taskId) {
+          currentTaskId = "";
+          $("taskIdText").textContent = "";
+          setRunningState(false);
+        }
+        await refreshTaskHistory(true);
+      } catch (err) {
+        showToast(`删除失败: ${err}`);
+      }
+    }
+
+    async function batchCancelRunningTasks() {
+      const candidates = latestHistoryTasks.filter((x) => String(x.status || "") === "running" || String(x.status || "") === "pending");
+      const taskIds = candidates.map((x) => String(x.task_id || "").trim()).filter((x) => x);
+      if (!taskIds.length) {
+        showToast("当前列表无可取消任务");
+        return;
+      }
+      try {
+        const res = await apiFetch(withAuthQuery("/api/tasks/batch_cancel"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_ids: taskIds }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "批量取消失败");
+        showToast(`批量取消已受理 ${Number(data.accepted || 0)} / ${Number(data.count || taskIds.length)}`);
+        await refreshTaskHistory(true);
+        await refreshMonitor();
+        if (currentTaskId) await fetchStatus();
+      } catch (err) {
+        showToast(`批量取消失败: ${err}`);
+      }
+    }
+
+    async function batchDeleteEndedTasks() {
+      const purge = !!$("batchDeletePurge").checked;
+      const candidates = latestHistoryTasks.filter((x) => {
+        const s = String(x.status || "");
+        return s === "completed" || s === "failed";
+      });
+      const taskIds = candidates.map((x) => String(x.task_id || "").trim()).filter((x) => x);
+      if (!taskIds.length) {
+        showToast("当前列表无可删除任务");
+        return;
+      }
+      const yes = window.confirm(`确认批量删除 ${taskIds.length} 个已结束任务吗？`);
+      if (!yes) return;
+      try {
+        const res = await apiFetch(withAuthQuery("/api/tasks/batch_delete"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_ids: taskIds, purge }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "批量删除失败");
+        showToast(`批量删除完成 ${Number(data.deleted || 0)} / ${Number(data.count || taskIds.length)}`);
+        taskIds.forEach((id) => detailCache.delete(id));
+        if (currentTaskId && taskIds.includes(currentTaskId)) {
+          currentTaskId = "";
+          $("taskIdText").textContent = "";
+          setRunningState(false);
+        }
+        await refreshTaskHistory(true);
+        await refreshMonitor();
+      } catch (err) {
+        showToast(`批量删除失败: ${err}`);
+      }
+    }
+
     async function fetchStatus() {
       if (!currentTaskId) return;
       try {
-        const res = await fetch(`/api/status/${currentTaskId}`);
+        const res = await apiFetch(withAuthQuery(`/api/status/${currentTaskId}`));
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error || "状态获取失败");
 
@@ -2933,7 +3384,7 @@
       if (!currentTaskId) return;
       if (sse) sse.close();
 
-      sse = new EventSource(`/api/progress?task_id=${currentTaskId}&start=recent`);
+      sse = new EventSource(withAuthQuery(`/api/progress?task_id=${currentTaskId}&start=recent`));
       sse.onmessage = (evt) => {
         try {
           const d = JSON.parse(evt.data || "{}");
@@ -2976,7 +3427,7 @@
         return;
       }
       try {
-        const res = await fetch(`/api/download/${currentTaskId}/${fileType}`);
+        const res = await apiFetch(withAuthQuery(`/api/download/${currentTaskId}/${fileType}`));
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `下载失败(${res.status})`);
@@ -3005,7 +3456,7 @@
         return;
       }
       try {
-        const res = await fetch(`/api/download_bundle/${currentTaskId}`);
+        const res = await apiFetch(withAuthQuery(`/api/download_bundle/${currentTaskId}`));
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `打包下载失败(${res.status})`);
@@ -3078,7 +3529,7 @@
       pushRuntimeLog("开始提交任务", "上传完成", "pending");
 
       try {
-        const res = await fetch("/api/analyze", { method: "POST", body: form });
+        const res = await apiFetch(withAuthQuery("/api/analyze"), { method: "POST", body: form });
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error || "任务提交失败");
 
@@ -3210,6 +3661,21 @@
       if (historyRetryBtn instanceof HTMLElement) {
         const sourceTaskId = historyRetryBtn.getAttribute("data-task-id") || "";
         retryTask(sourceTaskId);
+        return;
+      }
+
+      const historyCancelBtn = target.closest(".history-cancel-btn");
+      if (historyCancelBtn instanceof HTMLElement) {
+        const taskId = historyCancelBtn.getAttribute("data-task-id") || "";
+        cancelTask(taskId);
+        return;
+      }
+
+      const historyDeleteBtn = target.closest(".history-delete-btn");
+      if (historyDeleteBtn instanceof HTMLElement) {
+        const taskId = historyDeleteBtn.getAttribute("data-task-id") || "";
+        deleteTask(taskId);
+        return;
       }
     });
 
@@ -3304,6 +3770,36 @@
       if (!historyHasMore) return;
       refreshTaskHistory(false);
     });
+    $("batchCancelRunningBtn").addEventListener("click", () => {
+      batchCancelRunningTasks();
+    });
+    $("batchDeleteEndedBtn").addEventListener("click", () => {
+      batchDeleteEndedTasks();
+    });
+    $("auditRefreshBtn").addEventListener("click", () => {
+      refreshAudit();
+    });
+
+    $("applyTokenBtn").addEventListener("click", async () => {
+      saveToken($("apiTokenInput").value || "");
+      await refreshAuthStatus();
+      await refreshHealth();
+      await refreshMonitor();
+      await refreshAudit();
+      await refreshTaskHistory(true);
+      if (currentTaskId) await fetchStatus();
+      showToast(apiToken ? "Token 已应用" : "Token 已清空");
+    });
+
+    $("clearTokenBtn").addEventListener("click", async () => {
+      saveToken("");
+      await refreshAuthStatus();
+      await refreshHealth();
+      await refreshMonitor();
+      await refreshAudit();
+      await refreshTaskHistory(true);
+      showToast("Token 已清除");
+    });
 
     setRunningState(false);
     setDownloadEnabled(false, null, null);
@@ -3316,10 +3812,16 @@
     updateUploadMeta({}, "未上传");
     setStageBanner("等待任务开始", "pending", "");
     $("progressMeta").textContent = "当前模块：- | 说明：等待任务开始";
+    loadSavedToken();
+    refreshAuthStatus();
     refreshHealth();
+    refreshMonitor();
+    refreshAudit();
     refreshTaskHistory(true);
     setInterval(refreshHealth, 10000);
     historyTimer = setInterval(() => refreshTaskHistory(true), 5000);
+    monitorTimer = setInterval(() => refreshMonitor(), 8000);
+    auditTimer = setInterval(() => refreshAudit(), 12000);
   </script>
 </body>
 </html>
