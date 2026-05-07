@@ -12,7 +12,13 @@ from project_name.action.skeleton_sequence_classifier import SkeletonSequenceCla
 from project_name.video.capture import FramePacket
 
 # Force ultralytics to use a local writable config path, avoiding user-profile permission issues.
-_local_cfg_dir = Path.cwd() / ".ultralytics"
+try:
+    from labsopguard.runtime_paths import ULTRALYTICS_ROOT, configure_runtime_environment
+
+    configure_runtime_environment()
+    _local_cfg_dir = ULTRALYTICS_ROOT
+except Exception:
+    _local_cfg_dir = Path(__file__).resolve().parents[3] / ".ultralytics"
 _local_cfg_dir.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("YOLO_CONFIG_DIR", str(_local_cfg_dir))
 
@@ -25,6 +31,11 @@ try:
 except ImportError:
     _log.warning("ultralytics not installed; YOLO backend will be unavailable.")
     YOLO = None
+
+try:
+    import torch  # type: ignore
+except ImportError:
+    torch = None
 
 
 @dataclass
@@ -59,7 +70,7 @@ class MultiLevelDetector:
         self.runtime_cfg = _load_runtime_config(runtime_config_path)
         self.backend = str(self.runtime_cfg.get("backend", "ultralytics")).lower()
         self.model_name = str(self.runtime_cfg.get("model", "yolov8n.pt"))
-        self.device = str(self.runtime_cfg.get("device", "cuda:0"))
+        self.device = self._resolve_device(str(self.runtime_cfg.get("device", "cuda:0")))
         self.layer2_window = int(self.runtime_cfg.get("layer2_window", 30))
         self.strict_model = bool(self.runtime_cfg.get("strict_model", True))
         self.layer2_backend = str(self.runtime_cfg.get("layer2_backend", "skateformer"))
@@ -89,6 +100,36 @@ class MultiLevelDetector:
             window_size=self.layer2_window,
             backend=self.layer2_backend,
         )
+
+    @staticmethod
+    def _resolve_device(device: str) -> str:
+        requested = str(device or "cpu").strip()
+        normalized = requested.lower()
+        if normalized in {"", "auto"}:
+            requested = "cpu"
+            normalized = "cpu"
+
+        if normalized == "cpu":
+            return "cpu"
+
+        if torch is None or not torch.cuda.is_available():
+            return "cpu"
+
+        if normalized.isdigit():
+            index = int(normalized)
+            return requested if index < torch.cuda.device_count() else "cpu"
+
+        if normalized.startswith("cuda:"):
+            try:
+                index = int(normalized.split(":", 1)[1])
+            except ValueError:
+                return "cpu"
+            return requested if index < torch.cuda.device_count() else "cpu"
+
+        if normalized == "cuda":
+            return "cuda:0"
+
+        return requested
 
     def _normalize_label(self, raw_label: str) -> str:
         key = self._canonicalize_token(raw_label)
@@ -142,12 +183,24 @@ class MultiLevelDetector:
         if self._model is None:
             return [], None, 0
 
-        preds = self._model.predict(
-            source=frame_bgr,
-            conf=self.confidence_threshold,
-            verbose=False,
-            device=self.device,
-        )
+        try:
+            preds = self._model.predict(
+                source=frame_bgr,
+                conf=self.confidence_threshold,
+                verbose=False,
+                device=self.device,
+            )
+        except ValueError:
+            if self.device == "cpu":
+                raise
+            _log.warning("Ultralytics device %s failed, retrying on CPU.", self.device)
+            self.device = "cpu"
+            preds = self._model.predict(
+                source=frame_bgr,
+                conf=self.confidence_threshold,
+                verbose=False,
+                device=self.device,
+            )
         objects: List[Dict[str, Any]] = []
         keypoints17: Optional[List[List[float]]] = None
         pose_instances = 0

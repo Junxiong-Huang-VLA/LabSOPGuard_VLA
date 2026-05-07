@@ -98,6 +98,7 @@ def _match_class(gt_boxes: List[Box], pred_boxes: List[Box], iou_thr: float) -> 
     matched_pred = set()
     candidates: List[Tuple[float, int, int]] = []
     for pi, pb in enumerate(pred_boxes):
+        
         for gi, gb in enumerate(gt_boxes):
             iou = _iou(pb.xyxy, gb.xyxy)
             if iou >= iou_thr:
@@ -107,6 +108,10 @@ def _match_class(gt_boxes: List[Box], pred_boxes: List[Box], iou_thr: float) -> 
     tp = 0
     for _, pi, gi in candidates:
         if pi in matched_pred or gi in matched_gt:
+            
+
+
+
             continue
         matched_pred.add(pi)
         matched_gt.add(gi)
