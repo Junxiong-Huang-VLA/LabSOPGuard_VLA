@@ -116,6 +116,67 @@ services:
       - frontend
     restart: unless-stopped
 
+  # Wireless video sender metrics/runtime profile
+  wireless-video-sender:
+    build: .
+    profiles: ["wireless-video"]
+    command: python -m backend.wireless_video.sender_app --config config/cameras/sender_default.json
+    volumes:
+      - .:/app
+      - ./outputs:/app/outputs
+    environment:
+      - WIRELESS_VIDEO_SENDER_METRICS_PORT=9301
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "9301:9301"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9301/metrics', timeout=2).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # Wireless video receiver metrics/runtime profile
+  wireless-video-receiver:
+    build: .
+    profiles: ["wireless-video"]
+    command: python -m backend.wireless_video.receiver_app --config config/cameras/receiver_5cam.json
+    volumes:
+      - .:/app
+      - ./outputs:/app/outputs
+    environment:
+      - WIRELESS_VIDEO_RECEIVER_METRICS_PORT=9302
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "9302:9302"
+      - "5600-5610:5600-5610/udp"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9302/metrics', timeout=2).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
   # 监控服务（可选）
   prometheus:
     image: prom/prometheus:latest
@@ -124,7 +185,10 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml
       - prometheus_data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'

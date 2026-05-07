@@ -10,12 +10,15 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import json
 import os
+import secrets
 import shutil
+import socket
 import threading
 import time
 import traceback
 import uuid
 import zipfile
+import urllib.parse
 import urllib.request
 import urllib.error
 from io import BytesIO
@@ -50,6 +53,9 @@ AUDIT_LOCK = threading.Lock()
 ALERT_NOTIFY_LOCK = threading.Lock()
 AUDIT_BUFFER: List[Dict[str, Any]] = []
 ALERT_NOTIFY_STATE: Dict[str, str] = {}
+TEMP_AUDIO_ARTIFACTS: Dict[str, Dict[str, Any]] = {}
+TEMP_AUDIO_ARTIFACTS_LOCK = threading.Lock()
+TEMP_AUDIO_SUFFIXES = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav", ".webm"}
 
 SETTINGS = load_settings()
 EXECUTOR = ThreadPoolExecutor(max_workers=SETTINGS.max_workers, thread_name_prefix="integrated-worker")
@@ -303,6 +309,74 @@ def _resolve_project_file(rel: str) -> Optional[Path]:
     except Exception:
         return None
     return candidate
+
+
+def _is_within_directory(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve().relative_to(directory.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _prune_temp_audio_artifacts_locked(now_ts: Optional[float] = None) -> None:
+    now = time.time() if now_ts is None else float(now_ts)
+    stale = [
+        token
+        for token, item in TEMP_AUDIO_ARTIFACTS.items()
+        if float(item.get("expires_at", 0.0) or 0.0) <= now
+    ]
+    for token in stale:
+        TEMP_AUDIO_ARTIFACTS.pop(token, None)
+
+
+def _register_temp_audio_artifact(path: str | Path, ttl_sec: int = 600) -> Optional[str]:
+    try:
+        resolved = Path(path).expanduser().resolve()
+    except Exception:
+        return None
+    if resolved.suffix.lower() not in TEMP_AUDIO_SUFFIXES or not resolved.exists() or not resolved.is_file():
+        return None
+    token = secrets.token_urlsafe(24)
+    expires_at = time.time() + max(1, int(ttl_sec))
+    with TEMP_AUDIO_ARTIFACTS_LOCK:
+        _prune_temp_audio_artifacts_locked()
+        TEMP_AUDIO_ARTIFACTS[token] = {"path": str(resolved), "expires_at": expires_at}
+    return token
+
+
+def _resolve_temp_audio_artifact(token: str) -> Optional[Path]:
+    token_value = str(token or "").strip()
+    if not token_value:
+        return None
+    with TEMP_AUDIO_ARTIFACTS_LOCK:
+        _prune_temp_audio_artifacts_locked()
+        item = TEMP_AUDIO_ARTIFACTS.get(token_value)
+        if not item:
+            return None
+        path = Path(str(item.get("path", "")))
+    if path.suffix.lower() not in TEMP_AUDIO_SUFFIXES or not path.exists() or not path.is_file():
+        return None
+    return path.resolve()
+
+
+def _resolve_temp_audio_artifact_by_legacy_path(path: str) -> Optional[Path]:
+    try:
+        requested = Path(path).expanduser().resolve()
+    except Exception:
+        return None
+    with TEMP_AUDIO_ARTIFACTS_LOCK:
+        _prune_temp_audio_artifacts_locked()
+        tokens = [
+            token
+            for token, item in TEMP_AUDIO_ARTIFACTS.items()
+            if Path(str(item.get("path", ""))).resolve() == requested
+        ]
+    for token in tokens:
+        resolved = _resolve_temp_audio_artifact(token)
+        if resolved == requested:
+            return resolved
+    return None
 
 
 def _set_task_module_status(
@@ -612,10 +686,27 @@ def _build_task_queue_payload() -> Dict[str, Any]:
     }
 
 
+def _validate_monitor_webhook_url(value: str) -> str:
+    from backend.callback_security import validate_callback_url
+
+    return validate_callback_url(
+        value,
+        env_get=os.getenv,
+        resolver=socket.getaddrinfo,
+        env_prefix="INTEGRATED_MONITOR_WEBHOOK",
+        field_name="monitor_webhook_url",
+        cidr_error_prefix="monitor webhook",
+    )
+
+
 def _maybe_send_monitor_webhooks(settings: IntegratedSettings, monitor_payload: Dict[str, Any]) -> Dict[str, Any]:
     webhook_url = str(settings.monitor_webhook_url or "").strip()
     if not webhook_url:
         return {"enabled": False, "sent": 0}
+    try:
+        webhook_url = _validate_monitor_webhook_url(webhook_url)
+    except ValueError as exc:
+        return {"enabled": True, "sent": 0, "blocked": True, "error": str(exc)}
 
     min_level = _normalize_monitor_level(settings.monitor_webhook_min_level or "high", default="high")
     cooldown_sec = max(60, int(settings.monitor_webhook_cooldown_sec))
@@ -653,9 +744,13 @@ def _maybe_send_monitor_webhooks(settings: IntegratedSettings, monitor_payload: 
                 method="POST",
             )
             try:
-                with urllib.request.urlopen(req, timeout=4.0) as resp:
-                    if int(getattr(resp, "status", 200)) >= 400:
-                        continue
+                resp_obj = urllib.request.urlopen(req, timeout=4.0)
+                if hasattr(resp_obj, "__enter__"):
+                    with resp_obj as resp:
+                        if int(getattr(resp, "status", 200)) >= 400:
+                            continue
+                elif int(getattr(resp_obj, "status", 200)) >= 400:
+                    continue
                 ALERT_NOTIFY_STATE[signature] = _utc_now_iso()
                 sent_count += 1
             except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
@@ -1694,6 +1789,12 @@ def _normalize_bool(v: Any, default: bool = True) -> bool:
     return str(v).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def get_monitor():
+    from integrated_system.adaptive_monitor import get_monitor as _get_monitor
+
+    return _get_monitor()
+
+
 def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
     cfg = settings or SETTINGS
     app = Flask(__name__, template_folder=str(Path(__file__).resolve().parent / "templates"))
@@ -2537,7 +2638,7 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
                 }
             ), 400
 
-        if out_dir is None:
+        if out_dir is None or not out_dir.exists() or not out_dir.is_dir():
             return jsonify(
                 {
                     "ok": False,
@@ -2559,7 +2660,7 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
         rel = mapping.get(canonical_type, "")
         path = _resolve_project_file(rel)
 
-        if path is None or not path.exists() or not path.is_file():
+        if path is None or not path.exists() or not path.is_file() or not _is_within_directory(path, out_dir):
             return jsonify(
                 {
                     "ok": False,
@@ -2608,7 +2709,7 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
             if not rel:
                 continue
             p = _resolve_project_file(str(rel))
-            if p and p.exists() and p.is_file():
+            if p and p.exists() and p.is_file() and _is_within_directory(p, out_dir):
                 existing_files.append(p)
 
         if not existing_files:
@@ -2630,6 +2731,128 @@ def create_app(settings: Optional[IntegratedSettings] = None) -> Flask:
             actor=_request_actor(),
         )
         return send_file(bundle_path, as_attachment=True, download_name=f"{task_id}_bundle.zip")
+
+    @app.post("/api/adaptive_monitor/start")
+    def adaptive_monitor_start():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        monitor = get_monitor()
+        if hasattr(monitor, "start_monitoring"):
+            monitor.start_monitoring()
+        return jsonify({"ok": True, "status": "started"})
+
+    @app.post("/api/adaptive_monitor/stop")
+    def adaptive_monitor_stop():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        monitor = get_monitor()
+        if hasattr(monitor, "stop_monitoring"):
+            monitor.stop_monitoring()
+        return jsonify({"ok": True, "status": "stopped"})
+
+    @app.post("/api/adaptive_monitor/reset")
+    def adaptive_monitor_reset():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        monitor = get_monitor()
+        if hasattr(monitor, "reset_statistics"):
+            monitor.reset_statistics()
+        return jsonify({"ok": True, "status": "reset"})
+
+    @app.post("/api/adaptive_monitor/process_frame")
+    def adaptive_monitor_process_frame():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        payload = request.get_json(silent=True) or {}
+        frame_payload = str(
+            payload.get("frame")
+            or payload.get("image")
+            or payload.get("frame_base64")
+            or ""
+        ).strip()
+        if not frame_payload:
+            return jsonify({"ok": False, "error": "missing frame payload"}), 400
+        return jsonify({"ok": False, "error": "frame processing is unavailable in this route"}), 501
+
+    @app.get("/api/adaptive_monitor/status")
+    def adaptive_monitor_status():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
+        monitor = get_monitor()
+        stats = monitor.get_statistics() if hasattr(monitor, "get_statistics") else {}
+        return jsonify({"ok": True, "statistics": stats})
+
+    @app.get("/api/adaptive_monitor/report")
+    def adaptive_monitor_report():
+        auth_error = _auth_guard("read")
+        if auth_error:
+            return auth_error
+        monitor = get_monitor()
+        constraints = []
+        for item in list(getattr(monitor, "constraints", []) or []):
+            constraints.append(
+                {
+                    "constraint_id": getattr(item, "constraint_id", ""),
+                    "description": getattr(item, "description", ""),
+                    "severity": getattr(item, "severity", ""),
+                    "enabled": bool(getattr(item, "enabled", False)),
+                }
+            )
+        return jsonify(
+            {
+                "ok": True,
+                "statistics": monitor.get_statistics() if hasattr(monitor, "get_statistics") else {},
+                "constraints": constraints,
+                "violation_history": list(getattr(monitor, "violation_history", []) or []),
+            }
+        )
+
+    @app.post("/api/tts/speak")
+    def tts_speak():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        text = str((request.get_json(silent=True) or {}).get("text") or "").strip()
+        if not text:
+            return jsonify({"ok": False, "error": "missing text"}), 400
+        return jsonify({"ok": False, "error": "tts backend unavailable"}), 501
+
+    @app.post("/api/tts/stream")
+    def tts_stream():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        text = str((request.get_json(silent=True) or {}).get("text") or "").strip()
+        if not text:
+            return jsonify({"ok": False, "error": "missing text"}), 400
+        return jsonify({"ok": False, "error": "tts backend unavailable"}), 501
+
+    @app.post("/api/asr/transcribe")
+    def asr_transcribe():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        audio = str((request.get_json(silent=True) or {}).get("audio") or "").strip()
+        if not audio:
+            return jsonify({"ok": False, "error": "missing audio"}), 400
+        return jsonify({"ok": False, "error": "asr backend unavailable"}), 501
+
+    @app.post("/api/voice/chat")
+    def voice_chat():
+        auth_error = _auth_guard("write")
+        if auth_error:
+            return auth_error
+        payload = request.get_json(silent=True) or {}
+        audio = str(payload.get("audio") or "").strip()
+        text = str(payload.get("text") or "").strip()
+        if not audio and not text:
+            return jsonify({"ok": False, "error": "missing audio or text"}), 400
+        return jsonify({"ok": False, "error": "voice backend unavailable"}), 501
 
     @app.get("/api/monitor")
     def monitor():

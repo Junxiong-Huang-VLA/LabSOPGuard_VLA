@@ -57,6 +57,18 @@ class TensorRTConfig:
     num_keypoints: int = 17  # COCO pose keypoints
 
 
+def resolve_int8_calibration_cache(int8: bool, calibration_cache: str | Path | None) -> Optional[Path]:
+    """Validate the optional INT8 calibration cache path."""
+    if not int8:
+        return None
+    if not calibration_cache:
+        raise RuntimeError("INT8 mode requires an existing calibration cache")
+    cache_path = Path(calibration_cache).expanduser()
+    if not cache_path.exists() or not cache_path.is_file():
+        raise RuntimeError(f"INT8 calibration cache not found: {cache_path}")
+    return cache_path
+
+
 # ---------------------------------------------------------------------------
 # ONNX Export
 # ---------------------------------------------------------------------------

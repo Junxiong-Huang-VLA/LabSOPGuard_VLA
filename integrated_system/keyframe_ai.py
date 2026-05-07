@@ -75,14 +75,29 @@ def extract_keyframes_by_diff(
             continue
 
         diff = cv2.absdiff(prev_gray, gray)
-        score = float(np.mean(diff))
+        mean_score = float(np.mean(diff))
+        active_threshold = max(8.0, float(diff_threshold) * 0.4)
+        active_ratio = float(np.count_nonzero(diff >= active_threshold)) / float(diff.size or 1)
+        local_score = float(np.percentile(diff, 99.0)) if active_ratio >= 0.002 else 0.0
+        score = max(mean_score, local_score)
         t = frame_id / fps
 
         if score >= diff_threshold and (t - last_saved_t) >= min_interval_sec:
             out = output_dir / f"keyframe_{len(saved_paths)+1:03d}.jpg"
             if _safe_write_jpg(out, frame):
+                reason = "adaptive_motion" if local_score >= diff_threshold and local_score >= mean_score else "frame_diff"
                 saved_paths.append(out)
-                keyframes_meta.append({"frame_id": frame_id, "timestamp": t, "score": score, "image": out.name})
+                keyframes_meta.append(
+                    {
+                        "frame_id": frame_id,
+                        "timestamp": t,
+                        "score": score,
+                        "mean_score": mean_score,
+                        "local_score": local_score,
+                        "reason": reason,
+                        "image": out.name,
+                    }
+                )
                 last_saved_t = t
                 if len(saved_paths) >= max_keyframes:
                     break

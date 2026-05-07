@@ -10,6 +10,7 @@ import time
 from .config import ReceiverConfig, load_receiver_config
 from .decoder import Decoder
 from .frame_queue import FrameQueue
+from .metrics import start_metrics_server_from_env
 from .models import FrameAssembly, VideoFrame
 from .renderer import MonitorWallRenderer, Renderer
 from .state import RuntimeState
@@ -524,6 +525,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Gemini RTP receiver")
     parser.add_argument("--config", required=True, help="receiver json config")
     args = parser.parse_args()
+    start_metrics_server_from_env("WIRELESS_VIDEO_RECEIVER_METRICS_PORT", default_port=0)
     cfg = load_receiver_config(args.config)
     multi_mode = bool(cfg.channels) or int(cfg.runtime.auto_listen_port_count) > 0
     if multi_mode:

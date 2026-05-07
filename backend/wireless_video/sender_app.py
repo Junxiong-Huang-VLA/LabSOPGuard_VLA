@@ -11,6 +11,7 @@ from .camera import CameraSource, list_connected_cameras
 from .config import CodecConfig, SenderConfig, load_sender_config
 from .encoder import Encoder
 from .frame_queue import FrameQueue
+from .metrics import start_metrics_server_from_env
 from .models import VideoFrame
 from .rtp import RtpH264Packetizer
 from .state import RuntimeState
@@ -651,6 +652,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Gemini RTP sender")
     parser.add_argument("--config", required=True, help="sender json config")
     args = parser.parse_args()
+    start_metrics_server_from_env("WIRELESS_VIDEO_SENDER_METRICS_PORT", default_port=0)
     cfg = load_sender_config(args.config)
     if cfg.cameras or cfg.runtime.auto_discover_cameras:
         return MultiSenderService(cfg).run()

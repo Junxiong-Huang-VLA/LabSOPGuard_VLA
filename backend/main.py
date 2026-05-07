@@ -3197,6 +3197,21 @@ def _infer_key_action_start_time(*names: str) -> str:
     return _now_iso()
 
 
+def _infer_key_action_camera_id(path_value: Optional[str], *, view: str) -> str:
+    name = Path(str(path_value or "")).name.lower()
+    if view == "third_person":
+        if "top" in name:
+            return "top_view"
+        if "overview" in name:
+            return "overview"
+        return "third_person"
+    if "bottom" in name:
+        return "bottom_view"
+    if "first" in name or "fpv" in name or "ego" in name:
+        return "first_person"
+    return "first_person"
+
+
 def _run_key_action_index_task(
     experiment_id: str,
     *,
@@ -3246,6 +3261,8 @@ def _run_key_action_index_task(
                     "start_time": session_start_time,
                     "fps": third_fps,
                     "offset_sec": 0,
+                    "role": "third_person",
+                    "camera_id": _infer_key_action_camera_id(third_person_video_path, view="third_person"),
                 }
             },
             "detection_config": detection_config,
@@ -3257,6 +3274,8 @@ def _run_key_action_index_task(
                 "start_time": session_start_time,
                 "fps": first_fps,
                 "offset_sec": 0,
+                "role": "first_person",
+                "camera_id": _infer_key_action_camera_id(first_person_video_path, view="first_person"),
             }
         manifest_path = output_dir / "manifest.json"
         _write_json(manifest_path, manifest)

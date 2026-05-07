@@ -90,7 +90,7 @@ class ProductionDeployer:
         # 检查是否有训练数据
         dataset_yaml = self.project_root / "data" / "dataset" / "dataset.yaml"
         if not dataset_yaml.exists():
-        self.log("未找到训练数据集，使用预训练模型")
+            self.log("未找到训练数据集，使用预训练模型")
             return True
 
         # 执行训练脚本
@@ -132,7 +132,7 @@ class ProductionDeployer:
             self.log("Redis服务运行正常")
             return True
         except Exception as e:
-        self.log("Redis服务不可用，请确保Redis服务已启动: redis-server")
+            self.log("Redis服务不可用，请确保Redis服务已启动: redis-server")
             return False
 
     def create_systemd_services(self) -> bool:
