@@ -1,0 +1,112 @@
+  <section class="card realtime-monitor-panel" id="realtime-monitor-panel"> 
+    <div class="card-header"> 
+      <h2>Realtime Adaptive Monitor <span class="badge badge-live" id="rtmHeaderBadge">Idle</span></h2> 
+      <div class="realtime-monitor-toolbar"> 
+        <button class="secondary" type="button" id="rtmStartCameraBtn">Camera</button> 
+        <label class="secondary" for="rtmVideoInput">Upload Video</label> 
+        <input type="file" id="rtmVideoInput" accept="video/*" hidden /> 
+        <button class="secondary" type="button" id="rtmStopSourceBtn">Stop Source</button> 
+        <button class="secondary" type="button" id="rtmStartBtn">Start Monitor</button> 
+        <button class="secondary" type="button" id="rtmStopBtn" disabled>Stop Monitor</button> 
+        <button class="secondary" type="button" id="rtmResetBtn">Reset</button> 
+        <button class="secondary" type="button" id="rtmReportBtn">Report</button> 
+      </div> 
+    </div> 
+    <div class="card-body"> 
+      <div class="realtime-monitor-grid"> 
+        <div class="realtime-monitor-side"> 
+          <div class="realtime-monitor-status"> 
+            <div class="status-dot warning" id="rtmStatusDot"></div> 
+            <div> 
+              <div style="font-size:13px;font-weight:600" id="rtmStatusText">No source selected</div> 
+              <div class="text-muted" style="font-size:12px" id="rtmStatusNote">Attach a camera or an uploaded video, then start the adaptive monitor.</div> 
+            </div> 
+          </div> 
+          <div class="realtime-monitor-summary"> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Frames</div> 
+              <div class="value" id="rtmFrameCount">0</div> 
+            </div> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Violations</div> 
+              <div class="value" id="rtmViolationCount">0</div> 
+            </div> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Compliance</div> 
+              <div class="value" id="rtmComplianceValue">0.0%</div> 
+            </div> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Backend</div> 
+              <div class="value" id="rtmBackendValue">idle</div> 
+            </div> 
+            <div class="rtm-mini-stat" style="grid-column:1 / -1;"> 
+              <div class="label">Latest Actions</div> 
+              <div class="value" id="rtmLatestActions">No detections yet</div> 
+            </div> 
+            <div class="rtm-mini-stat" style="grid-column:1 / -1;"> 
+              <div class="label">PPE State</div> 
+              <div class="value" id="rtmLatestPpe">No PPE state yet</div> 
+            </div> 
+          </div> 
+        </div> 
+
+        <div> 
+          <div class="realtime-monitor-stage" id="rtmStage"> 
+            <video id="rtmCameraVideo" playsinline muted style="display:none;"></video> 
+            <video id="rtmUploadedVideo" playsinline muted style="display:none;"></video> 
+            <canvas id="rtmDisplayCanvas" style="display:none;"></canvas> 
+            <div class="realtime-monitor-placeholder" id="rtmPlaceholder"> 
+              <div class="icon">LIVE</div> 
+              <div>Annotated live preview will render here.</div> 
+              <div style="font-size:12px;max-width:320px;">The adaptive monitor now runs directly from the home page, so the standalone route is only a compatibility redirect.</div> 
+            </div> 
+          </div> 
+          <div class="realtime-monitor-meta"> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Latency</div> 
+              <div class="value" id="rtmLatencyValue">0 ms</div> 
+            </div> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">FPS</div> 
+              <div class="value" id="rtmFpsValue">0</div> 
+            </div> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Source</div> 
+              <div class="value" id="rtmSourceValue">none</div> 
+            </div> 
+            <div class="rtm-mini-stat"> 
+              <div class="label">Active Rules</div> 
+              <div class="value" id="rtmConstraintValue">0</div> 
+            </div> 
+          </div> 
+        </div> 
+
+        <div class="realtime-monitor-side"> 
+          <div> 
+            <div class="rtm-list-header"> 
+              <strong>Step Tracker</strong> 
+              <span class="text-muted mono" id="rtmCompletedSteps">0 / 0</span> 
+            </div> 
+            <div class="step-list" id="rtmStepList"> 
+              <div class="step-item pending"> 
+                <div class="step-indicator">1</div> 
+                <div class="step-content"> 
+                  <div class="step-name">No SOP state yet</div> 
+                  <div class="step-meta">Start the monitor to populate the step tracker.</div> 
+                </div> 
+              </div> 
+            </div> 
+          </div> 
+          <div> 
+            <div class="rtm-list-header"> 
+              <strong>Recent Violations</strong> 
+              <span class="text-muted mono" id="rtmViolationWindow">last 10</span> 
+            </div> 
+            <div class="rtm-list scrollbar-thin" id="rtmAlertList"> 
+              <div class="text-muted" style="font-size:12px;padding:8px 4px;">No adaptive monitor alerts yet.</div> 
+            </div> 
+          </div> 
+        </div> 
+      </div> 
+    </div> 
+  </section>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+@page {
+    size: A4;
+    margin: 2cm 2.5cm;
+    @bottom-center {
+        content: "Page " counter(page) " / " counter(pages);
+        font-size: 9px;
+        color: #888;
+    }
+}
+body {
+    font-family: "Microsoft YaHei", "SimSun", "Helvetica Neue", Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+}
+.cover {
+    text-align: center;
+    padding-top: 120px;
+    page-break-after: always;
+}
+.cover h1 {
+    font-size: 28pt;
+    color: #1a3a5c;
+    margin-bottom: 10px;
+}
+.cover h2 {
+    font-size: 18pt;
+    color: #4a6a8a;
+    font-weight: normal;
+    margin-bottom: 40px;
+}
+.cover .meta-table {
+    margin: 40px auto;
+    border-collapse: collapse;
+    width: 80%;
+}
+.cover .meta-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #dde4ec;
+    text-align: left;
+}
+.cover .meta-table td:first-child {
+    color: #4a6a8a;
+    width: 40%;
+    font-weight: bold;
+}
+h1 {
+    color: #1a3a5c;
+    font-size: 18pt;
+    border-bottom: 2px solid #1a3a5c;
+    padding-bottom: 5px;
+    margin-top: 30px;
+}
+h2 {
+    color: #2a5a8c;
+    font-size: 14pt;
+    margin-top: 20px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 10pt;
+}
+table th {
+    background: #1a3a5c;
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: bold;
+}
+table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #dde4ec;
+}
+table tr:nth-child(even) td {
+    background: #f5f8fc;
+}
+.severity-critical { color: #b71c1c; font-weight: bold; }
+.severity-high { color: #d32f2f; font-weight: bold; }
+.severity-medium { color: #f57c00; }
+.severity-low { color: #388e3c; }
+.status-ok { color: #2e7d32; font-weight: bold; }
+.status-missing { color: #c62828; }
+.status-failed { color: #d32f2f; }
+.status-skipped { color: #f57c00; }
+.metric-grid {
+    display: flex;
+    gap: 15px;
+    margin: 15px 0;
+}
+.metric-card {
+    flex: 1;
+    border: 1px solid #dde4ec;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    background: #f8fbff;
+}
+.metric-card .value {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #1a3a5c;
+}
+.metric-card .label {
+    font-size: 9pt;
+    color: #666;
+}
+.chart-container {
+    text-align: center;
+    margin: 15px 0;
+}
+.chart-container img {
+    max-width: 100%;
+    border: 1px solid #dde4ec;
+    border-radius: 4px;
+}
+.evidence-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 10px 0;
+}
+.evidence-frame {
+    border: 1px solid #dde4ec;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.evidence-frame img {
+    width: 100%;
+    height: auto;
+}
+.evidence-frame .caption {
+    padding: 4px 8px;
+    font-size: 9pt;
+    background: #f5f8fc;
+    color: #444;
+}
+.footer-note {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid #dde4ec;
+    font-size: 9pt;
+    color: #888;
+    text-align: center;
+}
+.section { page-break-inside: avoid; }
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ==================== COVER PAGE ==================== -->
+<div class="cover">
+    <h1>实验视频智能分析报告</h1>
+    <h2>Experimental Video Intelligent Analysis Report</h2>
+    <table class="meta-table">
+        <tr><td>任务编号 / Task ID</td><td>{{ task_id }}</td></tr>
+        <tr><td>实验类型 / Experiment Type</td><td>{{ experiment_type_zh }} / {{ experiment_type }}</td></tr>
+        <tr><td>输入视频 / Input Video</td><td>{{ video_path }}</td></tr>
+        <tr><td>分析状态 / Status</td><td>{{ status }}</td></tr>
+        <tr><td>生成时间 / Generated At</td><td>{{ generated_at }}</td></tr>
+        <tr><td>关键帧数 / Keyframes</td><td>{{ keyframe_count }}</td></tr>
+        <tr><td>报警总数 / Total Alarms</td><td>{{ alarm_count }}</td></tr>
+        <tr><td>合规率 / Compliance Rate</td><td>{{ "%.0f"|format(compliance_ratio * 100) }}%</td></tr>
+    </table>
+</div>
+
+<!-- ==================== EXECUTIVE SUMMARY ==================== -->
+<h1>1. 执行摘要 / Executive Summary</h1>
+
+<div class="section">
+<p>{{ summary_zh }}</p>
+<p style="color: #555; font-style: italic;">{{ summary_en }}</p>
+</div>
+
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="value">{{ alarm_count }}</div>
+        <div class="label">异常总数 / Total Alarms</div>
+    </div>
+    <div class="metric-card">
+        <div class="value" style="color: #d32f2f;">{{ critical_count }}</div>
+        <div class="label">严重 / Critical</div>
+    </div>
+    <div class="metric-card">
+        <div class="value" style="color: #f57c00;">{{ high_count }}</div>
+        <div class="label">高风险 / High</div>
+    </div>
+    <div class="metric-card">
+        <div class="value">{{ "%.0f"|format(compliance_ratio * 100) }}%</div>
+        <div class="label">合规率 / Compliance</div>
+    </div>
+</div>
+
+{% if overall_summary %}
+<div class="section">
+<h2>AI分析摘要 / AI Analysis Summary</h2>
+<p>{{ overall_summary[:2000] }}</p>
+</div>
+{% endif %}
+
+<!-- ==================== COMPLIANCE OVERVIEW ==================== -->
+<div class="page-break"></div>
+<h1>2. 合规性总览 / Compliance Overview</h1>
+
+<div class="section">
+<h2>步骤执行状态 / Step Execution Status</h2>
+<table>
+    <tr>
+        <th style="width:5%">#</th>
+        <th style="width:35%">步骤 / Step</th>
+        <th style="width:15%">状态 / Status</th>
+        <th style="width:45%">说明 / Notes</th>
+    </tr>
+    {% for step in steps %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ step.name_zh }} ({{ step.name_en }})</td>
+        <td class="{{ step.status_class }}">{{ step.status_zh }}</td>
+        <td>{{ step.notes }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+
+{% if charts.compliance %}
+<div class="chart-container">
+    <img src="{{ charts.compliance }}" alt="Compliance Chart">
+</div>
+{% endif %}
+
+<!-- ==================== ALARM DETAILS ==================== -->
+<div class="page-break"></div>
+<h1>3. 报警详情 / Alarm Details</h1>
+
+{% if alarms %}
+<div class="section">
+<table>
+    <tr>
+        <th style="width:4%">#</th>
+        <th style="width:12%">类型 / Type</th>
+        <th style="width:8%">严重性</th>
+        <th style="width:8%">时间</th>
+        <th style="width:35%">描述 / Description (ZH)</th>
+        <th style="width:33%">Description (EN)</th>
+    </tr>
+    {% for alarm in alarms[:50] %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ alarm.alarm_type }}</td>
+        <td class="severity-{{ alarm.severity }}">{{ alarm.severity_en }}</td>
+        <td>{{ "%.1f"|format(alarm.timestamp) }}s</td>
+        <td>{{ alarm.description_zh[:150] }}</td>
+        <td>{{ alarm.description_en[:150] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% if alarms|length > 50 %}
+<p style="color: #888; font-size: 9pt;">... and {{ alarms|length - 50 }} more alarms (see alarm_log.json for full list)</p>
+{% endif %}
+</div>
+
+{% if charts.severity %}
+<div class="chart-container">
+    <img src="{{ charts.severity }}" alt="Severity Distribution">
+</div>
+{% endif %}
+
+{% else %}
+<p>未检测到违规 / No violations detected.</p>
+{% endif %}
+
+<!-- ==================== TIMELINE ==================== -->
+<div class="page-break"></div>
+<h1>4. 实验时间线 / Experiment Timeline</h1>
+
+{% if charts.timeline %}
+<div class="chart-container">
+    <img src="{{ charts.timeline }}" alt="Experiment Timeline">
+</div>
+{% endif %}
+
+{% if timeline_events %}
+<div class="section">
+<h2>关键事件 / Key Events</h2>
+<table>
+    <tr>
+        <th>时间 / Time</th>
+        <th>步骤 / Step</th>
+        <th>事件类型 / Event</th>
+        <th>详情 / Details</th>
+    </tr>
+    {% for evt in timeline_events[:30] %}
+    <tr>
+        <td>{{ "%.1f"|format(evt.timestamp) }}s</td>
+        <td>{{ evt.step_id }}</td>
+        <td>{{ evt.event_type }}</td>
+        <td>{{ evt.description[:100] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+
+<!-- ==================== EVIDENCE FRAMES ==================== -->
+{% if keyframe_images %}
+<div class="page-break"></div>
+<h1>5. 关键证据帧 / Key Evidence Frames</h1>
+
+<div class="evidence-grid">
+    {% for img in keyframe_images[:8] %}
+    <div class="evidence-frame">
+        <img src="{{ img.path }}" alt="Frame {{ img.index }}">
+        <div class="caption">Frame {{ img.index }} — {{ "%.1f"|format(img.timestamp) }}s</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ==================== MODULE STATUS ==================== -->
+<div class="page-break"></div>
+<h1>6. 模块执行状态 / Module Status</h1>
+
+<div class="section">
+<table>
+    <tr>
+        <th style="width:20%">模块 / Module</th>
+        <th style="width:10%">状态</th>
+        <th style="width:70%">说明 / Message</th>
+    </tr>
+    {% for mod in modules %}
+    <tr>
+        <td>{{ mod.name }}</td>
+        <td class="status-{{ mod.status }}">{{ mod.status }}</td>
+        <td>{{ mod.message }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+
+<!-- ==================== FOOTER ==================== -->
+<div class="footer-note">
+    <p>本报告由 LabSOPGuard 实验视频智能分析系统自动生成。</p>
+    <p>This report was auto-generated by LabSOPGuard Intelligent Video Analysis System.</p>
+    <p>Report generated at {{ generated_at }} | Task {{ task_id }}</p>
+</div>
+
+</body>
+</html>

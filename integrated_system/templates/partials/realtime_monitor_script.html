@@ -1,0 +1,499 @@
+  const rtmState = {
+    active: false,
+    source: null,
+    stream: null,
+    frameTimer: null,
+    statusTimer: null,
+    lastFrameAt: 0,
+    frameInterval: 300,
+    objectUrl: null,
+    captureCanvas: document.createElement('canvas'),
+    captureCtx: null,
+    displayCanvas: document.getElementById('rtmDisplayCanvas'),
+    displayCtx: null,
+    cameraVideo: document.getElementById('rtmCameraVideo'),
+    uploadedVideo: document.getElementById('rtmUploadedVideo'),
+    placeholder: document.getElementById('rtmPlaceholder'),
+  };
+  rtmState.captureCtx = rtmState.captureCanvas.getContext('2d');
+  rtmState.displayCtx = rtmState.displayCanvas ? rtmState.displayCanvas.getContext('2d') : null;
+
+  function rtmSetText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function rtmSetHtml(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = value;
+  }
+
+  function rtmSetCanvasSize(width, height) {
+    const safeWidth = Math.max(1, Math.round(width || 640));
+    const safeHeight = Math.max(1, Math.round(height || 360));
+    if (rtmState.displayCanvas) {
+      rtmState.displayCanvas.width = safeWidth;
+      rtmState.displayCanvas.height = safeHeight;
+    }
+    rtmState.captureCanvas.width = safeWidth;
+    rtmState.captureCanvas.height = safeHeight;
+  }
+
+  function rtmShowStage(target) {
+    [rtmState.cameraVideo, rtmState.uploadedVideo, rtmState.displayCanvas, rtmState.placeholder].forEach((el) => {
+      if (!el) return;
+      el.style.display = el === target ? 'block' : 'none';
+    });
+    if (target === rtmState.placeholder) {
+      rtmState.placeholder.style.display = 'flex';
+    }
+  }
+
+  function rtmUpdateGlobalCameraStatus() {
+    const dot = document.getElementById('cameraStatus');
+    if (!dot) return;
+    dot.className = 'status-dot ' + (rtmState.source ? 'live' : 'warning');
+  }
+
+  function rtmSetState(active, note) {
+    rtmState.active = active;
+    const dot = document.getElementById('rtmStatusDot');
+    const badge = document.getElementById('rtmHeaderBadge');
+    if (dot) {
+      dot.className = 'status-dot ' + (active ? 'live' : (rtmState.source ? 'live' : 'warning'));
+    }
+    if (badge) {
+      badge.textContent = active ? 'Active' : (rtmState.source ? 'Ready' : 'Idle');
+    }
+    rtmSetText('rtmStatusText', active ? 'Adaptive monitor is running' : (rtmState.source ? 'Source connected' : 'No source selected'));
+    if (typeof note === 'string' && note) {
+      rtmSetText('rtmStatusNote', note);
+    }
+    const startBtn = document.getElementById('rtmStartBtn');
+    const stopBtn = document.getElementById('rtmStopBtn');
+    if (startBtn) startBtn.disabled = active || !rtmState.source;
+    if (stopBtn) stopBtn.disabled = !active;
+    rtmUpdateGlobalCameraStatus();
+  }
+
+  function rtmClearLoops() {
+    if (rtmState.frameTimer) {
+      clearTimeout(rtmState.frameTimer);
+      rtmState.frameTimer = null;
+    }
+    if (rtmState.statusTimer) {
+      clearInterval(rtmState.statusTimer);
+      rtmState.statusTimer = null;
+    }
+  }
+
+  function rtmRenderAlerts(violations) {
+    const list = document.getElementById('rtmAlertList');
+    if (!list) return;
+    const rows = Array.isArray(violations) ? violations.slice().reverse() : [];
+    if (rows.length === 0) {
+      list.innerHTML = '<div class="text-muted" style="font-size:12px;padding:8px 4px;">No adaptive monitor alerts yet.</div>';
+      return;
+    }
+    list.innerHTML = rows.slice(0, 10).map((item) => {
+      const severity = String(item.severity || 'Warning');
+      const cls = severity === 'Critical' ? 'critical' : (severity === 'Major' ? 'warning' : 'info');
+      const frameId = Number(item.frame_id || 0);
+      const seconds = Number(item.timestamp_sec || item.timestamp || 0).toFixed(2);
+      const desc = item.description || item.recommendation || 'Violation detected';
+      return `
+        <div class="alert-item ${cls}">
+          <div class="alert-time">frame ${frameId} | ${seconds}s | ${severity}</div>
+          <div class="alert-msg">${desc}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function rtmRenderSteps(stats) {
+    const list = document.getElementById('rtmStepList');
+    if (!list) return;
+    const labels = stats && typeof stats.step_labels === 'object' ? stats.step_labels : {};
+    const stepState = stats && typeof stats.step_state === 'object' ? stats.step_state : {};
+    const stepIds = Object.keys(labels).length > 0 ? Object.keys(labels) : Object.keys(stepState);
+    const completed = stepIds.filter((key) => Boolean(stepState[key])).length;
+    rtmSetText('rtmCompletedSteps', `${completed} / ${stepIds.length}`);
+
+    if (stepIds.length === 0) {
+      list.innerHTML = `
+        <div class="step-item pending">
+          <div class="step-indicator">1</div>
+          <div class="step-content">
+            <div class="step-name">No SOP state yet</div>
+            <div class="step-meta">Start the monitor to populate the step tracker.</div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    let activeAssigned = false;
+    list.innerHTML = stepIds.map((key, idx) => {
+      const done = Boolean(stepState[key]);
+      let cls = 'pending';
+      let indicator = String(idx + 1);
+      let meta = 'Pending';
+      if (done) {
+        cls = 'completed';
+        indicator = 'OK';
+        meta = 'Completed';
+      } else if (!activeAssigned && (rtmState.active || Number(stats.total_frames || 0) > 0)) {
+        cls = 'active';
+        meta = 'In progress';
+        activeAssigned = true;
+      }
+      const label = labels[key] || key;
+      return `
+        <div class="step-item ${cls}">
+          <div class="step-indicator">${indicator}</div>
+          <div class="step-content">
+            <div class="step-name">${idx + 1}. ${label}</div>
+            <div class="step-meta">${meta}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function rtmUpdateStatistics(stats, runtime) {
+    const safeStats = stats && typeof stats === 'object' ? stats : {};
+    const totalFrames = Number(safeStats.total_frames || 0);
+    const totalViolations = Number(safeStats.total_violations || 0);
+    const activeConstraints = Number(safeStats.active_constraints || 0);
+    const complianceRatio = Number(safeStats.compliance_ratio || 0);
+    const backend = safeStats.latest_backend || 'idle';
+    const actions = Array.isArray(safeStats.latest_actions) && safeStats.latest_actions.length > 0 ? safeStats.latest_actions.join(', ') : 'No detections yet';
+    const latestPpe = safeStats.latest_ppe && typeof safeStats.latest_ppe === 'object'
+      ? Object.entries(safeStats.latest_ppe).map(([key, value]) => `${key}:${value ? 'ok' : 'missing'}`).join(', ')
+      : 'No PPE state yet';
+    const severity = safeStats.severity_distribution && typeof safeStats.severity_distribution === 'object' ? safeStats.severity_distribution : {};
+    const criticalCount = Number(severity.Critical || 0);
+
+    rtmSetText('rtmFrameCount', String(totalFrames));
+    rtmSetText('rtmViolationCount', String(totalViolations));
+    rtmSetText('rtmComplianceValue', `${(complianceRatio * 100).toFixed(1)}%`);
+    rtmSetText('rtmBackendValue', String(backend));
+    rtmSetText('rtmLatestActions', actions);
+    rtmSetText('rtmLatestPpe', latestPpe || 'No PPE state yet');
+    rtmSetText('rtmConstraintValue', String(activeConstraints));
+    rtmSetText('rtmSourceValue', rtmState.source || 'none');
+    if (runtime && typeof runtime.latency === 'number') {
+      rtmSetText('rtmLatencyValue', `${runtime.latency} ms`);
+      rtmSetText('kpiLatency', `${runtime.latency}ms`);
+    }
+    if (runtime && typeof runtime.fps === 'number') {
+      rtmSetText('rtmFpsValue', String(runtime.fps));
+      rtmSetHtml('kpiFPS', `${runtime.fps}<span style="font-size:16px"> FPS</span>`);
+    }
+
+    rtmSetHtml('kpiCompliance', `${(complianceRatio * 100).toFixed(1)}<span style="font-size:16px">%</span>`);
+    rtmSetText('kpiAlerts', String(totalViolations));
+    rtmSetText('kpiCritical', String(criticalCount));
+    rtmSetText('kpiViolations', String(totalViolations));
+    rtmSetText('kpiDetections', String(totalFrames));
+
+    rtmRenderSteps(safeStats);
+    rtmRenderAlerts(Array.isArray(safeStats.recent_violations) ? safeStats.recent_violations : []);
+  }
+
+  async function rtmSyncStatus() {
+    try {
+      const response = await fetch('/api/adaptive_monitor/status');
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !payload.statistics) return;
+      rtmUpdateStatistics(payload.statistics);
+      if (Boolean(payload.statistics.is_active) !== rtmState.active) {
+        rtmSetState(Boolean(payload.statistics.is_active), Boolean(payload.statistics.is_active)
+          ? 'Server session active. Frames will resume when a source is connected.'
+          : (rtmState.source ? 'Source connected. Start monitoring when ready.' : 'Attach a source to start monitoring.'));
+      }
+    } catch (error) {
+      console.warn('adaptive monitor status sync failed', error);
+    }
+  }
+
+  function rtmStartStatusPolling() {
+    if (rtmState.statusTimer) {
+      clearInterval(rtmState.statusTimer);
+    }
+    rtmState.statusTimer = setInterval(rtmSyncStatus, 2000);
+  }
+
+  async function rtmStopMonitoring(options = {}) {
+    try {
+      await fetch('/api/adaptive_monitor/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.warn('adaptive monitor stop failed', error);
+    }
+
+    rtmClearLoops();
+    rtmSetState(false, rtmState.source ? 'Source connected. Start monitoring when ready.' : 'Attach a source to start monitoring.');
+    if (rtmState.source === 'camera' && rtmState.cameraVideo) {
+      rtmShowStage(rtmState.cameraVideo);
+    } else if (rtmState.source === 'upload' && rtmState.uploadedVideo) {
+      rtmShowStage(rtmState.uploadedVideo);
+    } else {
+      rtmShowStage(rtmState.placeholder);
+    }
+    if (!options.skipSync) {
+      rtmSyncStatus();
+    }
+  }
+
+  async function rtmStopSource(options = {}) {
+    if (rtmState.active) {
+      await rtmStopMonitoring({ skipSync: true });
+    }
+    rtmClearLoops();
+
+    if (rtmState.stream) {
+      rtmState.stream.getTracks().forEach((track) => track.stop());
+      rtmState.stream = null;
+    }
+    if (rtmState.cameraVideo) {
+      rtmState.cameraVideo.pause();
+      rtmState.cameraVideo.srcObject = null;
+    }
+    if (rtmState.uploadedVideo) {
+      rtmState.uploadedVideo.pause();
+      rtmState.uploadedVideo.removeAttribute('src');
+      rtmState.uploadedVideo.load();
+    }
+    if (rtmState.objectUrl) {
+      URL.revokeObjectURL(rtmState.objectUrl);
+      rtmState.objectUrl = null;
+    }
+    const input = document.getElementById('rtmVideoInput');
+    if (input) input.value = '';
+
+    rtmState.source = null;
+    rtmSetCanvasSize(640, 360);
+    if (rtmState.displayCtx && rtmState.displayCanvas) {
+      rtmState.displayCtx.clearRect(0, 0, rtmState.displayCanvas.width, rtmState.displayCanvas.height);
+    }
+    rtmShowStage(rtmState.placeholder);
+    rtmSetState(false, options.note || 'Source stopped. Attach a new source to continue.');
+    rtmSetText('rtmSourceValue', 'none');
+    await rtmSyncStatus();
+  }
+
+  async function rtmStartCamera() {
+    try {
+      await rtmStopSource({ note: 'Switching to camera source.' });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720, facingMode: 'user' },
+        audio: false,
+      });
+      rtmState.stream = stream;
+      rtmState.source = 'camera';
+      if (rtmState.cameraVideo) {
+        rtmState.cameraVideo.srcObject = stream;
+        rtmState.cameraVideo.muted = true;
+        await rtmState.cameraVideo.play();
+        rtmSetCanvasSize(rtmState.cameraVideo.videoWidth || 1280, rtmState.cameraVideo.videoHeight || 720);
+      }
+      rtmShowStage(rtmState.cameraVideo);
+      rtmSetText('rtmSourceValue', 'camera');
+      rtmSetState(false, 'Camera connected. Start monitoring when ready.');
+      showToast('Realtime monitor camera connected.', 'success');
+    } catch (error) {
+      console.error('adaptive monitor camera start failed', error);
+      showToast('Unable to access the camera for realtime monitoring.', 'error');
+      rtmSetState(false, 'Camera access failed. Use an uploaded video instead.');
+    }
+  }
+
+  async function rtmHandleVideoUpload(event) {
+    const file = event.target && event.target.files ? event.target.files[0] : null;
+    if (!file) return;
+
+    await rtmStopSource({ note: 'Switching to uploaded video.' });
+
+    rtmState.objectUrl = URL.createObjectURL(file);
+    rtmState.source = 'upload';
+    if (rtmState.uploadedVideo) {
+      rtmState.uploadedVideo.src = rtmState.objectUrl;
+      rtmState.uploadedVideo.muted = true;
+      rtmState.uploadedVideo.onloadedmetadata = async () => {
+        rtmSetCanvasSize(rtmState.uploadedVideo.videoWidth || 1280, rtmState.uploadedVideo.videoHeight || 720);
+        try {
+          await rtmState.uploadedVideo.play();
+        } catch (error) {
+          console.warn('adaptive monitor uploaded preview autoplay blocked', error);
+        }
+        rtmShowStage(rtmState.uploadedVideo);
+        rtmSetText('rtmSourceValue', file.name);
+        rtmSetState(false, `Uploaded video ready: ${file.name}`);
+        showToast('Realtime monitor video loaded.', 'success');
+      };
+      rtmState.uploadedVideo.onended = async () => {
+        await rtmStopSource({ note: 'Uploaded video playback ended.' });
+      };
+      rtmState.uploadedVideo.load();
+    }
+  }
+
+  async function rtmStartMonitoring() {
+    if (!rtmState.source) {
+      showToast('Select a camera or uploaded video before starting the realtime monitor.', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/adaptive_monitor/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        showToast(payload.error || 'Failed to start realtime monitor.', 'error');
+        return;
+      }
+      rtmSetState(true, 'Adaptive monitor running on the selected source.');
+      rtmStartStatusPolling();
+      rtmStartFrameLoop();
+      showToast('Realtime adaptive monitor started.', 'success');
+      rtmSyncStatus();
+    } catch (error) {
+      console.error('adaptive monitor start failed', error);
+      showToast('Failed to start realtime monitor.', 'error');
+    }
+  }
+
+  function rtmStartFrameLoop() {
+    if (rtmState.frameTimer) {
+      clearTimeout(rtmState.frameTimer);
+      rtmState.frameTimer = null;
+    }
+
+    const processFrame = () => {
+      if (!rtmState.active) return;
+      const now = Date.now();
+      if (now - rtmState.lastFrameAt < rtmState.frameInterval) {
+        rtmState.frameTimer = setTimeout(processFrame, 60);
+        return;
+      }
+      rtmState.lastFrameAt = now;
+
+      const sourceVideo = rtmState.source === 'camera' ? rtmState.cameraVideo : rtmState.uploadedVideo;
+      if (!sourceVideo || sourceVideo.readyState < 2 || sourceVideo.paused || sourceVideo.ended) {
+        rtmState.frameTimer = setTimeout(processFrame, 120);
+        return;
+      }
+
+      rtmState.captureCtx.drawImage(sourceVideo, 0, 0, rtmState.captureCanvas.width, rtmState.captureCanvas.height);
+      const frameBase64 = rtmState.captureCanvas.toDataURL('image/jpeg', 0.72);
+      const started = performance.now();
+
+      fetch('/api/adaptive_monitor/process_frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frame: frameBase64 })
+      })
+      .then((resp) => resp.json())
+      .then((result) => {
+        const latency = Math.max(1, Math.round(performance.now() - started));
+        const fps = Math.max(1, Math.round(1000 / Math.max(latency, rtmState.frameInterval)));
+        if (result.success && result.visual_frame) {
+          const image = new Image();
+          image.onload = () => {
+            if (!rtmState.displayCtx || !rtmState.displayCanvas) return;
+            rtmShowStage(rtmState.displayCanvas);
+            rtmState.displayCtx.clearRect(0, 0, rtmState.displayCanvas.width, rtmState.displayCanvas.height);
+            rtmState.displayCtx.drawImage(image, 0, 0, rtmState.displayCanvas.width, rtmState.displayCanvas.height);
+          };
+          image.src = 'data:image/jpeg;base64,' + result.visual_frame;
+          rtmUpdateStatistics(result.statistics, { latency, fps });
+          if (Array.isArray(result.violations)) {
+            result.violations.forEach((violation) => {
+              const message = violation.description || violation.recommendation || 'Violation detected';
+              speakAlert(message, String(violation.severity || 'warning').toLowerCase());
+            });
+          }
+        } else if (result.error) {
+          rtmSetState(true, 'Frame processing error: ' + result.error);
+        }
+      })
+      .catch((error) => {
+        console.error('adaptive monitor frame processing failed', error);
+      })
+      .finally(() => {
+        if (rtmState.active) {
+          rtmState.frameTimer = setTimeout(processFrame, rtmState.frameInterval);
+        } else {
+          rtmState.frameTimer = null;
+        }
+      });
+    };
+
+    processFrame();
+  }
+
+  async function rtmResetMonitoring() {
+    try {
+      const response = await fetch('/api/adaptive_monitor/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        showToast(payload.error || 'Failed to reset realtime monitor stats.', 'error');
+        return;
+      }
+      rtmSetText('rtmLatencyValue', '0 ms');
+      rtmSetText('rtmFpsValue', '0');
+      await rtmSyncStatus();
+      showToast('Realtime monitor statistics reset.', 'success');
+    } catch (error) {
+      console.error('adaptive monitor reset failed', error);
+      showToast('Failed to reset realtime monitor statistics.', 'error');
+    }
+  }
+
+  function rtmOpenReport() {
+    window.open('/api/adaptive_monitor/report', '_blank', 'noopener');
+  }
+
+  const rtmStartCameraBtn = document.getElementById('rtmStartCameraBtn');
+  const rtmVideoInput = document.getElementById('rtmVideoInput');
+  const rtmStopSourceBtn = document.getElementById('rtmStopSourceBtn');
+  const rtmStartBtn = document.getElementById('rtmStartBtn');
+  const rtmStopBtn = document.getElementById('rtmStopBtn');
+  const rtmResetBtn = document.getElementById('rtmResetBtn');
+  const rtmReportBtn = document.getElementById('rtmReportBtn');
+
+  if (rtmStartCameraBtn) {
+    rtmStartCameraBtn.addEventListener('click', () => { rtmStartCamera(); });
+  }
+  if (rtmVideoInput) {
+    rtmVideoInput.addEventListener('change', (event) => { rtmHandleVideoUpload(event); });
+  }
+  if (rtmStopSourceBtn) {
+    rtmStopSourceBtn.addEventListener('click', () => { rtmStopSource(); });
+  }
+  if (rtmStartBtn) {
+    rtmStartBtn.addEventListener('click', () => { rtmStartMonitoring(); });
+  }
+  if (rtmStopBtn) {
+    rtmStopBtn.addEventListener('click', () => { rtmStopMonitoring(); });
+  }
+  if (rtmResetBtn) {
+    rtmResetBtn.addEventListener('click', () => { rtmResetMonitoring(); });
+  }
+  if (rtmReportBtn) {
+    rtmReportBtn.addEventListener('click', rtmOpenReport);
+  }
+
+  rtmSetCanvasSize(640, 360);
+  rtmShowStage(rtmState.placeholder);
+  rtmSetState(false, 'Attach a source to start monitoring.');
+  rtmSyncStatus();
