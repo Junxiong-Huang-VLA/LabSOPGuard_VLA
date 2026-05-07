@@ -1,0 +1,42 @@
+# Python/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node/frontend
+node_modules/
+dist/
+build/
+.vite/
+
+# Nested application repository tracked separately
+LabSOPGuard/
+
+# Local experiment outputs and recovery artifacts
+output/
+outputs/
+logs/
+reports/
+tmp/
+memory/
+data/sessions/*
+!data/sessions/.gitkeep
+_recovery/
+*.source_patch.txt
+*.log
+.codex_runtime/
+.codex/
+.claude/
+
+# Local model/runtime caches and heavy weights
+.ultralytics/
+.playwright-cli/
+*.pt
+*.onnx
+*.engine
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
