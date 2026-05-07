@@ -25,6 +25,7 @@ logs/
 outputs/
 uploads/
 archive/runtime_artifacts/
+archive/manual_checks/
 integrated_system/outputs/
 runs/
 cache/
