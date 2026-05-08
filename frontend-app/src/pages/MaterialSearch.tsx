@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, BadgeCheck, Boxes, CheckCircle2, Clock3, Filter, Image, Search, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Boxes, CheckCircle2, Clock3, FileText, Filter, Image, Search, ShieldAlert } from 'lucide-react'
 import { experimentApi, prefetchExperimentRoute } from '../api'
 import { EmptyEvidence, EvidenceBadge, EvidenceCard, MetricTile, PageHero, primaryButtonClass, secondaryButtonClass, toneForStatus } from '../components/EvidenceUI'
 import { cleanDisplayText } from '../displayText'
-import { experimentFileUrl, mediaUrl } from '../mediaUrl'
+import { experimentFileUrl } from '../mediaUrl'
 import type { MaterialCandidateFile, MaterialCandidateGroup, MaterialDiagnosticsEvidenceItem, MaterialDiagnosticsResponse, MaterialSearchItem } from '../types'
 
 function asArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(item => String(item)) : []
+  return Array.isArray(value) ? value.map(item => String(item)).filter(Boolean) : []
 }
 
 function itemPreview(item: MaterialSearchItem, experimentId?: string) {
@@ -32,24 +32,24 @@ function keyed(value: unknown, index: number, prefix: string) {
   return `${prefix}-${raw || 'item'}-${index}`
 }
 
-function materialKey(item: MaterialSearchItem, index: number) {
-  return keyed(item.event_id || item.item_id || item.display_name || item.event_type, index, 'material')
+function pathText(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  }
+  return undefined
 }
 
 function candidateGroupKey(group: MaterialCandidateGroup, index: number) {
   return keyed(group.candidate_group_id || group.micro_segment_id || group.parent_segment_id, index, 'candidate-group')
 }
 
-function candidateFileKey(file: MaterialCandidateFile, index: number) {
-  return keyed(file.candidate_id || file.url || file.path || file.preview_url || file.clip_url, index, 'candidate-file')
-}
-
 function candidateFileId(file: MaterialCandidateFile, index: number) {
   return String(file.candidate_id || file.item_id || file.url || file.path || file.preview_url || file.clip_url || `candidate-${index}`)
 }
 
-function candidateFileUrl(item: MaterialCandidateFile) {
-  return mediaUrl(item.url || item.preview_url || item.clip_url || item.frame_path || item.clip_file_path || undefined)
+function candidateFileUrl(item: MaterialCandidateFile, experimentId?: string) {
+  return experimentFileUrl(pathText(item.url, item.preview_url, item.clip_url, item.frame_path, item.clip_file_path, item.stored_file, item.source_file), experimentId)
 }
 
 function candidateCanApprove(group: MaterialCandidateGroup) {
@@ -58,6 +58,15 @@ function candidateCanApprove(group: MaterialCandidateGroup) {
   const blocked = ['blocked', 'rejected', 'failed'].some(keyword => status.includes(keyword) || yoloStatus.includes(keyword))
   if (blocked || ['approved', 'accepted'].some(keyword => status.includes(keyword))) return false
   return !status || ['pending', 'review', 'candidate', 'needs_review'].some(keyword => status.includes(keyword))
+}
+
+function candidateFilesForGroup(group: MaterialCandidateGroup) {
+  const byId = new Map<string, MaterialCandidateFile>()
+  for (const file of [...(group.files || []), ...(group.keyframes || []), ...(group.clips || [])]) {
+    const id = candidateFileId(file, byId.size)
+    if (!byId.has(id)) byId.set(id, file)
+  }
+  return Array.from(byId.values())
 }
 
 export default function MaterialSearch() {
@@ -98,8 +107,18 @@ export default function MaterialSearch() {
     void load()
   }, [id])
 
-  const objects = useMemo(() => Array.from(new Set(items.flatMap(item => asArray(item.object_labels).concat(asArray(item.payload?.object_labels))))).filter(Boolean).slice(0, 40), [items])
-  const actions = useMemo(() => Array.from(new Set(items.flatMap(item => asArray(item.actions).concat(asArray(item.event_types), String(item.event_type || ''))))).filter(Boolean).slice(0, 40), [items])
+  const objects = useMemo(() => {
+    const formal = items.flatMap(item => asArray(item.object_labels).concat(asArray(item.payload?.object_labels)))
+    const candidate = candidateGroups.flatMap(group => [group.primary_object, ...candidateFilesForGroup(group).flatMap(file => asArray(file.object_labels).concat(String(file.primary_object || '')))])
+    return Array.from(new Set([...formal, ...candidate].filter(Boolean).map(String))).slice(0, 60)
+  }, [candidateGroups, items])
+
+  const actions = useMemo(() => {
+    const formal = items.flatMap(item => asArray(item.actions).concat(asArray(item.event_types), String(item.event_type || '')))
+    const candidate = candidateGroups.flatMap(group => [group.action_name, ...candidateFilesForGroup(group).flatMap(file => asArray(file.actions).concat(String(file.action_name || file.role || '')))])
+    return Array.from(new Set([...formal, ...candidate].filter(Boolean).map(String))).slice(0, 60)
+  }, [candidateGroups, items])
+
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     return items.filter(item => {
@@ -120,7 +139,7 @@ export default function MaterialSearch() {
   function selectedIdsForGroup(group: MaterialCandidateGroup) {
     const selected = selectedCandidateIds[group.candidate_group_id]
     if (selected?.length) return selected
-    return [...group.keyframes, ...group.clips]
+    return candidateFilesForGroup(group)
       .filter(file => file.recommended || file.exists !== false)
       .map(candidateFileId)
   }
@@ -160,8 +179,8 @@ export default function MaterialSearch() {
     <div className="space-y-5">
       <PageHero
         eyebrow={id ? <Link to={`/experiments/${id}/workspace`} className="hover:text-slate-900">分析概览</Link> : 'Materials'}
-        title="关键证据库"
-        description="集中审阅由片段、关键帧、物体标签、动作标签和审核状态组成的实验素材证据。"
+        title="关键素材库"
+        description="候选库与正式库分离展示。关键帧、关键片段和专业 PDF 先进入候选库，审核选中后再发布到正式素材库。"
         actions={id ? (
           <>
             <Link to={`/experiments/${id}/workspace`} className={secondaryButtonClass()}><ArrowLeft className="h-4 w-4" />工作台</Link>
@@ -178,18 +197,18 @@ export default function MaterialSearch() {
         data-pending={pending + pendingCandidates}
         data-clips={clips}
       >
-        <MetricTile label="素材总数" value={items.length} helper={`${filtered.length} visible`} tone="blue" Icon={Boxes} />
-        <MetricTile label="待审核" value={pending + pendingCandidates} helper={`${pendingCandidates} candidate groups`} tone="amber" Icon={Filter} />
+        <MetricTile label="正式素材" value={items.length} helper={`${filtered.length} visible`} tone="blue" Icon={Boxes} />
+        <MetricTile label="待审候选" value={pending + pendingCandidates} helper={`${pendingCandidates} candidate groups`} tone="amber" Icon={Filter} />
         <MetricTile label="强证据" value={strong} helper="strong evidence" tone="emerald" Icon={BadgeCheck} />
-        <MetricTile label="视频片段" value={clips} helper="clip assets" tone="cyan" Icon={Image} />
+        <MetricTile label="视频片段" value={clips} helper="approved clips" tone="cyan" Icon={Image} />
       </section>
 
       {candidateGroups.length > 0 && (
         <EvidenceCard className="p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-black text-slate-950">待审核素材候选</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">候选只在 YOLO 物理证据通过后允许进入正式关键素材库。</p>
+              <h2 className="text-lg font-black text-slate-950">候选素材库</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500">覆盖 hand-paper、hand-bottle、hand-balance、hand-spatula 等物理动作证据，审核后才进入正式库。</p>
             </div>
             <EvidenceBadge tone={pendingCandidates ? 'amber' : 'slate'}>{pendingCandidates} 组可审批</EvidenceBadge>
           </div>
@@ -199,7 +218,8 @@ export default function MaterialSearch() {
               const yoloStatus = String(group.yolo_recheck?.status || group.pipeline_status || 'unknown')
               const vlmStatus = String(group.vlm_semantics?.status || group.pipeline_stage || 'not_available')
               const selectedIds = selectedIdsForGroup(group)
-              const candidateFiles = [...group.keyframes.slice(0, 3), ...group.clips.slice(0, 2)]
+              const files = candidateFilesForGroup(group)
+              const visibleFiles = files.slice(0, 12)
               return (
                 <div key={candidateGroupKey(group, groupIndex)} className="rounded-lg border border-slate-200 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -213,9 +233,9 @@ export default function MaterialSearch() {
                     </div>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs font-bold text-slate-600 sm:grid-cols-4">
-                    <span>关键帧 {group.keyframes.length}</span>
-                    <span>关键片段 {group.clips.length}</span>
-                    <span>推荐 {group.recommended_count ?? selectedIds.length}</span>
+                    <span>关键帧 {group.keyframes?.length || 0}</span>
+                    <span>关键片段 {group.clips?.length || 0}</span>
+                    <span>候选文件 {files.length}</span>
                     <span>质量 {group.quality_score == null ? '-' : Number(group.quality_score).toFixed(2)}</span>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600 sm:grid-cols-3">
@@ -224,16 +244,18 @@ export default function MaterialSearch() {
                     <Gate label="Pipeline" value={group.pipeline_status || group.pipeline_stage || group.status || 'pending'} />
                   </div>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {candidateFiles.map((file, fileIndex) => (
+                    {visibleFiles.map((file, fileIndex) => (
                       <CandidatePreview
-                        key={candidateFileKey(file, fileIndex)}
+                        key={keyed(candidateFileId(file, fileIndex), fileIndex, 'candidate-file')}
                         file={file}
+                        experimentId={id}
                         selected={selectedIds.includes(candidateFileId(file, fileIndex))}
                         disabled={!canApprove}
                         onToggle={() => toggleCandidate(group, file, fileIndex)}
                       />
                     ))}
                   </div>
+                  {files.length > visibleFiles.length && <p className="mt-2 text-xs font-semibold text-slate-400">还有 {files.length - visibleFiles.length} 个候选文件可通过筛选审批。</p>}
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs font-semibold text-slate-500">{cleanDisplayText(group.review_gate_policy || '前端审核通过后同步到 material_references')} · 已选 {selectedIds.length}</p>
                     <button
@@ -249,7 +271,7 @@ export default function MaterialSearch() {
                   {!canApprove && (
                     <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
                       <ShieldAlert className="h-4 w-4" />
-                      YOLO 复核未通过或候选已处理，不能直接入正式素材库。
+                      候选已处理或复核未通过，不能直接进入正式素材库。
                     </div>
                   )}
                 </div>
@@ -267,17 +289,17 @@ export default function MaterialSearch() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索对象、动作或事件" className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm font-semibold outline-none focus:border-blue-400" />
           </label>
-          <select value={objectFilter} onChange={event => setObjectFilter(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700"><option value="">全部对象</option>{objects.map(item => <option key={item} value={item}>{item}</option>)}</select>
-          <select value={actionFilter} onChange={event => setActionFilter(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700"><option value="">全部动作</option>{actions.map(item => <option key={item} value={item}>{item}</option>)}</select>
+          <select value={objectFilter} onChange={event => setObjectFilter(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700"><option value="">全部对象</option>{objects.map(item => <option key={item} value={item}>{cleanDisplayText(item)}</option>)}</select>
+          <select value={actionFilter} onChange={event => setActionFilter(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700"><option value="">全部动作</option>{actions.map(item => <option key={item} value={item}>{cleanDisplayText(item)}</option>)}</select>
           <select value={reviewFilter} onChange={event => setReviewFilter(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700"><option value="all">全部审核</option><option value="pending">待审核</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select>
         </div>
       </EvidenceCard>
 
       {error && <EvidenceCard className="border-red-200 bg-red-50 p-4 text-red-700">{error}</EvidenceCard>}
-      {loading ? <EmptyEvidence title="正在加载关键素材..." /> : filtered.length === 0 ? <EmptyEvidence title="暂无匹配素材" /> : (
+      {loading ? <EmptyEvidence title="正在加载关键素材..." /> : filtered.length === 0 ? <EmptyEvidence title="暂无匹配的正式素材" /> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-smoke="experiment-material-grid" data-count={filtered.length}>
           {filtered.map((item, itemIndex) => (
-            <EvidenceCard key={materialKey(item, itemIndex)} className="overflow-hidden" data-smoke="experiment-material-card">
+            <EvidenceCard key={keyed(item.event_id || item.item_id || item.display_name || item.event_type, itemIndex, 'material')} className="overflow-hidden" data-smoke="experiment-material-card">
               <MaterialPreview item={item} experimentId={id} />
               <div className="p-4">
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -302,9 +324,7 @@ export default function MaterialSearch() {
 function shortPath(value: unknown) {
   const text = String(value || '')
   if (!text) return '-'
-  const normalized = text.replace(/\\/g, '/')
-  const parts = normalized.split('/')
-  return parts.slice(-3).join('/')
+  return text.replace(/\\/g, '/').split('/').slice(-3).join('/')
 }
 
 function MaterialDiagnosticsPanel({ diagnostics }: { diagnostics: MaterialDiagnosticsResponse }) {
@@ -316,7 +336,7 @@ function MaterialDiagnosticsPanel({ diagnostics }: { diagnostics: MaterialDiagno
         <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-black text-slate-950">证据链诊断</h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">确认正式素材来自已审批候选，并且文件与 URL 都能交付。</p>
+            <p className="mt-1 text-sm font-semibold text-slate-500">确认正式素材来自已审批候选，并且文件和 URL 可交付。</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <EvidenceBadge tone="blue">正式 {diagnostics.formal_material_reference_count ?? rows.length}</EvidenceBadge>
@@ -324,9 +344,7 @@ function MaterialDiagnosticsPanel({ diagnostics }: { diagnostics: MaterialDiagno
           </div>
         </summary>
         <div className="mt-4 grid gap-3">
-          {rows.map((item, index) => (
-            <DiagnosticsRow key={`${item.candidate_id || item.material_url || 'diagnostic'}-${index}`} item={item} />
-          ))}
+          {rows.map((item, index) => <DiagnosticsRow key={`${item.candidate_id || item.material_url || 'diagnostic'}-${index}`} item={item} />)}
         </div>
       </details>
     </EvidenceCard>
@@ -335,12 +353,7 @@ function MaterialDiagnosticsPanel({ diagnostics }: { diagnostics: MaterialDiagno
 
 function DiagnosticsRow({ item }: { item: MaterialDiagnosticsEvidenceItem }) {
   return (
-    <div
-      className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-600 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]"
-      data-smoke="material-diagnostics-row"
-      data-url-accessible={item.url_accessible ? 'true' : 'false'}
-      data-file-exists={item.material_exists ? 'true' : 'false'}
-    >
+    <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-600 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap gap-2">
           <EvidenceBadge tone="slate">{item.asset_kind || 'material'}</EvidenceBadge>
@@ -367,12 +380,8 @@ function DiagnosticsRow({ item }: { item: MaterialDiagnosticsEvidenceItem }) {
 function MaterialPreview({ item, experimentId }: { item: MaterialSearchItem; experimentId?: string }) {
   const preview = itemPreview(item, experimentId)
   const clip = itemClip(item, experimentId)
-  if (preview) {
-    return <img src={preview} alt={cleanDisplayText(item.display_name || item.item_id, 'material')} className="aspect-video w-full bg-slate-100 object-cover" data-smoke="experiment-formal-image" />
-  }
-  if (clip) {
-    return <video src={clip} className="aspect-video w-full bg-slate-950 object-contain" controls preload="metadata" data-smoke="experiment-formal-video" />
-  }
+  if (preview) return <img src={preview} alt={cleanDisplayText(item.display_name || item.item_id, 'material')} className="aspect-video w-full bg-slate-100 object-cover" data-smoke="experiment-formal-image" />
+  if (clip) return <video src={clip} className="aspect-video w-full bg-slate-950 object-contain" controls playsInline preload="metadata" data-smoke="experiment-formal-video" />
   return <div className="flex aspect-video items-center justify-center bg-slate-100 text-sm font-semibold text-slate-400">no preview</div>
 }
 
@@ -385,30 +394,52 @@ function Gate({ label, value }: { label: string; value: unknown }) {
   )
 }
 
-function CandidatePreview({ file, selected, disabled, onToggle }: { file: MaterialCandidateFile; selected: boolean; disabled: boolean; onToggle: () => void }) {
-  const url = candidateFileUrl(file)
-  const isClip = file.asset_kind === '关键片段' || Boolean(file.clip_url) || String(file.material_type || '').includes('clip')
-  if (!url) {
-    return <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400">no file</div>
-  }
+function CandidatePreview({
+  file,
+  experimentId,
+  selected,
+  disabled,
+  onToggle,
+}: {
+  file: MaterialCandidateFile
+  experimentId?: string
+  selected: boolean
+  disabled: boolean
+  onToggle: () => void
+}) {
+  const url = candidateFileUrl(file, experimentId)
+  const typeText = `${file.asset_kind || ''} ${file.material_type || ''} ${file.role || ''}`.toLowerCase()
+  const isClip = typeText.includes('clip') || typeText.includes('片段') || Boolean(file.clip_url)
+  const isReport = typeText.includes('report') || typeText.includes('报告') || String(url || '').toLowerCase().endsWith('.pdf')
+  if (!url) return <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400">no file</div>
   const overlay = (
     <label className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-xs font-black text-slate-700 shadow-sm">
       <input type="checkbox" checked={selected} disabled={disabled} onChange={onToggle} className="h-3.5 w-3.5 accent-emerald-600" />
       入库
     </label>
   )
+  if (isReport) {
+    return (
+      <div className={`relative flex aspect-video items-center justify-center rounded-lg border bg-slate-50 ${selected ? 'border-emerald-300' : 'border-slate-200'}`}>
+        {overlay}
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 text-sm font-black text-blue-700">
+          <FileText className="h-5 w-5" /> 专业报告
+        </a>
+      </div>
+    )
+  }
   if (isClip) {
     return (
       <div className="relative">
         {overlay}
-        <video src={url} className={`aspect-video w-full rounded-lg border bg-slate-950 object-contain ${selected ? 'border-emerald-300' : 'border-slate-200'}`} controls preload="metadata" />
+        <video src={url} className={`aspect-video w-full rounded-lg border bg-slate-950 object-contain ${selected ? 'border-emerald-300' : 'border-slate-200'}`} controls playsInline preload="metadata" />
       </div>
     )
   }
   return (
     <div className="relative">
       {overlay}
-      <img src={url} alt={cleanDisplayText(file.display_name || file.candidate_id, 'candidate')} className={`aspect-video rounded-lg border bg-slate-100 object-cover ${selected ? 'border-emerald-300' : 'border-slate-200'}`} />
+      <img src={url} alt={cleanDisplayText(file.display_name || file.candidate_id, 'candidate')} className={`aspect-video w-full rounded-lg border bg-slate-100 object-cover ${selected ? 'border-emerald-300' : 'border-slate-200'}`} />
     </div>
   )
 }
