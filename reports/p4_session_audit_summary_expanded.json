@@ -1,6 +1,6 @@
 {
   "schema_version": "key_action_session_audit.v1",
-  "generated_at": "2026-05-08T09:30:54.178725+00:00",
+  "generated_at": "2026-05-08T10:26:24.765390+00:00",
   "session_count": 3,
   "summary": {
     "health_pass_count": 3,
@@ -876,24 +876,47 @@
           "pending_confirmation_step_ids": []
         },
         "history": {
-          "session_count": 6,
-          "event_count": 500,
+          "session_count": 4,
+          "event_count": 727,
           "source_session_ids": [
             "2190fe06-3619-45fc-96ef-1bb8afb9bdf9",
             "3ccd635c-217e-40dd-9922-0e1e397739ce",
             "53ca6efe-a100-4e86-b041-7c98e2fcc662",
-            "817133dd-7e2f-442c-a0a7-dd3be1957387",
-            "cd35d322-1da3-4ae8-897c-7e405f5b5452",
-            "d16e3f8d-63ca-4d12-9aaa-6ec3b602a557"
-          ]
+            "solid-weighing-dual-view-20260508-153648"
+          ],
+          "key_action_index_session_count": 5,
+          "legacy_source_count": 0,
+          "step_reasoning_support": {
+            "history_record_count": 5,
+            "sources_with_process_records": 5,
+            "has_transition_priors": true
+          }
         },
         "query_smoke": {
           "configured": true,
+          "query_count": 8,
+          "chinese_query_count": 4,
+          "english_query_count": 4,
+          "traceable_top_count": 8,
+          "dual_view_traceable_top_count": 8,
+          "semantic_diversity": {
+            "query_count": 8,
+            "distinct_top_result_count": 4,
+            "distinct_top_result_ratio": 0.5,
+            "max_top_result_reuse_count": 3,
+            "most_reused_top_result_id": "seg_000002_micro_001",
+            "top_result_counts": {
+              "seg_000001_micro_002": 2,
+              "seg_000002_micro_001": 3,
+              "seg_000003_micro_002": 2,
+              "seg_000004": 1
+            }
+          },
           "queries": [
             {
               "query": "balance weighing",
               "result_count": 3,
-              "top_result_id": "seg_000004_micro_001",
+              "top_result_id": "seg_000001_micro_002",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -913,7 +936,7 @@
             {
               "query": "sample handling",
               "result_count": 3,
-              "top_result_id": "seg_000001_micro_002",
+              "top_result_id": "seg_000002_micro_001",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -923,7 +946,7 @@
             {
               "query": "recording balance readout",
               "result_count": 3,
-              "top_result_id": "seg_000003_micro_003",
+              "top_result_id": "seg_000003_micro_002",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -963,7 +986,7 @@
             {
               "query": "查找记录读数片段",
               "result_count": 3,
-              "top_result_id": "seg_000001_micro_002",
+              "top_result_id": "seg_000003_micro_002",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2044,10 +2067,10 @@
           "status": "warn",
           "gate_status": "pass",
           "error_count": 0,
-          "warning_count": 4
+          "warning_count": 3
         },
         "confirmation": {
-          "pending_count": 4,
+          "pending_count": 0,
           "item_count": 4,
           "machine_backlog_count": 18
         },
@@ -2067,24 +2090,47 @@
           ]
         },
         "history": {
-          "session_count": 6,
-          "event_count": 500,
+          "session_count": 4,
+          "event_count": 727,
           "source_session_ids": [
             "2190fe06-3619-45fc-96ef-1bb8afb9bdf9",
             "3ccd635c-217e-40dd-9922-0e1e397739ce",
             "53ca6efe-a100-4e86-b041-7c98e2fcc662",
-            "817133dd-7e2f-442c-a0a7-dd3be1957387",
-            "cd35d322-1da3-4ae8-897c-7e405f5b5452",
-            "d16e3f8d-63ca-4d12-9aaa-6ec3b602a557"
-          ]
+            "solid-weighing-dual-view-20260508-153648"
+          ],
+          "key_action_index_session_count": 5,
+          "legacy_source_count": 0,
+          "step_reasoning_support": {
+            "history_record_count": 5,
+            "sources_with_process_records": 5,
+            "has_transition_priors": true
+          }
         },
         "query_smoke": {
           "configured": true,
+          "query_count": 8,
+          "chinese_query_count": 4,
+          "english_query_count": 4,
+          "traceable_top_count": 8,
+          "dual_view_traceable_top_count": 8,
+          "semantic_diversity": {
+            "query_count": 8,
+            "distinct_top_result_count": 4,
+            "distinct_top_result_ratio": 0.5,
+            "max_top_result_reuse_count": 2,
+            "most_reused_top_result_id": "seg_000001_micro_009",
+            "top_result_counts": {
+              "seg_000001_micro_003": 2,
+              "seg_000001_micro_008": 2,
+              "seg_000001_micro_009": 2,
+              "seg_000001_micro_010": 2
+            }
+          },
           "queries": [
             {
               "query": "balance weighing",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_009",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2094,7 +2140,7 @@
             {
               "query": "pipetting liquid transfer",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_010",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2104,7 +2150,7 @@
             {
               "query": "sample handling",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_003",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2114,7 +2160,7 @@
             {
               "query": "recording balance readout",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_008",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2124,7 +2170,7 @@
             {
               "query": "查找使用天平称量的片段",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_009",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2134,7 +2180,7 @@
             {
               "query": "查找移液操作片段",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_010",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2144,7 +2190,7 @@
             {
               "query": "查找样品处理片段",
               "result_count": 3,
-              "top_result_id": "seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_003",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -2154,7 +2200,7 @@
             {
               "query": "查找记录读数片段",
               "result_count": 3,
-              "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_008",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -3309,7 +3355,7 @@
           "warning_count": 0
         },
         "confirmation": {
-          "pending_count": 4,
+          "pending_count": 0,
           "item_count": 4,
           "machine_backlog_count": 34
         },
@@ -3328,19 +3374,42 @@
           ]
         },
         "history": {
-          "session_count": 6,
-          "event_count": 500,
+          "session_count": 4,
+          "event_count": 727,
           "source_session_ids": [
             "2190fe06-3619-45fc-96ef-1bb8afb9bdf9",
             "3ccd635c-217e-40dd-9922-0e1e397739ce",
             "53ca6efe-a100-4e86-b041-7c98e2fcc662",
-            "817133dd-7e2f-442c-a0a7-dd3be1957387",
-            "cd35d322-1da3-4ae8-897c-7e405f5b5452",
-            "d16e3f8d-63ca-4d12-9aaa-6ec3b602a557"
-          ]
+            "solid-weighing-dual-view-20260508-153648"
+          ],
+          "key_action_index_session_count": 5,
+          "legacy_source_count": 0,
+          "step_reasoning_support": {
+            "history_record_count": 5,
+            "sources_with_process_records": 5,
+            "has_transition_priors": true
+          }
         },
         "query_smoke": {
           "configured": true,
+          "query_count": 8,
+          "chinese_query_count": 4,
+          "english_query_count": 4,
+          "traceable_top_count": 8,
+          "dual_view_traceable_top_count": 8,
+          "semantic_diversity": {
+            "query_count": 8,
+            "distinct_top_result_count": 4,
+            "distinct_top_result_ratio": 0.5,
+            "max_top_result_reuse_count": 2,
+            "most_reused_top_result_id": "seg_000004_micro_001",
+            "top_result_counts": {
+              "seg_000001_micro_001": 2,
+              "seg_000001_micro_002": 2,
+              "seg_000001_micro_003": 2,
+              "seg_000004_micro_001": 2
+            }
+          },
           "queries": [
             {
               "query": "balance weighing",
@@ -3365,7 +3434,7 @@
             {
               "query": "sample handling",
               "result_count": 3,
-              "top_result_id": "seg_000001_micro_002",
+              "top_result_id": "seg_000001_micro_001",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -3375,7 +3444,7 @@
             {
               "query": "recording balance readout",
               "result_count": 3,
-              "top_result_id": "seg_000004_micro_001",
+              "top_result_id": "seg_000001_micro_002",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -3405,7 +3474,7 @@
             {
               "query": "查找样品处理片段",
               "result_count": 3,
-              "top_result_id": "seg_000003_micro_001",
+              "top_result_id": "seg_000001_micro_001",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,
@@ -3415,7 +3484,7 @@
             {
               "query": "查找记录读数片段",
               "result_count": 3,
-              "top_result_id": "seg_000004_micro_001",
+              "top_result_id": "seg_000001_micro_002",
               "top_traceable": true,
               "top_has_first_person_clip": true,
               "top_has_third_person_clip": true,

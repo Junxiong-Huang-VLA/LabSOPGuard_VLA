@@ -1,6 +1,6 @@
 {
   "schema_version": "key_action_batch_refresh.v1",
-  "generated_at": "2026-05-08T09:19:37.341621+00:00",
+  "generated_at": "2026-05-08T10:07:57.137523+00:00",
   "source_count": 3,
   "refreshed_count": 3,
   "error_count": 0,
@@ -9,10 +9,10 @@
     "pipetting liquid transfer",
     "sample handling",
     "recording balance readout",
-    "查找使用天平称量的片段",
-    "查找移液操作片段",
-    "查找样品处理片段",
-    "查找记录读数片段"
+    "???????????",
+    "????????",
+    "????????",
+    "????????"
   ],
   "sessions": [
     {
@@ -1922,7 +1922,7 @@
           "health": {
             "status": "warn",
             "gate_status": "pass",
-            "warning_count": 4,
+            "warning_count": 3,
             "note_count": 1
           },
           "quality": {

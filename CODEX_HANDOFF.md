@@ -1,153 +1,281 @@
 # Codex Handoff - LabCapability
 
-Generated: 2026-05-08 16:45 Asia/Shanghai
+Generated: 2026-05-08 18:26:35 Asia/Shanghai
 
-## Project Guardrails
+## Read This First
 
-- Work only on the key-action indexer mainline: physical-evidence extraction from long dual-view experiment videos, multimodal time alignment, descriptions, vector indexing, and retrieval.
-- Keep `src/key_action_indexer` independent from the existing LabSOPGuard app.
-- Prioritize YOLO-backed key action segments, hand-object interaction evidence, micro-segments, multiview clip alignment, metadata, and retrieval.
-- Do not reintroduce PTZ, cloud PTZ, camera orchestration, camera port mapping, MQTT tooling, or unrelated infrastructure. PTZ lives in `D:\PtzTracker`.
-- Do not treat rendered YOLO boxes as the deliverable; they must feed segment/micro-segment metadata and retrieval.
+This handoff freezes the current P4 key-action review and retrieval state for a new Codex conversation.
+
+The latest user intent was to finish the manual-review closure, retrieval semantic diversity, homogeneous history samples, promotion safety review, and fixed final acceptance table. These are now implemented and validated. Do not restart from older P4 notes unless you need archaeology.
+
+## Project Boundaries
+
+- Root repo `D:\LabCapability` owns `src/key_action_indexer` and the key-action backend/report artifacts.
+- Nested repo `D:\LabCapability\LabSOPGuard` owns only the integration page, upload entry, and key-action display surfaces.
+- Keep `src/key_action_indexer` independent from the LabSOPGuard application.
+- Mainline scope is physical-evidence extraction from long dual-view experiment videos, multimodal time alignment, text descriptions, vector indexing, and query.
+- Do not reintroduce PTZ, cloud PTZ, five-camera orchestration, camera port mapping, MQTT tooling, wireless-video SDKs, `/api/v1/cameras`, or multi-monitor recording endpoints.
+- PTZ lives separately at `D:\PtzTracker`.
+- Multi-camera monitoring lives separately at `D:\MultiCameraMonitor`.
+- YOLO bounding boxes are not the final deliverable; they must feed segment/micro-segment metadata and retrieval.
 - Dry-run mode must remain runnable without real videos or ffmpeg.
-- Preserve `pytest -q`, backend Python compilation, frontend `npm run build`, existing key-actions pages, and segment-level retrieval.
+- Preserve `pytest -q`, backend Python compilation, frontend `npm run build`, existing key-actions pages, and existing segment-level retrieval.
 
-## Current State
+## Git State
 
-Three real key-action sessions were refreshed and audited:
+Root repo:
+
+- Path: `D:\LabCapability`
+- Branch: `codex/handoff-review-history-freeze`
+- Existing commits already made earlier:
+  - `d50dd5f feat: add key action indexer backend baseline`
+  - `0931bc8 docs: freeze p4 handoff and audit artifacts`
+  - `a9d17b6 fix: expose nested reviewed clip traceability`
+- Current working tree still has many uncommitted changes and untracked files. Do not blindly stage everything.
+
+Nested LabSOPGuard repo:
+
+- Path: `D:\LabCapability\LabSOPGuard`
+- Branch: `feat/full-closed-loop-backbone`
+- Ahead of origin by 2 commits:
+  - `81db242 chore: remove ptz and multi-camera surfaces`
+  - `e8434e2 feat: wire key action integration surfaces`
+- Current nested working tree still has modified integration files:
+  - `backend/main.py`
+  - `frontend-app/src/api.ts`
+  - `frontend-app/src/pages/KeyActionReviewQueue.tsx`
+
+Commit advice:
+
+- Keep root key-action indexer backend/report changes separate from LabSOPGuard UI integration changes.
+- Keep promotion/gold benchmark safety changes separate from reviewed index/query semantics if possible.
+- Do not mix PTZ/multi-camera cleanup, key-action page fixes, backend indexer capability, and report artifacts in one commit.
+
+## Sessions In Scope
+
+Main refreshed/audited sessions:
 
 - `D:\LabCapability\LabSOPGuard\outputs\experiments\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\key_action_index`
 - `D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index`
 - `D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index`
 
-Latest audit report:
+Additional complete key_action_index sources used for history:
 
-- Markdown: `D:\LabCapability\reports\p4_session_audit_summary.md`
-- JSON: `D:\LabCapability\reports\p4_session_audit_summary.json`
-- Generated: `2026-05-08T08:40:11.674487+00:00`
-- Health pass: `3/3`
-- QA pass: `1/3`
-- Average candidate ratio: `0.183932`
-- Max candidate ratio: `0.25974`
-- Strong process micro evidence: `10`
-- Retrieval-only micro evidence: `16`
-- Query smoke `balance weighing`: all three sessions return 3 traceable results.
+- `D:\LabCapability\LabSOPGuard\outputs\experiments\acceptance_test_20260505\key_action_index`
+- `D:\LabCapability\LabSOPGuard\outputs\experiments\solid-weighing-dual-view-20260508-153648\key_action_index`
 
-Session metrics:
+History source inventory:
 
-| Session | Segments | Micro | Strong | Retrieval-only | Video events | Candidate ratio | Rollup removed | QA | Health | Queue |
-|---|---:|---:|---:|---:|---:|---:|---:|---|---|---:|
-| `2190fe06-3619-45fc-96ef-1bb8afb9bdf9` | 5 | 8 | 2 | 6 | 81 | 0.185185 | 28 | `pass` | `pass` | 0 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | 1 | 8 | 6 | 2 | 131 | 0.10687 | 49 | `needs_review` | `pass` | 4 |
-| `53ca6efe-a100-4e86-b041-7c98e2fcc662` | 6 | 10 | 2 | 8 | 77 | 0.25974 | 34 | `needs_review` | `pass` | 4 |
+- `D:\LabCapability\reports\p4_history_source_inventory.json`
+- `D:\LabCapability\reports\p4_history_model_key_action_index_only.json`
+- `D:\LabCapability\reports\p4_history_model_key_action_index_only_summary.json`
 
-## Completed In This Thread
+History result:
 
-Implemented and refreshed:
+- Complete key_action_index sources: `5`
+- Legacy sources: `0`
+- History process records: `5`
+- Sources with process records: `5`
+- Transition priors: `true`
+- Note: distinct event `session_count` is `4` because `acceptance_test_20260505` reuses the 2190 session id internally, but `key_action_index_session_count` is `5`.
 
-- Added segment-level micro coverage backfill in `src/key_action_indexer/micro_coverage_backfill.py`.
-- Wired backfill into `batch-refresh` before micro quality enrichment.
-- Added CLI command `micro-coverage`.
-- Updated micro quality enrichment so forced segment-level backfill remains retrieval-only:
-  - `process_evidence_role = retrieval_candidate`
-  - `strong_process_evidence = false`
-  - `retrieval_priority_bucket = segment_level_backfill`
-  - warning includes `segment_level_retrieval_backfill`
-- Updated `video_understanding` so segment-level backfill rows compress into one `segment_level_retrieval_candidate` event instead of expanding into multiple candidate families.
-- Improved candidate rollup:
-  - same-micro, same-object, same-action cross-family rollup
-  - weak same-micro candidate bundle rollup
-  - summary now exposes primary, cross-family, and weak-bundle group counts.
-- `batch-refresh` now builds/loads stage scope, so known out-of-scope labels do not block model coverage.
-- Built the same 3-session `history_model.json` into all three refreshed sessions.
-- Generated missing-step recovery artifacts and human review bundles for the two remaining QA-blocked sessions.
+## What Was Completed
 
-Main changed files:
+### 1. Manual Confirmation Closure
 
-- `src/key_action_indexer/micro_coverage_backfill.py`
-- `src/key_action_indexer/micro_quality_enrichment.py`
-- `src/key_action_indexer/video_understanding.py`
-- `src/key_action_indexer/batch_refresh.py`
+The two QA-blocked sessions had confirmation queues closed from `pending` to explicit, auditable states.
+
+Important safety rule: Codex did not fabricate human approval. Remaining uncertain items were set to `needs_review` through non-human safety-gate files.
+
+Generated/applied files:
+
+- `D:\LabCapability\reports\p4_confirmation_decisions_3ccd635c-217e-40dd-9922-0e1e397739ce.codex_needs_more_review.json`
+- `D:\LabCapability\reports\p4_confirmation_decisions_53ca6efe-a100-4e86-b041-7c98e2fcc662.codex_needs_more_review.json`
+- `D:\LabCapability\reports\p4_confirmation_remaining_pending_3ccd635c-217e-40dd-9922-0e1e397739ce.codex_needs_more_review.json`
+- `D:\LabCapability\reports\p4_confirmation_remaining_pending_53ca6efe-a100-4e86-b041-7c98e2fcc662.codex_needs_more_review.json`
+- `D:\LabCapability\reports\p4_confirmation_remaining_pending_summary.json`
+
+Current queue state:
+
+- `3ccd...`: pending `0`, resolved `4`, all unresolved human decisions remain `needs_review`.
+- `53ca...`: pending `0`, resolved `4`, all unresolved human decisions remain `needs_review`.
+
+### 2. Review Packet / Decision Normalization
+
+Decision files now use human-friendly allowed values:
+
+- `approve`
+- `reject`
+- `needs_more_review`
+
+The backend normalizes them internally to:
+
+- `approved`
+- `rejected`
+- `needs_review`
+
+Key files:
+
+- `src/key_action_indexer/confirmation_loop.py`
+- `src/key_action_indexer/review_packet.py`
+- `tests/test_confirmation_loop.py`
+- `tests/test_review_packet.py`
+
+### 3. Retrieval Semantic Diversity
+
+The previous 3ccd retrieval concentration problem was fixed.
+
+Root causes addressed:
+
+- Reviewed micro-window segment rows were losing meaningful micro `index_text` and retaining review-only text.
+- Micro-window reviewed segments now preserve micro ids, micro time windows, micro global time, and rich micro text.
+- Chinese aliases and rerank behavior now separate weighing, pipetting, sample handling, and recording/readout.
+
+Current 3ccd query-to-result table:
+
+- Markdown: `D:\LabCapability\reports\p4_query_to_result_table_3ccd635c-217e-40dd-9922-0e1e397739ce.md`
+- JSON: `D:\LabCapability\reports\p4_query_to_result_table_3ccd635c-217e-40dd-9922-0e1e397739ce.json`
+- Distinct top results: `4/8`
+- Top-result distribution:
+  - `seg_000001_micro_009`: 2 queries, weighing / Chinese weighing
+  - `seg_000001_micro_010`: 2 queries, pipetting / Chinese pipetting
+  - `seg_000001_micro_003`: 2 queries, sample handling / Chinese sample handling
+  - `seg_000001_micro_008`: 2 queries, recording / Chinese recording
+
+Key files:
+
+- `src/key_action_indexer/reviewed_dataset.py`
+- `src/key_action_indexer/semantic_alias.py`
+- `src/key_action_indexer/session_audit.py`
+- `tests/test_reviewed_dataset.py`
+- `tests/test_semantic_alias.py`
+- `tests/test_session_audit.py`
+
+### 4. Batch Refresh / Final Audit
+
+Batch refresh completed successfully for all three main sessions.
+
+Main output:
+
+- `D:\LabCapability\reports\p4_batch_refresh_summary_expanded.json`
+- `D:\LabCapability\reports\p4_session_audit_summary_expanded.json`
+- `D:\LabCapability\reports\p4_session_audit_summary_expanded.md`
+
+Latest final acceptance table:
+
+| Session | QA | Health | Candidate ratio | Strong | Retrieval-only | Segment backfill promoted | Chinese queries | Dual-view traceability | Query semantic diversity |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `2190fe06-3619-45fc-96ef-1bb8afb9bdf9` | `pass` | `pass` | 0.185185 | 2 | 6 | 0 | 4 | 8/8 | 0.5 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `needs_review` | `pass` | 0.10687 | 6 | 2 | 0 | 4 | 8/8 | 0.5 |
+| `53ca6efe-a100-4e86-b041-7c98e2fcc662` | `needs_review` | `pass` | 0.25974 | 2 | 8 | 0 | 4 | 8/8 | 0.5 |
+
+Current audit risks:
+
+- `2190...`: none.
+- `3ccd...`: `qa_not_pass`.
+- `53ca...`: `qa_not_pass`.
+
+`history_under_sampled` is no longer raised because the audit now looks at complete key_action_index source support and process-record/transition support instead of only raw event session count.
+
+### 5. Promotion / Gold Benchmark Safety
+
+Promotion safety was hardened.
+
+Policy now enforced:
+
+- Machine generation may propose candidate bindings.
+- Machine generation must not write `human_verified=true`.
+- `human_verified=true` requires an explicit human decision file passed to `confirm-gold-query-benchmark --decisions`.
+- A promoted release is used as default only when `promotion_requirements.gold_benchmark_binding_mode == human_verified_review_file`.
+
+Current promotion review:
+
+- Markdown: `D:\LabCapability\reports\p4_promotion_safety_review.md`
+- JSON: `D:\LabCapability\reports\p4_promotion_safety_review.json`
+- Existing 3ccd promoted release: `v003`
+- Existing promoted binding mode: `None`
+- Active reviewed release after safety gate: `v006`
+- Active reviewed index: `D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index\reviewed_releases\v006\reviewed_index`
+
+Key files:
+
+- `src/key_action_indexer/retrieval_eval.py`
 - `src/key_action_indexer/cli.py`
-- `tests/test_micro_coverage_backfill.py`
-- `tests/test_video_understanding.py`
-- `tests/test_batch_refresh.py`
+- `src/key_action_indexer/reviewed_dataset.py`
+- `tests/test_retrieval_eval.py`
+- `tests/test_reviewed_dataset.py`
 
-## Recovery Artifacts
+## Current Remaining Gaps
 
-Generated reports:
+1. `3ccd...` and `53ca...` QA remain `needs_review`.
+   - This is expected and correct.
+   - The queue is not pending anymore, but true `approve/reject` still requires a real human reviewer.
+   - Do not auto-promote these to complete.
 
-- `D:\LabCapability\reports\p4_missing_step_recovery_3ccd635c-217e-40dd-9922-0e1e397739ce.json`
-- `D:\LabCapability\reports\p4_missing_step_recovery_53ca6efe-a100-4e86-b041-7c98e2fcc662.json`
-- `D:\LabCapability\reports\p4_review_bundle_3ccd635c-217e-40dd-9922-0e1e397739ce.md`
-- `D:\LabCapability\reports\p4_review_bundle_53ca6efe-a100-4e86-b041-7c98e2fcc662.md`
+2. Recording evidence remains retrieval/needs-review unless a human confirms the paper/readout clip.
+   - Do not treat recording retrieval hits as strong process evidence automatically.
 
-Recovery summary:
+3. `acceptance_test_20260505` is a complete key_action_index source but reuses the 2190 session id internally.
+   - History source quality is acceptable for now.
+   - For stronger future reasoning, add more complete sessions with distinct real session ids.
 
-| Session | Step | Action | Status | Confidence | Video candidates | Transcript candidates | Asset candidates | Best video | Best asset |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|
-| `3ccd...` | `step_001` Weighing | `weighing` | `skipped_or_unobserved` | 0.20 | 8 | 0 | 8 | 0.904 | 0.37 |
-| `3ccd...` | `step_004` Recording | `recording` | `not_observed` | 0.10 | 8 | 0 | 8 | 0.5831 | 0.49 |
-| `53ca...` | `step_003` Sample Handling | `sample_handling` | `not_observed` | 0.10 | 8 | 0 | 8 | 0.5765 | 0.49 |
-| `53ca...` | `step_004` Recording | `recording` | `not_observed` | 0.10 | 8 | 0 | 8 | 0.554 | 0.49 |
-
-Review bundle summaries:
-
-- `3ccd...`: 4 pending items: Weighing review, Pipetting review, Sample Handling suggested approve, Recording review.
-- `53ca...`: 4 pending items: Weighing suggested approve, Pipetting suggested approve, Sample Handling review, Recording review.
-
-Important: do not auto-approve these. Use the review bundles and candidate clips/keyframes for human confirmation.
-
-## Remaining Blockers
-
-1. `history_under_sampled` remains on all sessions because only 3 real complete sessions were found. The QA/history reuse check can pass with the current model, but audit still correctly flags fewer than 6 source sessions.
-2. `3ccd...` QA remains `needs_review`:
-   - `step_reasoning` needs review.
-   - `completion` needs review; unresolved steps are currently `step_001` and `step_004`.
-   - `human_confirmation` has 4 pending queue items.
-3. `53ca...` QA remains `needs_review`:
-   - `step_reasoning` needs review.
-   - `completion` needs review; unresolved steps are currently `step_003` and `step_004`.
-   - `human_confirmation` has 4 pending queue items.
-4. `53ca...` segment parent micro coverage is now fixed by retrieval-only backfill. The added backfills must not be promoted into strong process evidence unless real visual confirmation supports that later.
-
-## Recommended Next Steps
-
-1. Human-review the pending confirmation queues for `3ccd...` and `53ca...`.
-   - Start from the two `p4_review_bundle_*.md` files.
-   - Use the corresponding `p4_missing_step_recovery_*.json` files to inspect candidate clips/keyframes.
-   - Apply decisions with `confirmation-batch` only after a human-readable decision file is prepared.
-2. Add at least 3 more real, complete same-class sessions to the history model to clear `history_under_sampled`.
-3. After human decisions and more sessions, rerun `batch-refresh`, rebuild `history-model`, then rerun `audit-sessions`.
-4. Keep candidate ratios below the current level; do not remove rollup or let retrieval-only segment backfill explode into multiple event families.
-5. Keep multi-camera/PTZ work out of this repo. The separate frontend previously checked is under `D:\MultiCameraMonitor\multi_camera_monitor\frontend-app`.
+4. Working tree is dirty.
+   - There are many untracked docs/data files from earlier work.
+   - Review `git status --short` before staging.
+   - Avoid staging unrelated untracked files.
 
 ## Useful Commands
+
+Use PowerShell from `D:\LabCapability`.
 
 Batch refresh:
 
 ```powershell
-python -m key_action_indexer.cli batch-refresh --source "D:\LabCapability\LabSOPGuard\outputs\experiments\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\key_action_index" --source "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index" --source "D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index" --query "balance weighing" --output-summary "D:\LabCapability\reports\p4_batch_refresh_summary.json"
+python -m key_action_indexer.cli batch-refresh `
+  --source "D:\LabCapability\LabSOPGuard\outputs\experiments\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\key_action_index" `
+  --source "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index" `
+  --source "D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index" `
+  --query "balance weighing" `
+  --query "pipetting liquid transfer" `
+  --query "sample handling" `
+  --query "recording balance readout" `
+  --query "查找使用天平称量的片段" `
+  --query "查找移液操作片段" `
+  --query "查找样品处理片段" `
+  --query "查找记录读数片段" `
+  --output-summary "D:\LabCapability\reports\p4_batch_refresh_summary_expanded.json"
 ```
 
 Audit:
 
 ```powershell
-python -m key_action_indexer.cli audit-sessions --source "D:\LabCapability\LabSOPGuard\outputs\experiments\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\key_action_index" --source "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index" --source "D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index" --query "balance weighing" --output-json "D:\LabCapability\reports\p4_session_audit_summary.json" --output-md "D:\LabCapability\reports\p4_session_audit_summary.md"
+python -m key_action_indexer.cli audit-sessions `
+  --source "D:\LabCapability\LabSOPGuard\outputs\experiments\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\key_action_index" `
+  --source "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index" `
+  --source "D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index" `
+  --query "balance weighing" `
+  --query "pipetting liquid transfer" `
+  --query "sample handling" `
+  --query "recording balance readout" `
+  --query "查找使用天平称量的片段" `
+  --query "查找移液操作片段" `
+  --query "查找样品处理片段" `
+  --query "查找记录读数片段" `
+  --output-json "D:\LabCapability\reports\p4_session_audit_summary_expanded.json" `
+  --output-md "D:\LabCapability\reports\p4_session_audit_summary_expanded.md"
 ```
 
-Missing-step recovery:
+Freeze reviewed dataset:
 
 ```powershell
-python -m key_action_indexer.cli missing-step-recovery --session-dir "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index" --output "D:\LabCapability\reports\p4_missing_step_recovery_3ccd635c-217e-40dd-9922-0e1e397739ce.json" --confidence-threshold 0.5 --window-padding-sec 5.0
-python -m key_action_indexer.cli missing-step-recovery --session-dir "D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index" --output "D:\LabCapability\reports\p4_missing_step_recovery_53ca6efe-a100-4e86-b041-7c98e2fcc662.json" --confidence-threshold 0.5 --window-padding-sec 5.0
+python -m key_action_indexer.cli freeze-reviewed-dataset --session-dir "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index"
 ```
 
-Review bundles:
+Gold benchmark safety:
 
 ```powershell
-python -m key_action_indexer.cli review-bundle --session-dir "D:\LabCapability\LabSOPGuard\outputs\experiments\3ccd635c-217e-40dd-9922-0e1e397739ce\key_action_index" --output "D:\LabCapability\reports\p4_review_bundle_3ccd635c-217e-40dd-9922-0e1e397739ce.md" --format md
-python -m key_action_indexer.cli review-bundle --session-dir "D:\LabCapability\LabSOPGuard\outputs\experiments\53ca6efe-a100-4e86-b041-7c98e2fcc662\key_action_index" --output "D:\LabCapability\reports\p4_review_bundle_53ca6efe-a100-4e86-b041-7c98e2fcc662.md" --format md
+# This must fail without --decisions. That is intentional.
+python -m key_action_indexer.cli confirm-gold-query-benchmark --session-dir "<session>" --decisions "<real-human-decision-file.json>"
 ```
 
 Validation:
@@ -155,21 +283,27 @@ Validation:
 ```powershell
 python -m pytest -q
 python -m compileall -q src LabSOPGuard\backend tests
+powershell -ExecutionPolicy Bypass -File D:\LabCapability\scripts\check_project_scope.ps1
+cd D:\LabCapability\LabSOPGuard\frontend-app
 npm run build
 ```
 
-For frontend builds, run `npm run build` from:
-
-- `D:\LabCapability\LabSOPGuard\frontend-app`
-- `D:\MultiCameraMonitor\multi_camera_monitor\frontend-app`
-
 ## Last Validation
 
-The latest full validation before this handoff passed:
+All latest validation passed:
 
-- `python -m pytest -q` -> `194 passed`
+- `python -m pytest -q` -> `210 passed`
 - `python -m compileall -q src LabSOPGuard\backend tests` -> passed
+- `powershell -ExecutionPolicy Bypass -File D:\LabCapability\scripts\check_project_scope.ps1` -> passed, no PTZ/camera/wireless/multi-monitor core code found
 - `npm run build` in `D:\LabCapability\LabSOPGuard\frontend-app` -> passed
-- `npm run build` in `D:\MultiCameraMonitor\multi_camera_monitor\frontend-app` -> passed
 
-Only report files and this handoff were added after that validation.
+## Recommended Next Conversation Prompt
+
+Paste this into the new conversation:
+
+```text
+Read D:\LabCapability\CODEX_HANDOFF.md and continue from the frozen P4 state.
+Preserve the root/LabSOPGuard git boundary. Do not reintroduce PTZ or multi-camera scope.
+First inspect git status in both repos, then help split the remaining changes into clean commits.
+Do not fabricate human approvals: unresolved 3ccd and 53ca QA items must stay needs_review until real human decision files exist.
+```
