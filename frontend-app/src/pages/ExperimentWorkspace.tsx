@@ -96,8 +96,11 @@ export default function ExperimentWorkspace() {
       const getKeyActionStatus = experimentApi.getKeyActionStatus as unknown as ((experimentId: string) => Promise<{ status?: string } | null>) | undefined
       const getKeyActionResults = experimentApi.getKeyActionResults as unknown as ((experimentId: string) => Promise<KeyActionResults | null>) | undefined
       const nextKeyStatus = getKeyActionStatus ? await getKeyActionStatus(id).catch(() => null) : null
-      if (nextKeyStatus?.status === 'completed' && getKeyActionResults) {
+      const keyStatus = String(nextKeyStatus?.status || '').toLowerCase()
+      if (getKeyActionResults && ['completed', 'needs_review', 'partial_failed'].includes(keyStatus)) {
         setKeyResults(await getKeyActionResults(id).catch(() => null))
+      } else {
+        setKeyResults(null)
       }
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : 'analysis-overview 加载失败')

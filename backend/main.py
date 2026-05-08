@@ -2855,6 +2855,8 @@ def _with_default_key_action_yolo_config(config: Dict[str, Any]) -> Dict[str, An
 
 
 def _key_action_vlm_assist_config() -> Dict[str, Any]:
+    import importlib.util
+
     enabled = os.environ.get("KEY_ACTION_ENABLE_VLM_ASSIST", "1").strip().lower() not in {
         "0",
         "false",
@@ -2875,13 +2877,18 @@ def _key_action_vlm_assist_config() -> Dict[str, Any]:
         ),
         "max_groups": max(0, max_groups),
         "api_key_configured": bool(os.environ.get("DASHSCOPE_API_KEY")),
+        "dashscope_installed": importlib.util.find_spec("dashscope") is not None,
     }
 
 
 def _build_key_action_vlm_assist_client() -> tuple[Any | None, Dict[str, Any]]:
     config = _key_action_vlm_assist_config()
-    if not config["enabled"] or not config["api_key_configured"]:
-        return None, {**config, "configured": False}
+    if not config["enabled"]:
+        return None, {**config, "configured": False, "reason": "disabled"}
+    if not config["dashscope_installed"]:
+        return None, {**config, "configured": False, "reason": "dashscope_not_installed"}
+    if not config["api_key_configured"]:
+        return None, {**config, "configured": False, "reason": "dashscope_api_key_missing"}
     try:
         from experiment.vlm_client import DashScopeVLClient
 
@@ -3665,11 +3672,16 @@ def _run_key_action_index_task(
             experiment_id,
             {
                 "progress": 0.965,
-                "message": "Publishing recommended YOLO/VLM-passed key materials",
+                "message": "Staging review-gated key material candidates",
                 "material_candidates": candidate_summary,
             },
         )
-        material_auto_publish = _auto_publish_key_action_material_candidates(experiment_id, candidate_summary)
+        material_auto_publish = {
+            "status": "skipped",
+            "reason": "candidate_review_required",
+            "policy": "Keyframes, key clips, and professional reports stay in the candidate queue until manually approved.",
+            "approved_count": 0,
+        }
         if isinstance(candidate_summary, dict):
             candidate_summary["auto_publish"] = material_auto_publish
         summary["material_candidates"] = candidate_summary
@@ -3701,6 +3713,19 @@ def _run_key_action_index_task(
         except Exception as exc:
             logger.exception("YOLO experiment-focus clip generation failed for experiment %s", experiment_id)
             summary["yolo_experiment_focus_clips"] = {"available": False, "error": str(exc)}
+        try:
+            from key_action_indexer.quality_gate import build_quality_gate  # type: ignore
+            from key_action_indexer.reviewed_dataset import freeze_reviewed_dataset  # type: ignore
+
+            reviewed_release = freeze_reviewed_dataset(output_dir)
+            summary["reviewed_dataset"] = reviewed_release
+            summary["reviewed_quality_gate"] = build_quality_gate(
+                output_dir,
+                output_path=output_dir / "reports" / "quality_gate.json",
+            )
+        except Exception as exc:
+            logger.exception("Reviewed release convergence failed for experiment %s", experiment_id)
+            summary["reviewed_dataset"] = {"available": False, "error": str(exc)}
         _write_json(output_dir / "pipeline_summary.json", summary)
         result = _key_action_results_payload(experiment_id)
         quality_payload = _key_action_quality_payload(experiment_id)
@@ -7652,8 +7677,24 @@ def _key_action_overview_counts(experiment_id: str) -> Dict[str, Any]:
 
 
 def _key_action_scene_summary_for_overview(experiment_id: str, counts: Dict[str, Any]) -> Dict[str, Any]:
-    if not _key_action_output_dir(experiment_id).exists():
+    output_dir = _key_action_output_dir(experiment_id)
+    if not output_dir.exists():
         return {}
+    vlm_summary = _load_json_if_exists(output_dir / "metadata" / "scene_vlm_summary.json") or {}
+    if isinstance(vlm_summary, dict) and vlm_summary.get("description"):
+        return {
+            "description": vlm_summary.get("description"),
+            "activities": vlm_summary.get("activities") or vlm_summary.get("detected_activities") or [],
+            "objects": vlm_summary.get("objects") or vlm_summary.get("object_labels") or [],
+            "visible_lab_objects": vlm_summary.get("visible_lab_objects") or vlm_summary.get("object_labels") or [],
+            "uncertain_objects": vlm_summary.get("uncertain_objects") or [],
+            "step_indicators": vlm_summary.get("step_indicators") or [],
+            "ppe_assessment": vlm_summary.get("ppe_assessment") or vlm_summary.get("ppe_status") or {},
+            "alerts": vlm_summary.get("alerts") or [],
+            "detections": vlm_summary.get("detections") or [],
+            "evidence_source": vlm_summary.get("evidence_source") or "qwen_vl_scene_summary",
+            "raw": vlm_summary,
+        }
     objects = [
         key
         for key, _value in sorted(
@@ -7670,7 +7711,10 @@ def _key_action_scene_summary_for_overview(experiment_id: str, counts: Dict[str,
             reverse=True,
         )
     ][:10]
-    process = _load_json_if_exists(_key_action_output_dir(experiment_id) / "metadata" / "experiment_process.json") or {}
+    pipeline_summary = _load_json_if_exists(output_dir / "pipeline_summary.json") or {}
+    vlm_assist = pipeline_summary.get("key_action_vlm_assist") if isinstance(pipeline_summary, dict) else {}
+    vlm_reason = str((vlm_assist or {}).get("reason") or (vlm_assist or {}).get("error") or "")
+    process = _load_json_if_exists(output_dir / "metadata" / "experiment_process.json") or {}
     step_indicators = [
         f"{step.get('name') or step.get('step_id')}: {step.get('status')}"
         for step in (process.get("steps") or [])
@@ -7680,11 +7724,20 @@ def _key_action_scene_summary_for_overview(experiment_id: str, counts: Dict[str,
     micro_count = int(counts.get("micro_segment_count") or 0)
     detection_count = int(counts.get("yolo_detection_count") or 0)
     event_count = int(counts.get("video_event_count") or 0)
-    description = (
-        f"关键动作索引已生成 {segment_count} 个关键片段、{micro_count} 个微片段、"
-        f"{detection_count} 个 YOLO 检测框和 {event_count} 条视频理解事件。"
-        f"主要对象包括：{', '.join(objects[:8]) if objects else '暂无对象统计'}。"
-    )
+    if not bool((vlm_assist or {}).get("configured")):
+        degrade = vlm_reason or "dashscope_api_key_missing"
+        description = (
+            f"Qwen-VL 场景语义复核未启用（{degrade}）。当前仅展示 YOLO/微片段证据："
+            f"{segment_count} 个 episode、{micro_count} 个微片段、{detection_count} 个检测框；"
+            f"主要对象包括：{', '.join(objects[:8]) if objects else '暂无对象统计'}。"
+        )
+        evidence_source = "yolo_micro_evidence_qwen_vl_unavailable"
+    else:
+        description = (
+            "Qwen-VL 已配置，但本次运行没有生成独立场景摘要；"
+            f"当前只展示候选素材级 VLM/YOLO 复核证据和 {micro_count} 个微片段统计。"
+        )
+        evidence_source = "yolo_micro_evidence_scene_summary_not_generated"
     return {
         "description": description,
         "activities": activities,
@@ -7698,7 +7751,7 @@ def _key_action_scene_summary_for_overview(experiment_id: str, counts: Dict[str,
             {"class_name": key, "count": value}
             for key, value in (counts.get("normalized_object_counts") or {}).items()
         ],
-        "evidence_source": "key_action_index/video_understanding_summary",
+        "evidence_source": evidence_source,
         "raw": counts.get("video_understanding_summary") or {},
     }
 
