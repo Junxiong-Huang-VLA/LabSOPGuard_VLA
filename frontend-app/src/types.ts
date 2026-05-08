@@ -243,6 +243,10 @@ export interface MaterialSearchItem {
   event_id?: string
   display_name?: string
   event_type?: string
+  canonical_action_type?: string
+  canonical_object?: string
+  sop_phase?: string
+  interaction_family?: string
   time_start?: number
   time_end?: number
   evidence_level?: string
@@ -290,6 +294,9 @@ export interface MaterialDiagnosticsEvidenceItem {
   candidate_group_id?: string | null
   asset_kind?: string | null
   display_name?: string | null
+  canonical_action_type?: string | null
+  canonical_object?: string | null
+  sop_phase?: string | null
   review_status?: string | null
   approved_by?: string | null
   approved_at?: string | null
@@ -311,6 +318,19 @@ export interface MaterialDiagnosticsResponse {
   schema_version?: string
   experiment_id: string
   published_total?: number
+  formal_material_total?: number
+  best_material_total?: number
+  candidate_total?: number
+  candidate_pending_total?: number
+  candidate_approved_total?: number
+  candidate_rejected_total?: number
+  candidate_deferred_total?: number
+  candidate_not_selected_total?: number
+  last_formal_sync_at?: string | null
+  approved_unsynced_count?: number
+  approved_unsynced_candidates?: MaterialDiagnosticsEvidenceItem[]
+  file_access_status?: string
+  missing_file_count?: number
   formal_material_reference_count?: number
   url_accessible_count?: number
   missing_clip_count?: number
@@ -342,6 +362,10 @@ export interface MaterialCandidateFile {
   event_id?: string
   display_name?: string
   event_type?: string
+  canonical_action_type?: string
+  canonical_object?: string
+  sop_phase?: string
+  interaction_family?: string
   time_start?: number
   time_end?: number
   evidence_level?: string
@@ -351,6 +375,9 @@ export interface MaterialCandidateFile {
   asset_kind?: string
   material_type?: string
   candidate_status?: string
+  disposition?: string
+  rejection_reason_code?: string
+  rejection_reason?: string
   recommended?: boolean
   recommendation_reason?: string
   quality_score?: number
@@ -374,6 +401,10 @@ export interface MaterialCandidateGroup {
   vlm_semantics?: Record<string, unknown> | null
   primary_object?: string | null
   action_name?: string | null
+  canonical_action_type?: string | null
+  canonical_object?: string | null
+  sop_phase?: string | null
+  interaction_family?: string | null
   micro_segment_id?: string | null
   parent_segment_id?: string | null
   keyframes: MaterialCandidateFile[]
@@ -388,6 +419,9 @@ export interface MaterialCandidatesResponse {
   file_total?: number
   pending_total?: number
   approved_total?: number
+  rejected_total?: number
+  deferred_total?: number
+  not_selected_total?: number
   items: MaterialCandidateGroup[]
   manifest?: Record<string, unknown>
   candidate_index?: string

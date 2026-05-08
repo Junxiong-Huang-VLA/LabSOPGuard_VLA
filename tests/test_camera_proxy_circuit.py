@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import pytest
+
+pytest.skip("Camera proxy circuit tests moved to D:\\MultiCameraMonitor scope.", allow_module_level=True)
+
 import importlib
 import sys
 from pathlib import Path
-
-import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:

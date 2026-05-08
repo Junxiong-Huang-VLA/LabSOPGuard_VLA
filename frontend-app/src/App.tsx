@@ -36,6 +36,7 @@ export default function App() {
             <Route path="experiments/:id/report" element={<ExperimentReport />} />
             <Route path="experiments/:id/timeline" element={<ExperimentTimeline />} />
             <Route path="experiments/:id/materials" element={<MaterialSearch />} />
+            <Route path="experiments/:id/materials/review" element={<MaterialSearch />} />
             <Route path="experiments/:id/materials/timeline" element={<MaterialTimelineView />} />
             <Route path="experiments/:id/steps/:stepId" element={<StepDetail />} />
             <Route path="experiments/:id/steps/:stepId/review" element={<StepReview />} />

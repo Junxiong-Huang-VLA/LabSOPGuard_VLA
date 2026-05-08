@@ -76,6 +76,8 @@ if load_dotenv is not None:
 
 CONFIG_PATH = PROJECT_ROOT / "configs"
 
+from labsopguard.material_taxonomy import enrich_material_taxonomy
+
 # 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -2290,6 +2292,7 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
     ref_root, rows = _material_reference_root_and_rows(exp_dir)
     items: List[Dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
+        row = enrich_material_taxonomy(row)
         asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
         if asset_kind == "专业报告":
             continue
@@ -2315,6 +2318,10 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
                 "duration_sec": max(0.0, end_sec - start_sec),
                 "object_labels": _object_labels_from_material_row(row),
                 "actions": [row.get("action_name") or action.get("title") or asset_kind],
+                "canonical_action_type": row.get("canonical_action_type"),
+                "canonical_object": row.get("canonical_object"),
+                "sop_phase": row.get("sop_phase"),
+                "interaction_family": row.get("interaction_family"),
                 "review_status": row.get("review_status") or "accepted",
                 "evidence_level": row.get("evidence_level") or "recovered_reference",
                 "preview_url": preview_url,
@@ -2429,8 +2436,12 @@ def _material_candidate_group_status(rows: List[Dict[str, Any]]) -> str:
         return "pending"
     if statuses and all(status == "not_selected" for status in statuses):
         return "not_selected"
+    if statuses and all(status == "deferred" for status in statuses):
+        return "deferred"
     if any(status in {"rejected", "failed", "blocked"} for status in statuses):
         return next(status for status in statuses if status in {"rejected", "failed", "blocked"})
+    if any(status == "deferred" for status in statuses):
+        return "deferred"
     return statuses[0] if statuses else "pending"
 
 
@@ -2443,6 +2454,7 @@ def _first_material_candidate_value(rows: List[Dict[str, Any]], key: str, defaul
 
 
 def _material_candidate_file_payload(experiment_id: str, row: Dict[str, Any]) -> Dict[str, Any]:
+    row = enrich_material_taxonomy(row)
     candidate_root = _material_candidate_root(experiment_id)
     path = _material_row_path(row, candidate_root)
     url = _experiment_file_api_path(path, experiment_id) if path else None
@@ -2497,6 +2509,10 @@ def _material_candidates_payload(experiment_id: str) -> Dict[str, Any]:
                 "vlm_semantics": _first_material_candidate_value(group_rows, "vlm_semantics"),
                 "primary_object": _first_material_candidate_value(group_rows, "primary_object") or first.get("primary_object"),
                 "action_name": _first_material_candidate_value(group_rows, "action_name") or first.get("action_name"),
+                "canonical_action_type": _first_material_candidate_value(group_rows, "canonical_action_type") or first.get("canonical_action_type"),
+                "canonical_object": _first_material_candidate_value(group_rows, "canonical_object") or first.get("canonical_object"),
+                "sop_phase": _first_material_candidate_value(group_rows, "sop_phase") or first.get("sop_phase"),
+                "interaction_family": _first_material_candidate_value(group_rows, "interaction_family") or first.get("interaction_family"),
                 "micro_segment_id": _first_material_candidate_value(group_rows, "micro_segment_id") or first.get("micro_segment_id"),
                 "parent_segment_id": _first_material_candidate_value(group_rows, "parent_segment_id") or first.get("parent_segment_id"),
                 "keyframes": keyframes,
@@ -2514,6 +2530,9 @@ def _material_candidates_payload(experiment_id: str) -> Dict[str, Any]:
         "file_total": len(rows),
         "pending_total": sum(1 for row in rows if _material_candidate_status(row) == "pending"),
         "approved_total": sum(1 for row in rows if _material_candidate_status(row) in {"approved", "accepted"}),
+        "rejected_total": sum(1 for row in rows if _material_candidate_status(row) == "rejected"),
+        "deferred_total": sum(1 for row in rows if _material_candidate_status(row) == "deferred"),
+        "not_selected_total": sum(1 for row in rows if _material_candidate_status(row) == "not_selected"),
         "items": items,
         "manifest": manifest,
         "candidate_index": str(candidate_root / _MATERIAL_CANDIDATE_INDEX_FILENAME),
@@ -2598,22 +2617,39 @@ def _auto_publish_key_action_material_candidates(
     return result
 
 
+def _canonicalize_published_material_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    items = payload.get("items") if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        return payload
+    canonical_items = [enrich_material_taxonomy(item) if isinstance(item, dict) else item for item in items]
+    return {**payload, "items": canonical_items, "taxonomy": list(STANDARD_MATERIAL_ACTION_TYPES)}
+
+
+STANDARD_MATERIAL_ACTION_TYPES = (
+    "hand-bottle",
+    "hand-balance",
+    "hand-spatula",
+    "hand-paper",
+    "hand-container",
+)
+
+
 def _published_material_items(exp_dir: Path, experiment_id: str) -> Dict[str, Any]:
     payload = _load_json_if_exists(exp_dir / "published_materials.json")
     if isinstance(payload, dict) and payload.get("items"):
-        return payload
+        return _canonicalize_published_material_payload(payload)
     fallback = _material_reference_items(exp_dir, experiment_id)
     try:
         from labsopguard.material_publishing import SemanticMaterialPublisher
 
         listed = SemanticMaterialPublisher(exp_dir, experiment_id=experiment_id).list_published()
         if isinstance(listed, dict) and listed.get("items"):
-            return listed
+            return _canonicalize_published_material_payload(listed)
     except Exception:
         logger.debug("Published material listing unavailable; falling back to material_references", exc_info=True)
     if fallback.get("items"):
         return fallback
-    return payload if isinstance(payload, dict) else fallback
+    return _canonicalize_published_material_payload(payload) if isinstance(payload, dict) else fallback
 
 
 def _sync_published_materials_from_references(exp_dir: Path, experiment_id: str) -> Dict[str, Any]:
@@ -2623,6 +2659,7 @@ def _sync_published_materials_from_references(exp_dir: Path, experiment_id: str)
         "schema_version": "published_materials.approved_material_references.v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": len(payload.get("items") or []),
+        "taxonomy": list(STANDARD_MATERIAL_ACTION_TYPES),
         "policy": "Only frontend-approved keyframes and key clips are synchronized into the key material library. Professional PDF reports are approved into the professional report folder only.",
     }
     _write_json(exp_dir / "published_materials.json", payload)
@@ -3978,6 +4015,40 @@ def _material_published_paths(item: Dict[str, Any]) -> Dict[str, Any]:
 def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     raw_items = payload.get("items") if isinstance(payload, dict) else []
     items = [item for item in raw_items if isinstance(item, dict)]
+    candidate_rows = [enrich_material_taxonomy(row) for row in _material_candidate_rows(experiment_id)]
+    published_candidate_ids = {str(item.get("candidate_id") or "") for item in items if item.get("candidate_id")}
+    published_source_candidates = {str(item.get("source_candidate_file") or "") for item in items if item.get("source_candidate_file")}
+    material_asset_candidates = []
+    for row in candidate_rows:
+        kind_text = str(row.get("asset_kind") or row.get("material_type") or row.get("role") or "").lower()
+        if "report" in kind_text or "报告" in kind_text:
+            continue
+        if row.get("clip_file_path") or row.get("frame_path") or row.get("stored_file") or row.get("asset_kind"):
+            material_asset_candidates.append(row)
+    approved_unsynced: List[Dict[str, Any]] = []
+    for row in material_asset_candidates:
+        status = _material_candidate_status(row)
+        candidate_id = str(row.get("candidate_id") or "")
+        stored_file = str(row.get("stored_file") or "")
+        if status != "approved":
+            continue
+        if candidate_id and candidate_id in published_candidate_ids:
+            continue
+        if stored_file and stored_file in published_source_candidates:
+            continue
+        approved_unsynced.append(
+            {
+                "candidate_id": candidate_id,
+                "candidate_group_id": row.get("candidate_group_id"),
+                "asset_kind": row.get("asset_kind") or row.get("material_type"),
+                "canonical_action_type": row.get("canonical_action_type"),
+                "canonical_object": row.get("canonical_object"),
+                "display_name": row.get("display_name") or row.get("action_name"),
+                "stored_file": stored_file,
+                "approved_at": row.get("approved_at"),
+                "approved_by": row.get("approved_by"),
+            }
+        )
     warnings_by_type: Dict[str, int] = {}
     warnings_count = 0
     broken_clip_paths: List[str] = []
@@ -4040,6 +4111,9 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
                 "candidate_group_id": item.get("candidate_group_id"),
                 "asset_kind": item.get("asset_kind") or item.get("material_type"),
                 "display_name": item.get("display_name") or item.get("action_name") or item.get("event_type"),
+                "canonical_action_type": item.get("canonical_action_type"),
+                "canonical_object": item.get("canonical_object"),
+                "sop_phase": item.get("sop_phase"),
                 "formal_material_reference": bool(item.get("formal_material_reference")),
                 "review_status": item.get("review_status"),
                 "approved_by": item.get("approved_by"),
@@ -4059,9 +4133,33 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
             }
         )
 
+    exp_dir = _experiment_output_dir(experiment_id)
+    published_json = exp_dir / "published_materials.json"
+    last_sync_at = payload.get("generated_at") if isinstance(payload, dict) else None
+    if not last_sync_at and published_json.exists():
+        last_sync_at = datetime.fromtimestamp(published_json.stat().st_mtime, timezone.utc).isoformat()
+    candidate_status_counts: Dict[str, int] = {}
+    for row in candidate_rows:
+        status = _material_candidate_status(row)
+        candidate_status_counts[status] = candidate_status_counts.get(status, 0) + 1
+    missing_file_count = sum(1 for item in evidence_items if not item.get("material_exists"))
     return {
         "experiment_id": experiment_id,
         "published_total": int(payload.get("total", len(items))) if isinstance(payload, dict) else len(items),
+        "formal_material_total": len(items),
+        "best_material_total": len({str(item.get("canonical_action_type") or item.get("event_type") or item.get("action_name") or "") for item in items}),
+        "candidate_total": len(candidate_rows),
+        "candidate_pending_total": candidate_status_counts.get("pending", 0),
+        "candidate_approved_total": candidate_status_counts.get("approved", 0),
+        "candidate_rejected_total": candidate_status_counts.get("rejected", 0),
+        "candidate_deferred_total": candidate_status_counts.get("deferred", 0),
+        "candidate_not_selected_total": candidate_status_counts.get("not_selected", 0),
+        "candidate_status_counts": candidate_status_counts,
+        "last_formal_sync_at": last_sync_at,
+        "approved_unsynced_count": len(approved_unsynced),
+        "approved_unsynced_candidates": approved_unsynced,
+        "file_access_status": "ok" if missing_file_count == 0 else "degraded",
+        "missing_file_count": missing_file_count,
         "clip_count": clip_count,
         "missing_clip_count": missing_clip_count,
         "missing_preview_count": missing_preview_count,
@@ -6165,6 +6263,15 @@ class MaterialCandidateApprovalRequest(BaseModel):
     selected_clip_ids: Optional[List[str]] = None
 
 
+class MaterialCandidateDispositionRequest(BaseModel):
+    decision: str
+    reviewer: Optional[str] = None
+    reason_code: Optional[str] = None
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    candidate_ids: Optional[List[str]] = None
+
+
 class KeyActionReviewDecisionRequest(BaseModel):
     decision: str
     reviewer: Optional[str] = "frontend_reviewer"
@@ -7083,6 +7190,48 @@ async def approve_experiment_material_candidate(
         "experiment_id": safe_experiment_id,
         "candidate_group_id": candidate_group_id,
         "approval": approval,
+        "candidates": _material_candidates_payload(safe_experiment_id),
+        "published_materials": published_materials,
+        "workspace_published_materials_reindex": workspace_reindex,
+    }
+
+
+@app.post("/api/v1/experiments/{experiment_id}/materials/candidates/{candidate_group_id}/decision", tags=["experiments"])
+async def decide_experiment_material_candidate(
+    experiment_id: str,
+    candidate_group_id: str,
+    request: MaterialCandidateDispositionRequest,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    try:
+        from key_action_indexer.material_references import dispose_material_candidates
+
+        disposition = dispose_material_candidates(
+            _key_action_output_dir(safe_experiment_id),
+            candidate_group_id=candidate_group_id,
+            decision=request.decision,
+            reason_code=request.reason_code,
+            reason=request.reason,
+            reviewer=request.reviewer,
+            notes=request.notes,
+            candidate_ids=request.candidate_ids,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Material candidate disposition failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    exp_dir = _experiment_output_dir(safe_experiment_id)
+    published_materials = _sync_published_materials_from_references(exp_dir, safe_experiment_id)
+    workspace_reindex = _rebuild_workspace_published_materials_index_quietly()
+    return {
+        "experiment_id": safe_experiment_id,
+        "candidate_group_id": candidate_group_id,
+        "disposition": disposition,
         "candidates": _material_candidates_payload(safe_experiment_id),
         "published_materials": published_materials,
         "workspace_published_materials_reindex": workspace_reindex,

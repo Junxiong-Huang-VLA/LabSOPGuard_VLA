@@ -270,6 +270,12 @@ export const experimentApi = {
     return data
   },
 
+  decideMaterialCandidate: async (id: string, candidateGroupId: string, request: { decision: string; reviewer?: string; reason_code?: string; reason?: string; notes?: string; candidate_ids?: string[] }) => {
+    const { data } = await api.post(`/experiments/${id}/materials/candidates/${candidateGroupId}/decision`, request)
+    invalidateExperimentCache(id)
+    return data
+  },
+
   backfillClip: async (id: string, request: { start_time_sec: number; end_time_sec: number; camera_id?: string; clip_id?: string }) => {
     const { data } = await api.post<ClipBackfillResponse>(`/experiments/${id}/materials/backfill-clip`, request)
     invalidateExperimentCache(id)

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .archive_planner import ArchivePlan, ArchivePlanner
+from labsopguard.material_taxonomy import canonicalize_material_action
 from .naming import container_label, display_name as make_display_name, searchable_text, stable_name as make_stable_name
 from .schemas import MATERIAL_PUBLISH_VERSION, MaterialPublishRecord, PublishedPaths, read_json, write_json
 from .semantic_enhancer import DisplayNameEnhancer, QwenVlmDisplayNameEnhancer
@@ -917,6 +918,7 @@ class SemanticMaterialPublisher:
             "frame_material_fallback",
         }:
             warnings.append("overlay_mode_not_event_selective")
+        taxonomy = canonicalize_material_action(event)
         published_paths = PublishedPaths(
             clip=str(clip) if clip else None,
             preview=str(preview) if preview else None,
@@ -946,6 +948,10 @@ class SemanticMaterialPublisher:
             canonical_event_path=str(event_json_path),
             published_paths=published_paths,
             warnings=list(dict.fromkeys(warnings)),
+            canonical_action_type=taxonomy["canonical_action_type"],
+            canonical_object=taxonomy["canonical_object"],
+            sop_phase=taxonomy["sop_phase"],
+            interaction_family=taxonomy["interaction_family"],
             extra={
                 "quality_score": asset.get("quality_score"),
                 "quality_grade": asset.get("quality_grade"),

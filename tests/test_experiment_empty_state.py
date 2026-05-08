@@ -280,7 +280,7 @@ def test_get_experiment_artifact_blocks_source_video_outside_project_root(tmp_pa
     assert 'project root' in response.text.lower()
 
 
-def test_professional_report_generation_syncs_to_material_delivery(tmp_path, monkeypatch):
+def test_professional_report_generation_stages_material_candidate(tmp_path, monkeypatch):
     setup_isolated_project_root(tmp_path)
     monkeypatch.setenv('EXPERIMENT_PROFESSIONAL_REPORT_ENABLED', '1')
 
@@ -336,19 +336,27 @@ def test_professional_report_generation_syncs_to_material_delivery(tmp_path, mon
     assert overview['artifacts']['professional_report_pdf']['ready'] is True
     assert overview['artifacts']['professional_report_html']['ready'] is True
 
-    delivery_matches = list((tmp_path / 'outputs' / 'material_references').glob(f'*/{REPORT_DIR_NAME}/professional_report_qwen36max.pdf'))
-    assert delivery_matches
-    delivery_root = delivery_matches[0].parents[1]
-    delivery_manifest = json.loads((delivery_root / 'manifest.json').read_text(encoding='utf-8'))
-    delivery_readme = (delivery_root / 'README.md').read_text(encoding='utf-8')
-    delivery_rows = [
+    delivery = summary['material_delivery']
+    assert delivery['status'] == 'candidate_staged'
+    assert delivery['report_count'] == 1
+
+    candidate_root = Path(delivery['path']).parent
+    report_candidate = candidate_root / REPORT_DIR_NAME / 'professional_report_qwen36max.pdf'
+    assert report_candidate.exists()
+    assert not list((tmp_path / 'outputs' / 'material_references').glob(f'*/{REPORT_DIR_NAME}/professional_report_qwen36max.pdf'))
+
+    candidate_manifest = json.loads((candidate_root / 'manifest.json').read_text(encoding='utf-8'))
+    candidate_readme = (candidate_root / 'README.md').read_text(encoding='utf-8')
+    candidate_rows = [
         json.loads(line)
-        for line in (delivery_root / '素材索引.jsonl').read_text(encoding='utf-8').splitlines()
+        for line in (candidate_root / '素材候选索引.jsonl').read_text(encoding='utf-8').splitlines()
         if line.strip()
     ]
-    assert delivery_manifest['report_count'] == 4
-    assert '专业报告: 4 files' in delivery_readme
-    assert all(delivery_root in Path(row['stored_file']).parents for row in delivery_rows if row.get('asset_kind') == REPORT_DIR_NAME)
+    assert candidate_manifest['candidate_count'] == 1
+    assert 'candidates: 1' in candidate_readme
+    assert candidate_rows[0]['asset_kind'] == REPORT_DIR_NAME
+    assert candidate_rows[0]['candidate_status'] == 'pending'
+    assert candidate_rows[0]['delivery_scope'] == 'professional_report_candidate'
 
 
 def test_material_search_rebuilds_index_and_filters(tmp_path):

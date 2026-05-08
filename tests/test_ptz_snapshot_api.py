@@ -1,3 +1,7 @@
+import pytest
+
+pytest.skip("PTZ tracker API tests moved to D:\\PtzTracker scope.", allow_module_level=True)
+
 from pathlib import Path
 import sys
 

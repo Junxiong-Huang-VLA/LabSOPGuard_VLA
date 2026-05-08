@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from labsopguard.material_taxonomy import enrich_material_taxonomy
 from labsopguard.retrieval import MaterialRetrievalIndex
 
 
@@ -229,7 +230,7 @@ def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[
             "clip": str(path) if asset_kind == KEY_CLIP_KIND else "",
             "keyframe": str(path) if asset_kind == KEYFRAME_KIND else "",
         }
-        items.append(
+        item = enrich_material_taxonomy(
             {
                 **row,
                 "material_id": item_id,
@@ -250,6 +251,7 @@ def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[
                 "payload": row,
             }
         )
+        items.append(item)
     index_path = ref_root / MATERIAL_INDEX_FILENAME
     source_mtime = float(index_path.stat().st_mtime) if index_path.exists() else float(ref_root.stat().st_mtime)
     return {"items": items, "source": str(ref_root), "source_mtime": source_mtime}
@@ -579,6 +581,9 @@ def _init_workspace_published_schema(conn: sqlite3.Connection) -> None:
             experiment_id TEXT,
             event_id TEXT,
             event_type TEXT,
+            canonical_action_type TEXT,
+            canonical_object TEXT,
+            sop_phase TEXT,
             display_name TEXT,
             stable_name TEXT,
             actor_name TEXT,
@@ -626,29 +631,42 @@ def _init_workspace_published_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    _ensure_columns(
+        conn,
+        "published_materials",
+        {
+            "canonical_action_type": "TEXT",
+            "canonical_object": "TEXT",
+            "sop_phase": "TEXT",
+            "stable_name": "TEXT",
+            "actor_name": "TEXT",
+            "time_start": "REAL",
+            "time_end": "REAL",
+            "evidence_grade": "TEXT",
+            "review_status": "TEXT",
+            "official_linked": "INTEGER DEFAULT 0",
+            "warning_count": "INTEGER DEFAULT 0",
+            "click_count": "INTEGER DEFAULT 0",
+            "review_count": "INTEGER DEFAULT 0",
+            "official_usage_count": "INTEGER DEFAULT 0",
+            "experiment_type": "TEXT",
+        },
+    )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_workspace_published_type ON published_materials(event_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_workspace_published_experiment ON published_materials(experiment_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_workspace_published_actor ON published_materials(actor_name)")
-    for statement in (
-        "ALTER TABLE published_materials ADD COLUMN time_start REAL",
-        "ALTER TABLE published_materials ADD COLUMN time_end REAL",
-        "ALTER TABLE published_materials ADD COLUMN evidence_grade TEXT",
-        "ALTER TABLE published_materials ADD COLUMN review_status TEXT",
-        "ALTER TABLE published_materials ADD COLUMN official_linked INTEGER DEFAULT 0",
-        "ALTER TABLE published_materials ADD COLUMN warning_count INTEGER DEFAULT 0",
-        "ALTER TABLE published_materials ADD COLUMN click_count INTEGER DEFAULT 0",
-        "ALTER TABLE published_materials ADD COLUMN review_count INTEGER DEFAULT 0",
-        "ALTER TABLE published_materials ADD COLUMN official_usage_count INTEGER DEFAULT 0",
-        "ALTER TABLE published_materials ADD COLUMN experiment_type TEXT",
-    ):
-        try:
-            conn.execute(statement)
-        except sqlite3.OperationalError:
-            pass
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_workspace_published_canonical_action ON published_materials(canonical_action_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_workspace_published_official ON published_materials(official_linked)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_workspace_published_experiment_type ON published_materials(experiment_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_events_material ON material_usage_events(material_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_counts_experiment ON material_usage_counts(experiment_id)")
+
+
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: Dict[str, str]) -> None:
+    existing = {str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
 
 def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) -> None:
@@ -663,6 +681,10 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
             item.get("display_name"),
             item.get("stable_name"),
             item.get("event_type"),
+            item.get("canonical_action_type"),
+            item.get("canonical_object"),
+            item.get("sop_phase"),
+            item.get("interaction_family"),
             item.get("actor_name"),
             source,
             target,
@@ -695,6 +717,9 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
         "experiment_id": experiment_id or item.get("experiment_id"),
         "event_id": item.get("event_id"),
         "event_type": item.get("event_type"),
+        "canonical_action_type": item.get("canonical_action_type"),
+        "canonical_object": item.get("canonical_object"),
+        "sop_phase": item.get("sop_phase"),
         "display_name": item.get("display_name"),
         "stable_name": item.get("stable_name"),
         "actor_name": item.get("actor_name"),
@@ -718,11 +743,13 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
     conn.execute(
         """
         INSERT OR REPLACE INTO published_materials
-        (material_id, experiment_id, event_id, event_type, display_name, stable_name, actor_name,
+        (material_id, experiment_id, event_id, event_type, canonical_action_type, canonical_object, sop_phase,
+         display_name, stable_name, actor_name,
          time_start, time_end, evidence_grade, review_status,
          published_path, material_publish_path, clip_path, preview_path, payload_json, searchable_text,
          official_linked, warning_count, click_count, review_count, official_usage_count, experiment_type)
-        VALUES (:material_id, :experiment_id, :event_id, :event_type, :display_name, :stable_name, :actor_name,
+        VALUES (:material_id, :experiment_id, :event_id, :event_type, :canonical_action_type, :canonical_object, :sop_phase,
+         :display_name, :stable_name, :actor_name,
          :time_start, :time_end, :evidence_grade, :review_status,
          :published_path, :material_publish_path, :clip_path, :preview_path, :payload_json, :searchable_text,
          :official_linked, :warning_count, :click_count, :review_count, :official_usage_count, :experiment_type)
@@ -735,6 +762,9 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
 SORT_FIELDS = {
     "experiment_id": "COALESCE(p.experiment_id, '')",
     "event_type": "COALESCE(p.event_type, '')",
+    "canonical_action_type": "COALESCE(p.canonical_action_type, '')",
+    "canonical_object": "COALESCE(p.canonical_object, '')",
+    "sop_phase": "COALESCE(p.sop_phase, '')",
     "display_name": "COALESCE(p.display_name, '')",
     "actor_name": "COALESCE(p.actor_name, '')",
     "time_start": "COALESCE(p.time_start, 0)",

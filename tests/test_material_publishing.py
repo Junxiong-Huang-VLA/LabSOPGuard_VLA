@@ -269,6 +269,113 @@ def test_published_materials_api_limit_preserves_total_and_reports_returned():
             shutil.rmtree(exp_dir)
 
 
+def test_material_reference_api_adds_canonical_taxonomy():
+    import shutil
+    import backend.main as main
+
+    exp_id = "_pytest_material_taxonomy_api"
+    exp_dir = main.PROJECT_ROOT / "outputs" / "experiments" / exp_id
+    ref_root = exp_dir / "material_references"
+    if exp_dir.exists():
+        shutil.rmtree(exp_dir)
+    main._EXPERIMENTS.pop(exp_id, None)
+    try:
+        frame_dir = ref_root / "\u5173\u952e\u5e27"
+        frame_dir.mkdir(parents=True, exist_ok=True)
+        frame = frame_dir / "hand_bottle.jpg"
+        frame.write_bytes(b"jpg")
+        (exp_dir / "experiment.json").write_text(
+            json.dumps({"experiment_id": exp_id, "title": "taxonomy api"}),
+            encoding="utf-8",
+        )
+        row = {
+            "schema_version": "material_reference.item.v1",
+            "asset_kind": "\u5173\u952e\u5e27",
+            "material_type": "\u5173\u952e\u5e27",
+            "action_name": "hand reagent bottle operation",
+            "stored_file": str(frame),
+            "stored_filename": frame.name,
+            "primary_object": "reagent_bottle",
+            "review_status": "accepted",
+            "approved_at": "2026-05-08T10:00:00+08:00",
+            "formal_material_reference": True,
+        }
+        (ref_root / "\u7d20\u6750\u7d22\u5f15.jsonl").write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        client = TestClient(main.app)
+        response = client.get(f"/api/v1/experiments/{exp_id}/materials/published")
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["canonical_action_type"] == "hand-bottle"
+        assert item["canonical_object"] == "bottle"
+        assert item["sop_phase"] == "reagent-bottle-handling"
+    finally:
+        main._EXPERIMENTS.pop(exp_id, None)
+        if exp_dir.exists():
+            shutil.rmtree(exp_dir)
+
+
+def test_material_candidate_disposition_requires_reason_and_hides_from_pending():
+    import shutil
+    import backend.main as main
+
+    exp_id = "_pytest_material_candidate_disposition"
+    exp_dir = main.PROJECT_ROOT / "outputs" / "experiments" / exp_id
+    queue = exp_dir / "_material_review_queue"
+    if exp_dir.exists():
+        shutil.rmtree(exp_dir)
+    main._EXPERIMENTS.pop(exp_id, None)
+    try:
+        frame_dir = queue / "\u5173\u952e\u5e27"
+        frame_dir.mkdir(parents=True, exist_ok=True)
+        frame = frame_dir / "bad_candidate.jpg"
+        frame.write_bytes(b"jpg")
+        (exp_dir / "experiment.json").write_text(json.dumps({"experiment_id": exp_id, "title": "candidate disposition"}), encoding="utf-8")
+        rows = [
+            {
+                "schema_version": "material_reference.item.v1",
+                "candidate_id": "candidate_bad_frame",
+                "candidate_group_id": "group_bad",
+                "asset_kind": "\u5173\u952e\u5e27",
+                "material_type": "\u5173\u952e\u5e27",
+                "stored_file": str(frame),
+                "stored_filename": frame.name,
+                "primary_object": "balance",
+                "candidate_status": "pending",
+                "review_status": "pending",
+            }
+        ]
+        (queue / "\u7d20\u6750\u5019\u9009\u7d22\u5f15.jsonl").write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+            encoding="utf-8",
+        )
+
+        client = TestClient(main.app)
+        missing_reason = client.post(
+            f"/api/v1/experiments/{exp_id}/materials/candidates/group_bad/decision",
+            json={"decision": "false_positive"},
+        )
+        assert missing_reason.status_code == 400
+
+        decided = client.post(
+            f"/api/v1/experiments/{exp_id}/materials/candidates/group_bad/decision",
+            json={"decision": "false_positive", "reason_code": "wrong_object", "notes": "not a balance action"},
+        )
+        assert decided.status_code == 200
+        payload = decided.json()["candidates"]
+        assert payload["pending_total"] == 0
+        assert payload["rejected_total"] == 1
+        assert payload["items"][0]["status"] == "rejected"
+        updated = json.loads((queue / "\u7d20\u6750\u5019\u9009\u7d22\u5f15.jsonl").read_text(encoding="utf-8").splitlines()[0])
+        assert updated["candidate_status"] == "rejected"
+        assert updated["rejection_reason_code"] == "wrong_object"
+        assert (queue / "review_log.jsonl").exists()
+    finally:
+        main._EXPERIMENTS.pop(exp_id, None)
+        if exp_dir.exists():
+            shutil.rmtree(exp_dir)
+
+
 def test_experiment_published_materials_prefers_global_formal_delivery_folder():
     import shutil
     import backend.main as main

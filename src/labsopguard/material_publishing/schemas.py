@@ -40,6 +40,10 @@ class MaterialPublishRecord:
     canonical_event_path: str
     published_paths: Dict[str, Any]
     warnings: List[str]
+    canonical_action_type: Optional[str] = None
+    canonical_object: Optional[str] = None
+    sop_phase: Optional[str] = None
+    interaction_family: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
