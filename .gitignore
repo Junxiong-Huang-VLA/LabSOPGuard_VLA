@@ -21,6 +21,8 @@ logs/
 reports/
 tmp/
 memory/
+data/*
+!data/sessions/
 data/sessions/*
 !data/sessions/.gitkeep
 _recovery/
@@ -29,6 +31,18 @@ _recovery/
 .codex_runtime/
 .codex/
 .claude/
+
+# Local recovery notes, scratch probes, and sidecar projects
+CLEANUP_PLAN.md
+FRONTEND_RECOVERY_HANDOFF_*.md
+codex_handoff_2026-05-07_*.md
+_rebuild_report.txt
+exp_*.json
+overview_*.json
+tempmonitor_page.html
+/package-lock.json
+boot/
+lab_preprocessing/
 
 # Local model/runtime caches and heavy weights
 .ultralytics/
