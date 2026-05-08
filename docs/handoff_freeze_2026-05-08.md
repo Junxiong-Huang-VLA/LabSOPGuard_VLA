@@ -92,6 +92,9 @@ Current expanded audit facts:
   `0.25974`.
 - Segment-level retrieval backfill remains retrieval-only; promoted segment
   backfill count is `0`.
+- Reviewed release query output now flattens nested `third_person.clip_path` and
+  `first_person.clip_path` into traceability fields, so the expanded audit shows
+  dual-view clip traceability for `3ccd...` query top results.
 - Health gate is `pass` for all three current sessions. The
   `default_chinese_query_validation.json` artifact on `3ccd...` is explicitly
   marked `bootstrap_pending_human_verification`, so it remains a warning until

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from key_action_indexer.cli import main
-from key_action_indexer.query_validation import validate_queries
+from key_action_indexer.query_validation import query_index, validate_queries
 from key_action_indexer.schemas import write_jsonl
 from key_action_indexer.vector_index import VectorIndex
 
@@ -199,3 +199,26 @@ def test_cli_query_runs_direct_search(tmp_path: Path, capsys) -> None:
     assert payload["query_count"] == 1
     assert payload["queries"][0]["result_count"] == 1
     assert payload["queries"][0]["results"][0]["segment_id"] == "seg_000001"
+
+
+def test_query_index_flattens_nested_view_clips_for_traceability(tmp_path: Path) -> None:
+    index_dir = tmp_path / "index"
+    metadata = [
+        {
+            "index_level": "segment",
+            "segment_id": "reviewed_seg_001",
+            "index_text": "reviewed balance weighing",
+            "third_person": {"clip_path": "clips/reviewed_third.mp4"},
+            "first_person": {"clip_path": "clips/reviewed_first.mp4"},
+            "keyframes": ["peak.jpg"],
+        }
+    ]
+    index = VectorIndex()
+    index.build([metadata[0]["index_text"]], metadata)
+    index.save(index_dir)
+
+    payload = query_index(index_dir, ["balance"], top_k=1)
+    result = payload["queries"][0]["results"][0]
+
+    assert result["third_person_clip"] == "clips/reviewed_third.mp4"
+    assert result["first_person_clip"] == "clips/reviewed_first.mp4"

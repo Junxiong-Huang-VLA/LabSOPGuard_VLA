@@ -71,6 +71,16 @@ def _short_text(value: Any, limit: int = 360) -> str:
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
+def _view_clip(result: Mapping[str, Any], view_name: str) -> Any:
+    direct = result.get(f"{view_name}_clip")
+    if direct:
+        return direct
+    view = result.get(view_name)
+    if isinstance(view, Mapping):
+        return view.get("clip_path") or view.get("annotated_clip_path")
+    return None
+
+
 def _query_result_row(result: dict[str, Any]) -> dict[str, Any]:
     fields = (
         "index_level",
@@ -96,6 +106,12 @@ def _query_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "asset_bindings",
     )
     row = {field: result.get(field) for field in fields if result.get(field) not in (None, "", [])}
+    third_person_clip = _view_clip(result, "third_person")
+    first_person_clip = _view_clip(result, "first_person")
+    if third_person_clip:
+        row["third_person_clip"] = third_person_clip
+    if first_person_clip:
+        row["first_person_clip"] = first_person_clip
     row["score"] = result.get("score")
     row["vector_score"] = result.get("vector_score")
     row["rerank_score"] = result.get("rerank_score")
@@ -655,8 +671,8 @@ def _has_traceability(result: dict[str, Any]) -> bool:
         or _asset_binding_has("keyframe", result.get("asset_bindings"))
     )
     has_clip = bool(
-        result.get("third_person_clip")
-        or result.get("first_person_clip")
+        _view_clip(result, "third_person")
+        or _view_clip(result, "first_person")
         or _asset_binding_has("clip", result.get("asset_bindings"))
         or _asset_binding_has("video", result.get("asset_bindings"))
     )

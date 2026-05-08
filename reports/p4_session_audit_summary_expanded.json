@@ -1,6 +1,6 @@
 {
   "schema_version": "key_action_session_audit.v1",
-  "generated_at": "2026-05-08T09:19:51.486753+00:00",
+  "generated_at": "2026-05-08T09:30:54.178725+00:00",
   "session_count": 3,
   "summary": {
     "health_pass_count": 3,
@@ -2086,9 +2086,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2096,9 +2096,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2106,9 +2106,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2116,9 +2116,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2126,9 +2126,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2136,9 +2136,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2146,9 +2146,9 @@
               "result_count": 3,
               "top_result_id": "seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             },
             {
@@ -2156,9 +2156,9 @@
               "result_count": 3,
               "top_result_id": "reviewed_seg_000001_seg_000001_micro_002",
               "top_traceable": true,
-              "top_has_first_person_clip": false,
-              "top_has_third_person_clip": false,
-              "top_dual_view_clip_traceable": false,
+              "top_has_first_person_clip": true,
+              "top_has_third_person_clip": true,
+              "top_dual_view_clip_traceable": true,
               "top_keyframe_count": 3
             }
           ]

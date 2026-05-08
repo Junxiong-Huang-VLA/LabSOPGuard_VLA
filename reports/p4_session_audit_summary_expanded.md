@@ -1,6 +1,6 @@
 # P4 Session Audit Summary
 
-- Generated: `2026-05-08T09:19:51.486753+00:00`
+- Generated: `2026-05-08T09:30:54.178725+00:00`
 - Sessions audited: `3`
 - Health pass: `3/3`
 - QA pass: `1/3`
@@ -40,14 +40,14 @@
 | `2190fe06-3619-45fc-96ef-1bb8afb9bdf9` | `查找移液操作片段` | 3 | `seg_000004` | `True` | `True` | 0 |
 | `2190fe06-3619-45fc-96ef-1bb8afb9bdf9` | `查找样品处理片段` | 3 | `seg_000002_micro_001` | `True` | `True` | 3 |
 | `2190fe06-3619-45fc-96ef-1bb8afb9bdf9` | `查找记录读数片段` | 3 | `seg_000001_micro_002` | `True` | `True` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `balance weighing` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `pipetting liquid transfer` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `sample handling` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `recording balance readout` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找使用天平称量的片段` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找移液操作片段` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找样品处理片段` | 3 | `seg_000001_micro_002` | `True` | `False` | 3 |
-| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找记录读数片段` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `False` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `balance weighing` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `pipetting liquid transfer` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `sample handling` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `recording balance readout` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找使用天平称量的片段` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找移液操作片段` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找样品处理片段` | 3 | `seg_000001_micro_002` | `True` | `True` | 3 |
+| `3ccd635c-217e-40dd-9922-0e1e397739ce` | `查找记录读数片段` | 3 | `reviewed_seg_000001_seg_000001_micro_002` | `True` | `True` | 3 |
 | `53ca6efe-a100-4e86-b041-7c98e2fcc662` | `balance weighing` | 3 | `seg_000004_micro_001` | `True` | `True` | 3 |
 | `53ca6efe-a100-4e86-b041-7c98e2fcc662` | `pipetting liquid transfer` | 3 | `seg_000001_micro_003` | `True` | `True` | 3 |
 | `53ca6efe-a100-4e86-b041-7c98e2fcc662` | `sample handling` | 3 | `seg_000001_micro_002` | `True` | `True` | 3 |
