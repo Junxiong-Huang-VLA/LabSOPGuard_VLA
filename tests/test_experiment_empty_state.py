@@ -338,6 +338,17 @@ def test_professional_report_generation_syncs_to_material_delivery(tmp_path, mon
 
     delivery_matches = list((tmp_path / 'outputs' / 'material_references').glob(f'*/{REPORT_DIR_NAME}/professional_report_qwen36max.pdf'))
     assert delivery_matches
+    delivery_root = delivery_matches[0].parents[1]
+    delivery_manifest = json.loads((delivery_root / 'manifest.json').read_text(encoding='utf-8'))
+    delivery_readme = (delivery_root / 'README.md').read_text(encoding='utf-8')
+    delivery_rows = [
+        json.loads(line)
+        for line in (delivery_root / '素材索引.jsonl').read_text(encoding='utf-8').splitlines()
+        if line.strip()
+    ]
+    assert delivery_manifest['report_count'] == 4
+    assert '专业报告: 4 files' in delivery_readme
+    assert all(delivery_root in Path(row['stored_file']).parents for row in delivery_rows if row.get('asset_kind') == REPORT_DIR_NAME)
 
 
 def test_material_search_rebuilds_index_and_filters(tmp_path):

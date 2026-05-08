@@ -9,25 +9,28 @@ export default function DualVideoPlayer({
   firstPersonUrl,
   thirdPersonUrl,
   seekRequest,
+  timeOffsetSec = 0,
 }: {
   firstPersonUrl?: string
   thirdPersonUrl?: string
   seekRequest?: DualVideoPlayerHandle | null
+  timeOffsetSec?: number
 }) {
   const firstRef = useRef<HTMLVideoElement>(null)
   const thirdRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     if (seekRequest?.seekTo == null) return
+    const relativeTime = Math.max(0, seekRequest.seekTo - timeOffsetSec)
     for (const ref of [firstRef, thirdRef]) {
-      if (ref.current) ref.current.currentTime = Math.max(0, seekRequest.seekTo)
+      if (ref.current) ref.current.currentTime = relativeTime
     }
-  }, [seekRequest?.seekTo, seekRequest?.token])
+  }, [seekRequest?.seekTo, seekRequest?.token, timeOffsetSec])
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <VideoPane title="第一视角" url={firstPersonUrl} refObject={firstRef} />
-      <VideoPane title="第三视角" url={thirdPersonUrl} refObject={thirdRef} />
+      <VideoPane title="第三人称（俯视桌面）" url={thirdPersonUrl} refObject={thirdRef} />
+      <VideoPane title="第一人称（操作者视角）" url={firstPersonUrl} refObject={firstRef} />
     </div>
   )
 }

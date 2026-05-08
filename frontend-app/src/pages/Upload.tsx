@@ -4,19 +4,22 @@ import { ArrowLeft, CheckCircle2, FileVideo2, Loader2, UploadCloud } from 'lucid
 import { experimentApi } from '../api'
 import { EmptyEvidence, EvidenceBadge, EvidenceCard, PageHero, primaryButtonClass, secondaryButtonClass } from '../components/EvidenceUI'
 
-type Slot = 'first' | 'third' | 'supplemental'
+type Slot = 'first' | 'third' | 'top' | 'bottom'
 
 export default function Upload() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [files, setFiles] = useState<Record<Slot, File[]>>({ first: [], third: [], supplemental: [] })
+  const [contextText, setContextText] = useState('')
+  const [protocolText, setProtocolText] = useState('')
+  const [sessionStartTime, setSessionStartTime] = useState('')
+  const [files, setFiles] = useState<Record<Slot, File[]>>({ first: [], third: [], top: [], bottom: [] })
   const [progress, setProgress] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const allFiles = useMemo(() => [...files.first, ...files.third, ...files.supplemental], [files])
-  const canSubmit = title.trim() && allFiles.length > 0 && !submitting
+  const allFiles = useMemo(() => [...files.first, ...files.third, ...files.top, ...files.bottom], [files])
+  const canSubmit = Boolean(title.trim()) && files.first.length > 0 && files.third.length > 0 && !submitting
 
   function updateFiles(slot: Slot, nextFiles: FileList | null) {
     setFiles(previous => ({ ...previous, [slot]: Array.from(nextFiles || []) }))
@@ -28,19 +31,26 @@ export default function Upload() {
     setError(null)
     setProgress(0)
     try {
-      const created = await experimentApi.create({ title: title.trim(), description: description.trim() })
+      const created = await experimentApi.create({
+        title: title.trim(),
+        description: description.trim(),
+        context_text: contextText.trim() || undefined,
+        protocol_text: protocolText.trim() || undefined,
+      })
       await experimentApi.uploadAndAnalyze(
         created.experiment_id,
         {
           firstPersonVideo: files.first[0] || null,
           thirdPersonVideo: files.third[0] || null,
-          topVideo: files.supplemental[0] || null,
+          topVideo: files.top[0] || null,
+          bottomVideo: files.bottom[0] || null,
+          sessionStartTime: sessionStartTime || null,
         },
         setProgress,
       )
       navigate(`/experiments/${created.experiment_id}/workspace`)
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : '上传失败')
+      setError(exc instanceof Error ? exc.message : '上传分析失败')
     } finally {
       setSubmitting(false)
     }
@@ -51,7 +61,7 @@ export default function Upload() {
       <PageHero
         eyebrow={<Link to="/experiments" className="hover:text-slate-900">实验队列</Link>}
         title="采集导入"
-        description="面向第一视角、第三视角和补充视角的视频导入。上传后立即进入分析与关键动作证据抽取流程。"
+        description="上传第一视角和第三视角视频后，系统会自动创建实验并启动关键动作、YOLO 标注、VLM 场景理解、关键素材和报告生成。"
         actions={(
           <Link to="/experiments" className={secondaryButtonClass()}>
             <ArrowLeft className="h-4 w-4" />
@@ -65,18 +75,37 @@ export default function Upload() {
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-700">实验名称</span>
-              <input value={title} onChange={event => setTitle(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="例如：ELISA 加样过程" />
+              <input value={title} onChange={event => setTitle(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="例如：固体称量实验" />
             </label>
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-700">实验描述</span>
               <input value={description} onChange={event => setDescription(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="批次、样本或 SOP 摘要" />
             </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-700">全局开始时间</span>
+              <input type="datetime-local" value={sessionStartTime} onChange={event => setSessionStartTime(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            </label>
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-semibold leading-6 text-blue-800">
+              时间会进入双视角对齐和检索元数据；没有精确开始时间时可留空，后端仍会按 dry-run / 本地视频路径运行。
+            </div>
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          <div className="mt-5 grid gap-4 lg:grid-cols-4">
             <UploadSlot title="第一视角" helper="操作者佩戴/近距视角" files={files.first} onChange={list => updateFiles('first', list)} />
             <UploadSlot title="第三视角" helper="台面/环境固定视角" files={files.third} onChange={list => updateFiles('third', list)} />
-            <UploadSlot title="补充视角" helper="可选视频，同步进入分析" files={files.supplemental} onChange={list => updateFiles('supplemental', list)} multiple />
+            <UploadSlot title="顶部视角" helper="可选，进入多视角对齐" files={files.top} onChange={list => updateFiles('top', list)} />
+            <UploadSlot title="底部视角" helper="可选，补充微片段证据" files={files.bottom} onChange={list => updateFiles('bottom', list)} />
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-700">实验上下文</span>
+              <textarea value={contextText} onChange={event => setContextText(event.target.value)} rows={5} className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="样品、材料、目标、已知异常或现场备注" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-700">SOP / 协议文本</span>
+              <textarea value={protocolText} onChange={event => setProtocolText(event.target.value)} rows={5} className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="步骤、参数、检查点或实验流程文本" />
+            </label>
           </div>
 
           {error && <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
@@ -97,13 +126,15 @@ export default function Upload() {
             <CheckRow ok={Boolean(title.trim())} label="实验名称已填写" />
             <CheckRow ok={files.first.length > 0} label="第一视角视频" />
             <CheckRow ok={files.third.length > 0} label="第三视角视频" />
+            <CheckRow ok={Boolean(sessionStartTime)} label={sessionStartTime ? '已提供全局开始时间' : '可选：全局开始时间'} />
+            <CheckRow ok={Boolean(contextText.trim() || protocolText.trim())} label="可选：上下文 / SOP 文本" />
             <CheckRow ok={allFiles.length > 0} label={`${allFiles.length} 个视频待上传`} />
           </div>
           <button type="button" disabled={!canSubmit} onClick={() => void submit()} className={`${primaryButtonClass('blue')} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50`}>
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-            创建并分析
+            上传实验分析
           </button>
-          <EmptyEvidence title="Dry-run 兼容" description="没有真实视频或 ffmpeg 时，后端 dry-run 仍可返回可审阅的占位状态。" />
+          <EmptyEvidence title="等待上传" description="至少选择第一视角和第三视角视频后可启动分析。" />
         </EvidenceCard>
       </div>
     </div>
@@ -131,8 +162,8 @@ function UploadSlot({ title, helper, files, onChange, multiple = false }: { titl
 function CheckRow({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2">
-      <CheckCircle2 className={`h-4 w-4 ${ok ? 'text-emerald-600' : 'text-slate-300'}`} />
-      {label}
+      <CheckCircle2 className={`h-4 w-4 ${ok ? 'text-emerald-500' : 'text-slate-300'}`} />
+      <span>{label}</span>
     </div>
   )
 }

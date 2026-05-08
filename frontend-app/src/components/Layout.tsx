@@ -4,6 +4,7 @@ import { prefetchExperimentsList } from '../api'
 export default function Layout() {
   const location = useLocation()
   const isExperimentArea = location.pathname.startsWith('/experiments') || location.pathname.startsWith('/upload')
+  const isWorkspaceMaterials = location.pathname.startsWith('/materials')
   const linkClass = (active: boolean) => `relative px-2 py-2 text-sm font-semibold transition-colors sm:px-3 sm:py-5 ${
     active
       ? 'text-blue-600 after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-blue-600'
@@ -18,7 +19,7 @@ export default function Layout() {
             <Link to="/experiments" onMouseEnter={prefetchExperimentsList} onFocus={prefetchExperimentsList} className="flex min-w-0 items-center gap-2 sm:gap-3">
               <img src="/realityloop-logo.png" alt="RealityLoop logo" className="h-8 w-8 shrink-0 object-contain sm:h-10 sm:w-10" />
               <h1 className="truncate text-base font-bold tracking-tight text-slate-950 sm:text-xl">
-                RealityLoop 实验室SOP态势感知理解平台
+                RealityLoop Key Action 索引平台
               </h1>
             </Link>
 
@@ -26,8 +27,8 @@ export default function Layout() {
               <Link to="/experiments" onMouseEnter={prefetchExperimentsList} onFocus={prefetchExperimentsList} className={linkClass(isExperimentArea)}>
                 实验列表 Experiments
               </Link>
-              <Link to="/ptz-tracker" className={linkClass(location.pathname.startsWith('/ptz-tracker'))}>
-                云台跟随 PTZ
+              <Link to="/materials" className={linkClass(isWorkspaceMaterials)}>
+                全局素材 Materials
               </Link>
             </nav>
           </div>

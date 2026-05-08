@@ -217,7 +217,10 @@ class VideoAnalysisPipeline:
                 self.vlm_client = DashScopeVLClient(
                     api_key=vlm_api_key,
                     base_url=vlm_base_url,
-                    model="qwen-vl-max",
+                    model=os.environ.get("KEY_ACTION_VLM_MODEL")
+                    or os.environ.get("QWEN_VL_MODEL")
+                    or os.environ.get("VLM_MODEL")
+                    or DashScopeVLClient.DEFAULT_MODEL,
                 )
             except Exception:
                 self.vlm_client = None

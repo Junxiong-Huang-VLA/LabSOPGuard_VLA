@@ -21,6 +21,7 @@ from labsopguard.material_publishing.archive_planner import ArchivePlanner
 from labsopguard.material_publishing.semantic_enhancer import QwenVlmDisplayNameEnhancer
 from labsopguard.material_publishing.uploaders import uploader_for
 from labsopguard.material_maintenance import (
+    check_workspace_published_materials_lifecycle,
     rebuild_workspace_published_materials_index,
     query_workspace_published_materials,
     record_workspace_published_material_click,
@@ -266,6 +267,375 @@ def test_published_materials_api_limit_preserves_total_and_reports_returned():
         main._EXPERIMENTS.pop(exp_id, None)
         if exp_dir.exists():
             shutil.rmtree(exp_dir)
+
+
+def test_experiment_published_materials_prefers_global_formal_delivery_folder():
+    import shutil
+    import backend.main as main
+
+    exp_id = "_pytest_formal_material_delivery_api"
+    exp_dir = main.PROJECT_ROOT / "outputs" / "experiments" / exp_id
+    delivery_root = main.PROJECT_ROOT / "outputs" / "material_references" / "正式素材交付测试_20260508"
+    for path in (exp_dir, delivery_root):
+        if path.exists():
+            shutil.rmtree(path)
+    main._EXPERIMENTS.pop(exp_id, None)
+    try:
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        (exp_dir / "experiment.json").write_text(
+            json.dumps(
+                {
+                    "experiment_id": exp_id,
+                    "title": "正式素材交付测试",
+                    "created_at": "2026-05-08T09:30:00+08:00",
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        keyframe_dir = delivery_root / "关键帧"
+        clip_dir = delivery_root / "关键片段"
+        keyframe_dir.mkdir(parents=True, exist_ok=True)
+        clip_dir.mkdir(parents=True, exist_ok=True)
+        frame = keyframe_dir / "手与天平操作_20260508.jpg"
+        clip = clip_dir / "手与天平操作_20260508.mp4"
+        frame.write_bytes(b"jpg")
+        clip.write_bytes(b"mp4")
+        rows = [
+            {
+                "schema_version": "material_reference.item.v1",
+                "asset_kind": "关键帧",
+                "material_type": "关键帧",
+                "action_name": "手与天平操作",
+                "stored_file": str(frame),
+                "stored_filename": frame.name,
+                "primary_object": "balance",
+                "review_status": "accepted",
+            },
+            {
+                "schema_version": "material_reference.item.v1",
+                "asset_kind": "关键片段",
+                "material_type": "关键片段",
+                "action_name": "手与天平操作",
+                "stored_file": str(clip),
+                "stored_filename": clip.name,
+                "primary_object": "balance",
+                "review_status": "accepted",
+            },
+        ]
+        (delivery_root / "素材索引.jsonl").write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+            encoding="utf-8",
+        )
+        (delivery_root / "manifest.json").write_text(
+            json.dumps({"formal_material_references": str(delivery_root)}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        client = TestClient(main.app)
+        response = client.get(f"/api/v1/experiments/{exp_id}/materials/published")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["total"] == 2
+        assert payload["source"] == str(delivery_root)
+        frame_item = next(item for item in payload["items"] if item["asset_kind"] == "关键帧")
+        clip_item = next(item for item in payload["items"] if item["asset_kind"] == "关键片段")
+        assert frame_item["frame_path"] == str(frame)
+        assert clip_item["clip_file_path"] == str(clip)
+        assert frame_item["preview_url"].startswith(f"/api/v1/experiments/{exp_id}/material-references/files/")
+        assert clip_item["clip_url"].startswith(f"/api/v1/experiments/{exp_id}/material-references/files/")
+        assert client.get(frame_item["preview_url"]).status_code == 200
+        assert client.get(clip_item["clip_url"]).status_code == 200
+
+        reindex = client.post("/api/v1/materials/published/reindex", headers={"X-Operator-Role": "admin"})
+        assert reindex.status_code == 200
+        workspace = client.get("/api/v1/materials/published?limit=500", headers={"X-Operator-Role": "admin"})
+        assert workspace.status_code == 200
+        workspace_items = [item for item in workspace.json()["items"] if item.get("experiment_id") == exp_id]
+        assert len(workspace_items) == 2
+        workspace_frame = next(item for item in workspace_items if item["preview_path"])
+        workspace_clip = next(item for item in workspace_items if item["clip_path"])
+        assert workspace_frame["preview_url"].startswith(f"/api/v1/experiments/{exp_id}/material-references/files/")
+        assert workspace_clip["clip_url"].startswith(f"/api/v1/experiments/{exp_id}/material-references/files/")
+        assert client.get(workspace_frame["preview_url"]).status_code == 200
+        assert client.get(workspace_clip["clip_url"]).status_code == 200
+    finally:
+        main._EXPERIMENTS.pop(exp_id, None)
+        for path in (exp_dir, delivery_root):
+            if path.exists():
+                shutil.rmtree(path)
+
+
+def test_workspace_published_materials_indexes_formal_material_references_without_publish_json(tmp_path: Path):
+    experiments_root = tmp_path / "outputs" / "experiments"
+    exp_id = "exp_formal_workspace_index"
+    exp_dir = experiments_root / exp_id
+    delivery_root = tmp_path / "outputs" / "material_references" / "正式素材交付测试_20260508"
+    keyframe_dir = delivery_root / "关键帧"
+    clip_dir = delivery_root / "关键片段"
+    report_dir = delivery_root / "专业报告"
+    keyframe_dir.mkdir(parents=True, exist_ok=True)
+    clip_dir.mkdir(parents=True, exist_ok=True)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    exp_dir.mkdir(parents=True, exist_ok=True)
+    (exp_dir / "experiment.json").write_text(
+        json.dumps(
+            {
+                "experiment_id": exp_id,
+                "title": "正式素材交付测试",
+                "created_at": "2026-05-08T09:30:00+08:00",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    rows = []
+    for index, (primary_object, action_object) in enumerate((("container", "容器"), ("beaker", "烧杯")), start=1):
+        frame = keyframe_dir / f"手与{action_object}操作_20260508_{index:02d}.jpg"
+        clip = clip_dir / f"手与{action_object}操作_20260508.mp4"
+        frame.write_bytes(b"jpg")
+        clip.write_bytes(b"mp4")
+        for asset_kind, path in (("关键帧", frame), ("关键片段", clip)):
+            rows.append(
+                {
+                    "schema_version": "material_reference.item.v1",
+                    "asset_kind": asset_kind,
+                    "material_type": asset_kind,
+                    "action_name": f"手与{action_object}操作",
+                    "candidate_id": f"candidate_{primary_object}_{asset_kind}",
+                    "micro_segment_id": f"micro_{index}",
+                    "stored_file": str(path),
+                    "stored_filename": path.name,
+                    "primary_object": primary_object,
+                    "review_status": "accepted",
+                    "start_sec": float(index),
+                    "end_sec": float(index + 1),
+                    "yolo_recheck": {
+                        "status": "passed",
+                        "primary_object": primary_object,
+                        "valid_evidence_count": 3,
+                    },
+                    "vlm_semantics": {
+                        "status": "aligned",
+                        "model": "qwen3.6-plus",
+                        "description": "戴手套操作烧杯并进行 pouring liquid" if primary_object == "beaker" else "戴手套操作容器",
+                        "physical_action": "pouring_liquid" if primary_object == "beaker" else "handling_container",
+                        "confirmed_objects": [primary_object, "gloved_hand"],
+                    },
+                }
+            )
+    report = report_dir / "professional_report_qwen36max.pdf"
+    report.write_bytes(b"%PDF")
+    rows.append(
+        {
+            "schema_version": "material_reference.item.v1",
+            "asset_kind": "专业报告",
+            "material_type": "专业报告",
+            "role": "professional_report_pdf",
+            "stored_file": str(report),
+            "file_name": report.name,
+            "review_status": "accepted",
+        }
+    )
+    (delivery_root / "素材索引.jsonl").write_text(
+        "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    index_path = tmp_path / "published_materials.sqlite"
+    rebuild = rebuild_workspace_published_materials_index(experiments_root, index_path)
+    assert rebuild["total"] == 4
+    assert rebuild["experiments"][0]["source"] == "formal_material_references"
+    assert rebuild["experiments"][0]["published_count"] == 4
+
+    queried = query_workspace_published_materials(index_path, limit=10)
+    assert queried["total"] == 4
+    assert {item["event_type"] for item in queried["items"]} == {"手与容器操作", "手与烧杯操作"}
+    assert all(item["event_type"] != "专业报告" for item in queried["items"])
+    assert sum(1 for item in queried["items"] if item["preview_path"]) == 2
+    assert sum(1 for item in queried["items"] if item["clip_path"]) == 2
+    assert query_workspace_published_materials(index_path, text="烧杯", limit=10)["total"] == 2
+    assert query_workspace_published_materials(index_path, text="容器操作", limit=10)["total"] == 2
+    assert query_workspace_published_materials(index_path, text="戴手套操作", limit=10)["total"] == 4
+    assert query_workspace_published_materials(index_path, text="pouring liquid", limit=10)["total"] == 2
+
+
+def test_workspace_published_lifecycle_health_rebuilds_stale_formal_index(tmp_path: Path):
+    experiments_root = tmp_path / "experiments"
+    exp_id = "exp_formal_lifecycle"
+    exp_dir = experiments_root / exp_id
+    exp_dir.mkdir(parents=True)
+    (exp_dir / "experiment.json").write_text(
+        json.dumps({"experiment_id": exp_id, "title": "Lifecycle Formal", "created_at": "2026-05-08T00:00:00Z"}),
+        encoding="utf-8",
+    )
+    ref_root = tmp_path / "material_references" / "Lifecycle_Formal_20260508"
+    (ref_root / "关键帧").mkdir(parents=True)
+    (ref_root / "关键片段").mkdir(parents=True)
+
+    def write_material(filename: str, asset_kind: str, index: int) -> dict:
+        folder = "关键帧" if asset_kind == "关键帧" else "关键片段"
+        suffix = ".jpg" if asset_kind == "关键帧" else ".mp4"
+        stored_filename = f"{filename}{suffix}"
+        (ref_root / folder / stored_filename).write_bytes(b"material")
+        return {
+            "candidate_id": f"candidate_{index}",
+            "asset_kind": asset_kind,
+            "stored_file": f"{folder}/{stored_filename}",
+            "action_name": "手与烧杯操作",
+            "primary_object": "beaker",
+            "vlm_semantics": {"description": "戴手套操作烧杯并进行 pouring liquid"},
+            "yolo_recheck": {"status": "passed", "primary_object": "beaker", "valid_evidence_count": 2},
+        }
+
+    rows = [
+        write_material("frame_1", "关键帧", 1),
+        write_material("frame_2", "关键帧", 2),
+        write_material("clip_1", "关键片段", 3),
+        write_material("clip_2", "关键片段", 4),
+        {"asset_kind": "专业报告", "stored_file": "专业报告/report.md"},
+    ]
+    index_jsonl = ref_root / "素材索引.jsonl"
+    index_jsonl.write_text("\n".join(json.dumps(row, ensure_ascii=False) for row in rows), encoding="utf-8")
+    index_path = tmp_path / "published_materials.sqlite"
+    rebuild_workspace_published_materials_index(experiments_root, index_path)
+
+    healthy = check_workspace_published_materials_lifecycle(experiments_root, index_path)
+    assert healthy["status"] == "ok"
+    assert healthy["sqlite_count"] == 4
+    assert healthy["expected_indexable_count"] == 4
+    assert healthy["formal_jsonl_material_count"] == 4
+    assert healthy["formal_report_count"] == 1
+
+    rows.append(write_material("frame_3", "关键帧", 5))
+    index_jsonl.write_text("\n".join(json.dumps(row, ensure_ascii=False) for row in rows), encoding="utf-8")
+
+    stale = check_workspace_published_materials_lifecycle(experiments_root, index_path)
+    assert stale["status"] == "needs_rebuild"
+    assert stale["sqlite_count"] == 4
+    assert stale["expected_indexable_count"] == 5
+    assert {warning["code"] for warning in stale["warnings"]} & {"count_mismatch", "stale_index"}
+
+    rebuilt = check_workspace_published_materials_lifecycle(experiments_root, index_path, auto_rebuild=True)
+    assert rebuilt["status"] == "rebuilt"
+    assert rebuilt["sqlite_count"] == 5
+    assert rebuilt["expected_indexable_count"] == 5
+    assert rebuilt["warnings_before_rebuild"]
+
+
+def test_material_candidate_approval_api_rebuilds_workspace_published_index():
+    import shutil
+    import backend.main as main
+    from labsopguard.material_maintenance import query_workspace_published_materials
+
+    exp_id = "_pytest_candidate_approval_reindexes_workspace"
+    exp_dir = main.PROJECT_ROOT / "outputs" / "experiments" / exp_id
+    delivery_root = main.PROJECT_ROOT / "outputs" / "material_references" / "审批索引刷新测试_20260508"
+    for path in (exp_dir, delivery_root):
+        if path.exists():
+            shutil.rmtree(path)
+    main._EXPERIMENTS.pop(exp_id, None)
+    try:
+        key_action_dir = exp_dir / "key_action_index"
+        candidate_root = exp_dir / "_material_review_queue"
+        candidate_frame_dir = candidate_root / "关键帧"
+        candidate_clip_dir = candidate_root / "关键片段"
+        candidate_frame_dir.mkdir(parents=True, exist_ok=True)
+        candidate_clip_dir.mkdir(parents=True, exist_ok=True)
+        (exp_dir / "experiment.json").write_text(
+            json.dumps(
+                {
+                    "experiment_id": exp_id,
+                    "title": "审批索引刷新测试",
+                    "created_at": "2026-05-08T09:30:00+08:00",
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        key_action_dir.mkdir(parents=True, exist_ok=True)
+        frame = candidate_frame_dir / "手与烧杯操作_20260508.jpg"
+        clip = candidate_clip_dir / "手与烧杯操作_20260508.mp4"
+        frame.write_bytes(b"jpg")
+        clip.write_bytes(b"mp4")
+        rows = [
+            {
+                "schema_version": "material_reference.item.v1",
+                "asset_kind": "关键帧",
+                "material_type": "关键帧",
+                "candidate_id": "candidate_frame",
+                "candidate_group_id": "candidate_group_beaker",
+                "candidate_status": "pending",
+                "review_status": "pending",
+                "recommended": True,
+                "stored_file": str(frame),
+                "stored_filename": frame.name,
+                "action_name": "手与烧杯操作",
+                "primary_object": "beaker",
+                "start_sec": 1.0,
+                "end_sec": 2.0,
+                "exists": True,
+                "yolo_recheck": {"status": "passed", "primary_object": "beaker", "valid_evidence_count": 3},
+                "vlm_semantics": {
+                    "status": "aligned",
+                    "model": "qwen3.6-plus",
+                    "description": "戴手套操作烧杯并进行 pouring liquid",
+                    "physical_action": "pouring_liquid",
+                },
+            },
+            {
+                "schema_version": "material_reference.item.v1",
+                "asset_kind": "关键片段",
+                "material_type": "关键片段",
+                "candidate_id": "candidate_clip",
+                "candidate_group_id": "candidate_group_beaker",
+                "candidate_status": "pending",
+                "review_status": "pending",
+                "recommended": True,
+                "stored_file": str(clip),
+                "stored_filename": clip.name,
+                "action_name": "手与烧杯操作",
+                "primary_object": "beaker",
+                "start_sec": 1.0,
+                "end_sec": 2.0,
+                "exists": True,
+                "yolo_recheck": {"status": "passed", "primary_object": "beaker", "valid_evidence_count": 3},
+                "vlm_semantics": {
+                    "status": "aligned",
+                    "model": "qwen3.6-plus",
+                    "description": "戴手套操作烧杯并进行 pouring liquid",
+                    "physical_action": "pouring_liquid",
+                },
+            },
+        ]
+        (candidate_root / "素材候选索引.jsonl").write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+            encoding="utf-8",
+        )
+
+        client = TestClient(main.app)
+        response = client.post(
+            f"/api/v1/experiments/{exp_id}/materials/candidates/candidate_group_beaker/approve",
+            json={"reviewer": "pytest"},
+            headers={"X-Operator-Role": "admin"},
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["approval"]["approved_count"] == 2
+        assert payload["workspace_published_materials_reindex"]["total"] >= 2
+
+        queried = query_workspace_published_materials(main._workspace_published_materials_index_path(), text="pouring liquid", limit=500)
+        current = [item for item in queried["items"] if item.get("experiment_id") == exp_id]
+        assert len(current) == 2
+    finally:
+        main._EXPERIMENTS.pop(exp_id, None)
+        for path in (exp_dir, delivery_root):
+            if path.exists():
+                shutil.rmtree(path)
+        rebuild_workspace_published_materials_index(
+            main.PROJECT_ROOT / "outputs" / "experiments",
+            main._workspace_published_materials_index_path(),
+        )
 
 
 def test_material_timeline_limit_and_etag_cache():

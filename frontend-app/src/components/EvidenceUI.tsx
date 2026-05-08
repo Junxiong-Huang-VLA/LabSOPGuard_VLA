@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { AlertCircle, CheckCircle2, Clock3, Loader2 } from 'lucide-react'
 
@@ -27,8 +27,8 @@ export function EvidenceBadge({ children, tone = 'slate', className = '' }: { ch
   return <span className={`inline-flex min-h-6 items-center rounded-md px-2 py-0.5 text-xs font-bold ring-1 ${toneClasses[tone].soft} ${className}`}>{children}</span>
 }
 
-export function EvidenceCard({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/70 ${className}`}>{children}</section>
+export function EvidenceCard({ children, className = '', ...props }: { children: ReactNode; className?: string } & HTMLAttributes<HTMLElement>) {
+  return <section className={`rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/70 ${className}`} {...props}>{children}</section>
 }
 
 export function MetricTile({ label, value, helper, tone = 'slate', Icon }: { label: string; value: ReactNode; helper?: ReactNode; tone?: Tone; Icon?: LucideIcon }) {

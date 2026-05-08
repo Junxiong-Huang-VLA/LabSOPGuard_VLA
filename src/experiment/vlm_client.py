@@ -38,20 +38,30 @@ class VLMSceneDescription:
     inference_time_ms: int
 
 
+def default_vlm_model() -> str:
+    return (
+        os.environ.get("KEY_ACTION_VLM_MODEL")
+        or os.environ.get("QWEN_VL_MODEL")
+        or os.environ.get("VLM_MODEL")
+        or "qwen3.6-plus"
+    )
+
+
 class DashScopeVLClient:
     """
     DashScope Qwen-VL 客户端。
-    支持 qwen-vl-max, qwen-vl-plus, qwen2-vl-7b-instruct 等模型。
+    默认使用 2026-05-07 固化的 key-action VLM assist 模型。
+    仍可通过 KEY_ACTION_VLM_MODEL/QWEN_VL_MODEL/VLM_MODEL 或构造参数覆盖。
     """
 
-    DEFAULT_MODEL = "qwen-vl-max"
+    DEFAULT_MODEL = default_vlm_model()
     VISION_API_URL = "https://dashscope.aliyuncs.com/api/v1"
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        model: str = "qwen-vl-max",
+        model: Optional[str] = None,
         timeout: int = 60,
     ):
         self.api_key = api_key or os.environ.get("DASHSCOPE_API_KEY", "")
@@ -59,7 +69,7 @@ class DashScopeVLClient:
             "DASHSCOPE_BASE_URL", self.VISION_API_URL
         )
         self.base_url = raw_base_url.replace("/compatible-mode/v1", "/api/v1")
-        self.model = model
+        self.model = model or default_vlm_model()
         self.timeout = timeout
 
         if not self.api_key:

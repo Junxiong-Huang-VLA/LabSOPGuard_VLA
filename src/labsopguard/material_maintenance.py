@@ -5,6 +5,7 @@ import sqlite3
 import base64
 import hashlib
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -29,6 +30,11 @@ DEFAULT_SCORING_PROFILE: Dict[str, Any] = {
     "experiment_type_priorities": {},
 }
 
+KEYFRAME_KIND = "\u5173\u952e\u5e27"
+KEY_CLIP_KIND = "\u5173\u952e\u7247\u6bb5"
+REPORT_KIND = "\u4e13\u4e1a\u62a5\u544a"
+MATERIAL_INDEX_FILENAME = "\u7d20\u6750\u7d22\u5f15.jsonl"
+
 
 def _load_json(path: Path, default: Any) -> Any:
     if not path.exists():
@@ -36,10 +42,219 @@ def _load_json(path: Path, default: Any) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: List[Dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
 def experiment_id_from_dir(experiment_dir: str | Path) -> str:
     path = Path(experiment_dir)
     exp = _load_json(path / "experiment.json", {})
     return str(exp.get("experiment_id") or path.name)
+
+
+def _material_delivery_safe_name(value: str) -> str:
+    return re.sub(r'[<>:"/\\|?*\s]+', "_", value).strip("._") or "material"
+
+
+def _material_delivery_date_label(value: str) -> str:
+    if value:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).strftime("%Y%m%d")
+        except ValueError:
+            pass
+        match = re.search(r"(?<!\d)(20\d{2})[-_]?([01]\d)[-_]?([0-3]\d)(?!\d)", value)
+        if match:
+            return "".join(match.groups())
+    return datetime.now().strftime("%Y%m%d")
+
+
+def _formal_material_reference_root_for_exp(exp_dir: Path) -> Path:
+    local_root = exp_dir / "material_references"
+    for meta_path in (local_root / "manifest.json", local_root / "\u7d20\u6750\u7d22\u5f15.json"):
+        payload = _load_json(meta_path, {})
+        if not isinstance(payload, dict):
+            continue
+        candidate = payload.get("formal_material_references") or payload.get("simplified_material_references")
+        if candidate:
+            return Path(str(candidate))
+
+    exp = _load_json(exp_dir / "experiment.json", {})
+    title = str(
+        exp.get("title")
+        or exp.get("experiment_title")
+        or exp.get("experiment_name")
+        or exp.get("name")
+        or exp_dir.name
+    )
+    date = _material_delivery_date_label(str(exp.get("created_at") or exp.get("experiment_date") or exp.get("date") or exp_dir.name))
+    outputs_dir = exp_dir.parent.parent if exp_dir.parent.name == "experiments" else exp_dir.parent
+    return outputs_dir / "material_references" / _material_delivery_safe_name(f"{title}_{date}")
+
+
+def _material_reference_root_candidates(exp_dir: Path) -> List[Path]:
+    formal_root = _formal_material_reference_root_for_exp(exp_dir)
+    local_root = exp_dir / "material_references"
+    roots: List[Path] = []
+    for root in (formal_root, local_root):
+        if root not in roots:
+            roots.append(root)
+    return roots
+
+
+def _material_reference_rows_from_root(ref_root: Path) -> List[Dict[str, Any]]:
+    rows = _read_jsonl(ref_root / MATERIAL_INDEX_FILENAME)
+    if rows:
+        return rows
+    payload = _load_json(ref_root / "\u7d20\u6750\u7d22\u5f15.json", {})
+    records = payload.get("records") if isinstance(payload, dict) else None
+    return [row for row in (records or []) if isinstance(row, dict)]
+
+
+def _material_reference_root_and_rows(exp_dir: Path) -> Tuple[Optional[Path], List[Dict[str, Any]]]:
+    for ref_root in _material_reference_root_candidates(exp_dir):
+        rows = _material_reference_rows_from_root(ref_root)
+        if rows:
+            return ref_root, rows
+    return None, []
+
+
+def _material_reference_row_path(row: Dict[str, Any], ref_root: Path) -> Optional[Path]:
+    raw_path = row.get("stored_file") or row.get("stored_path") or row.get("file_path")
+    if raw_path:
+        path = Path(str(raw_path))
+        return path if path.is_absolute() else ref_root / path
+    filename = row.get("stored_filename") or row.get("file_name")
+    asset_kind = row.get("asset_kind") or row.get("material_type")
+    if filename and asset_kind:
+        return ref_root / str(asset_kind) / str(filename)
+    return None
+
+
+def _flatten_search_terms(value: Any) -> List[str]:
+    terms: List[str] = []
+    if isinstance(value, dict):
+        for nested in value.values():
+            terms.extend(_flatten_search_terms(nested))
+    elif isinstance(value, list):
+        for nested in value:
+            terms.extend(_flatten_search_terms(nested))
+    elif value is not None:
+        text = str(value).strip()
+        if text:
+            terms.append(text)
+    return terms
+
+
+def _action_object_terms(action_name: str) -> List[str]:
+    terms: List[str] = []
+    match = re.search(r"手与(.+?)操作", action_name)
+    if match:
+        obj = match.group(1).strip()
+        if obj:
+            terms.extend([obj, f"{obj} 操作", f"{obj}操作"])
+    return terms
+
+
+def _semantic_material_terms(row: Dict[str, Any]) -> List[str]:
+    terms: List[str] = []
+    action_name = str(row.get("action_name") or row.get("event_type") or "")
+    if action_name:
+        terms.extend([action_name, *_action_object_terms(action_name)])
+    primary_object = str(row.get("primary_object") or row.get("object_label") or "")
+    if primary_object:
+        terms.append(primary_object)
+    terms.extend(_flatten_search_terms(row.get("object_labels")))
+    terms.extend(_flatten_search_terms(row.get("actions")))
+
+    vlm = row.get("vlm_semantics") if isinstance(row.get("vlm_semantics"), dict) else {}
+    description = str(vlm.get("description") or "")
+    physical_action = str(vlm.get("physical_action") or "")
+    terms.extend([description, physical_action, physical_action.replace("_", " ")])
+    terms.extend(_flatten_search_terms(vlm.get("confirmed_objects")))
+    terms.extend(_flatten_search_terms(vlm.get("uncertain_objects")))
+    if "手套" in description or "gloved_hand" in terms:
+        terms.extend(["戴手套", "戴手套 操作", "戴手套操作", "gloved hand operation"])
+
+    yolo = row.get("yolo_recheck") if isinstance(row.get("yolo_recheck"), dict) else {}
+    terms.extend(
+        [
+            str(yolo.get("status") or ""),
+            str(yolo.get("primary_object") or ""),
+            str(yolo.get("valid_evidence_count") or ""),
+        ]
+    )
+    packet = vlm.get("evidence_packet") if isinstance(vlm.get("evidence_packet"), dict) else {}
+    terms.extend(_flatten_search_terms(packet.get("allowed_confirmed_objects")))
+    terms.extend(_flatten_search_terms(packet.get("top_detections")))
+    terms.extend(_flatten_search_terms(packet.get("hand_object_interactions")))
+    return [term for term in terms if term]
+
+
+def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, Any]:
+    ref_root, rows = _material_reference_root_and_rows(exp_dir)
+    if ref_root is None:
+        return {"items": [], "source": None, "source_mtime": float(exp_dir.stat().st_mtime)}
+    items: List[Dict[str, Any]] = []
+    for index, row in enumerate(rows, start=1):
+        asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
+        if asset_kind == REPORT_KIND:
+            continue
+        if asset_kind not in {KEYFRAME_KIND, KEY_CLIP_KIND}:
+            continue
+        path = _material_reference_row_path(row, ref_root)
+        if path is None or not path.is_file():
+            continue
+        start_sec = row.get("time_start", row.get("start_sec"))
+        end_sec = row.get("time_end", row.get("end_sec", start_sec))
+        item_id = str(row.get("material_id") or row.get("item_id") or row.get("candidate_id") or row.get("micro_segment_id") or f"material_reference_{index:04d}")
+        event_id = str(row.get("event_id") or row.get("micro_segment_id") or item_id)
+        display_name = str(row.get("display_name") or row.get("action_name") or path.stem)
+        primary_object = str(row.get("primary_object") or row.get("object_label") or "")
+        object_labels = row.get("object_labels") if isinstance(row.get("object_labels"), list) else []
+        if primary_object and primary_object not in object_labels:
+            object_labels = [primary_object, *object_labels]
+        published_paths = {
+            "preview": str(path) if asset_kind == KEYFRAME_KIND else "",
+            "clip": str(path) if asset_kind == KEY_CLIP_KIND else "",
+            "keyframe": str(path) if asset_kind == KEYFRAME_KIND else "",
+        }
+        items.append(
+            {
+                **row,
+                "material_id": item_id,
+                "event_id": event_id,
+                "experiment_id": row.get("experiment_id") or experiment_id,
+                "event_type": row.get("event_type") or row.get("action_name") or asset_kind,
+                "display_name": display_name,
+                "stable_name": row.get("stable_name") or path.stem,
+                "time_start": start_sec,
+                "time_end": end_sec,
+                "evidence_grade": row.get("evidence_grade") or row.get("evidence_level") or "strong",
+                "review_status": row.get("review_status") or "accepted",
+                "published_paths": {**(row.get("published_paths") or {}), **published_paths},
+                "source_container": row.get("source_container") or {"class_name": primary_object} if primary_object else row.get("source_container"),
+                "object_labels": object_labels,
+                "actions": row.get("actions") or [row.get("action_name") or asset_kind],
+                "semantic_search_terms": _semantic_material_terms(row),
+                "payload": row,
+            }
+        )
+    index_path = ref_root / MATERIAL_INDEX_FILENAME
+    source_mtime = float(index_path.stat().st_mtime) if index_path.exists() else float(ref_root.stat().st_mtime)
+    return {"items": items, "source": str(ref_root), "source_mtime": source_mtime}
 
 
 def rebuild_experiment_material_index(experiment_dir: str | Path, *, force: bool = True) -> Dict[str, Any]:
@@ -128,17 +343,25 @@ def rebuild_workspace_published_materials_index(
     for exp_dir in sorted(path for path in root.iterdir() if path.is_dir()):
         experiment_id = experiment_id_from_dir(exp_dir)
         experiment_meta = _experiment_metadata(exp_dir)
-        source_mtime = float(exp_dir.stat().st_mtime)
         published_path = exp_dir / "published_materials.json"
-        if not published_path.exists():
-            experiments.append({"experiment_id": experiment_id, "status": "skipped", "reason": "published_materials.json missing"})
-            continue
-        payload = _load_json(published_path, {})
+        source = "published_materials.json"
+        source_mtime = float(published_path.stat().st_mtime) if published_path.exists() else float(exp_dir.stat().st_mtime)
+        if published_path.exists():
+            payload = _load_json(published_path, {})
+            raw_items = [item for item in (payload.get("items") or []) if isinstance(item, dict)]
+        else:
+            fallback = _formal_material_reference_items(exp_dir, experiment_id)
+            raw_items = [item for item in (fallback.get("items") or []) if isinstance(item, dict)]
+            source = "formal_material_references"
+            source_mtime = float(fallback.get("source_mtime") or source_mtime)
+            if not raw_items:
+                experiments.append({"experiment_id": experiment_id, "status": "skipped", "reason": "published_materials.json missing"})
+                continue
         count = 0
         official_counts = _official_usage_counts(exp_dir)
         review_counts = _review_usage_counts(exp_dir)
         usage_metrics = _material_usage_metrics(exp_dir)
-        for item in payload.get("items") or []:
+        for item in raw_items:
             event_id = str(item.get("event_id") or "")
             material_id = str(item.get("material_id") or event_id)
             usage = usage_metrics.get(material_id) or usage_metrics.get(event_id) or {}
@@ -158,7 +381,7 @@ def rebuild_workspace_published_materials_index(
             if previous is None or source_mtime >= previous[0]:
                 items_by_key[workspace_key] = (source_mtime, enriched)
             count += 1
-        experiments.append({"experiment_id": experiment_id, "status": "indexed", "published_count": count})
+        experiments.append({"experiment_id": experiment_id, "status": "indexed", "source": source, "published_count": count})
     items = [entry[1] for entry in items_by_key.values()]
     conn = sqlite3.connect(str(output))
     try:
@@ -177,6 +400,175 @@ def rebuild_workspace_published_materials_index(
         "experiments": experiments,
         "index_path": str(output),
     }
+
+
+def _iso_timestamp(value: Optional[float]) -> Optional[str]:
+    if value is None:
+        return None
+    return datetime.fromtimestamp(float(value), timezone.utc).isoformat()
+
+
+def _workspace_published_sqlite_count(index_path: Path) -> Optional[int]:
+    if not index_path.exists():
+        return None
+    conn = sqlite3.connect(str(index_path))
+    try:
+        _init_workspace_published_schema(conn)
+        row = conn.execute("SELECT COUNT(*) FROM published_materials").fetchone()
+        return int(row[0]) if row else 0
+    finally:
+        conn.close()
+
+
+def _formal_reference_counts(exp_dir: Path) -> Dict[str, Any]:
+    ref_root, rows = _material_reference_root_and_rows(exp_dir)
+    if ref_root is None:
+        return {
+            "root": None,
+            "source_path": None,
+            "source_mtime": None,
+            "material_count": 0,
+            "report_count": 0,
+        }
+    material_count = 0
+    report_count = 0
+    for row in rows:
+        asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
+        if asset_kind == REPORT_KIND:
+            report_count += 1
+        elif asset_kind in {KEYFRAME_KIND, KEY_CLIP_KIND}:
+            material_count += 1
+    jsonl_path = ref_root / MATERIAL_INDEX_FILENAME
+    json_path = ref_root / "\u7d20\u6750\u7d22\u5f15.json"
+    source_path = jsonl_path if jsonl_path.exists() else json_path if json_path.exists() else ref_root
+    return {
+        "root": str(ref_root),
+        "source_path": str(source_path),
+        "source_mtime": float(source_path.stat().st_mtime) if source_path.exists() else None,
+        "material_count": material_count,
+        "report_count": report_count,
+    }
+
+
+def _workspace_published_lifecycle_snapshot(experiments_root: Path, index_path: Path) -> Dict[str, Any]:
+    expected_keys: set[str] = set()
+    formal_jsonl_material_count = 0
+    formal_report_count = 0
+    latest_source_mtime: Optional[float] = None
+    experiments: List[Dict[str, Any]] = []
+    if not experiments_root.exists():
+        experiments_root.mkdir(parents=True, exist_ok=True)
+
+    for exp_dir in sorted(path for path in experiments_root.iterdir() if path.is_dir()):
+        experiment_id = experiment_id_from_dir(exp_dir)
+        published_path = exp_dir / "published_materials.json"
+        formal_counts = _formal_reference_counts(exp_dir)
+        formal_jsonl_material_count += int(formal_counts["material_count"])
+        formal_report_count += int(formal_counts["report_count"])
+        source = "none"
+        source_path: Optional[str] = None
+        source_mtime: Optional[float] = None
+        expected_items: List[Dict[str, Any]] = []
+        if published_path.exists():
+            payload = _load_json(published_path, {})
+            expected_items = [item for item in (payload.get("items") or []) if isinstance(item, dict)]
+            source = "published_materials.json"
+            source_path = str(published_path)
+            source_mtime = float(published_path.stat().st_mtime)
+        else:
+            fallback = _formal_material_reference_items(exp_dir, experiment_id)
+            fallback_items = [item for item in (fallback.get("items") or []) if isinstance(item, dict)]
+            expected_items = fallback_items
+            if expected_items or formal_counts["material_count"]:
+                source = "formal_material_references"
+                source_path = str(fallback.get("source") or formal_counts.get("source_path") or "")
+                source_mtime = float(fallback.get("source_mtime") or formal_counts.get("source_mtime") or exp_dir.stat().st_mtime)
+        experiment_keys: set[str] = set()
+        for item in expected_items:
+            event_id = str(item.get("event_id") or "")
+            material_id = str(item.get("material_id") or event_id)
+            effective_experiment_id = str(item.get("experiment_id") or experiment_id)
+            effective_material_id = str(item.get("material_id") or material_id)
+            workspace_key = f"{effective_experiment_id}:{effective_material_id}" if effective_experiment_id else effective_material_id
+            expected_keys.add(workspace_key)
+            experiment_keys.add(workspace_key)
+        expected_count = len(experiment_keys)
+        if source_mtime is not None:
+            latest_source_mtime = max(latest_source_mtime or 0.0, source_mtime)
+        if expected_count or formal_counts["material_count"] or formal_counts["report_count"] or published_path.exists():
+            experiments.append(
+                {
+                    "experiment_id": experiment_id,
+                    "source": source,
+                    "source_path": source_path,
+                    "source_mtime": _iso_timestamp(source_mtime),
+                    "expected_indexable_count": expected_count,
+                    "formal_jsonl_material_count": formal_counts["material_count"],
+                    "formal_report_count": formal_counts["report_count"],
+                }
+            )
+
+    index_exists = index_path.exists()
+    index_mtime = float(index_path.stat().st_mtime) if index_exists else None
+    sqlite_count = _workspace_published_sqlite_count(index_path)
+    expected_total = len(expected_keys)
+    warnings: List[Dict[str, Any]] = []
+    if not index_exists:
+        warnings.append({"code": "missing_index", "message": "workspace published materials index is missing"})
+    if sqlite_count is not None and sqlite_count != expected_total:
+        warnings.append(
+            {
+                "code": "count_mismatch",
+                "message": "workspace published materials index count differs from formal source count",
+                "sqlite_count": sqlite_count,
+                "expected_indexable_count": expected_total,
+            }
+        )
+    if index_mtime is not None and latest_source_mtime is not None and index_mtime + 1e-6 < latest_source_mtime:
+        warnings.append(
+            {
+                "code": "stale_index",
+                "message": "workspace published materials index is older than a published-material source",
+                "index_mtime": _iso_timestamp(index_mtime),
+                "latest_source_mtime": _iso_timestamp(latest_source_mtime),
+            }
+        )
+
+    return {
+        "schema_version": "workspace_published_materials_lifecycle.v1",
+        "status": "ok" if not warnings else ("missing" if not index_exists else "needs_rebuild"),
+        "index_path": str(index_path),
+        "index_exists": index_exists,
+        "index_mtime": _iso_timestamp(index_mtime),
+        "latest_source_mtime": _iso_timestamp(latest_source_mtime),
+        "sqlite_count": sqlite_count,
+        "expected_indexable_count": expected_total,
+        "formal_jsonl_material_count": formal_jsonl_material_count,
+        "formal_report_count": formal_report_count,
+        "experiment_count": len(experiments),
+        "experiments": experiments,
+        "warnings": warnings,
+    }
+
+
+def check_workspace_published_materials_lifecycle(
+    experiments_root: str | Path,
+    index_path: str | Path,
+    *,
+    auto_rebuild: bool = False,
+) -> Dict[str, Any]:
+    """Report whether workspace published-materials SQLite is aligned with its formal sources."""
+    root = Path(experiments_root)
+    output = Path(index_path)
+    report = _workspace_published_lifecycle_snapshot(root, output)
+    if not auto_rebuild or report.get("status") == "ok":
+        return report
+    rebuild_result = rebuild_workspace_published_materials_index(root, output)
+    refreshed = _workspace_published_lifecycle_snapshot(root, output)
+    refreshed["status"] = "rebuilt" if refreshed.get("status") == "ok" else refreshed.get("status")
+    refreshed["warnings_before_rebuild"] = report.get("warnings") or []
+    refreshed["rebuild"] = rebuild_result
+    return refreshed
 
 
 def _init_workspace_published_schema(conn: sqlite3.Connection) -> None:
@@ -263,6 +655,8 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
     paths = item.get("published_paths") or {}
     source = item.get("source_container") or {}
     target = item.get("target_container") or {}
+    vlm = item.get("vlm_semantics") if isinstance(item.get("vlm_semantics"), dict) else {}
+    yolo = item.get("yolo_recheck") if isinstance(item.get("yolo_recheck"), dict) else {}
     text = " ".join(
         str(part)
         for part in [
@@ -272,6 +666,19 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
             item.get("actor_name"),
             source,
             target,
+            item.get("primary_object"),
+            " ".join(str(label) for label in (item.get("object_labels") or [])),
+            " ".join(str(action) for action in (item.get("actions") or [])),
+            " ".join(str(term) for term in (item.get("semantic_search_terms") or [])),
+            " ".join(_semantic_material_terms(item)),
+            vlm.get("description"),
+            vlm.get("physical_action"),
+            str(vlm.get("physical_action") or "").replace("_", " "),
+            " ".join(_flatten_search_terms(vlm.get("confirmed_objects"))),
+            " ".join(_flatten_search_terms(vlm.get("uncertain_objects"))),
+            yolo.get("status"),
+            yolo.get("primary_object"),
+            yolo.get("valid_evidence_count"),
             item.get("evidence_grade"),
             item.get("review_status"),
             " ".join(item.get("warnings") or []),

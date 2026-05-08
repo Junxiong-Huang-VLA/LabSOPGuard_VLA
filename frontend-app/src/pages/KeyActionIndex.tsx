@@ -292,6 +292,16 @@ function queryResultScore(row: QueryRow) {
   return score == null ? '-' : formatNumber(score, 3)
 }
 
+function queryResultSegmentId(row: QueryRow) {
+  const metadata = asRecord(row.metadata)
+  return recordString(row, 'segment_id') || recordString(metadata, 'segment_id') || recordString(row, 'parent_segment_id') || recordString(metadata, 'parent_segment_id')
+}
+
+function queryResultMicroId(row: QueryRow) {
+  const metadata = asRecord(row.metadata)
+  return recordString(row, 'micro_segment_id') || recordString(metadata, 'micro_segment_id')
+}
+
 export default function KeyActionIndex() {
   const { id } = useParams<{ id: string }>()
   const [status, setStatus] = useState<KeyActionStatus | null>(null)
@@ -399,6 +409,14 @@ export default function KeyActionIndex() {
     } finally {
       setQueryLoading(false)
     }
+  }
+
+  function focusQueryResult(row: QueryRow) {
+    const microId = queryResultMicroId(row)
+    const micro = microId ? microSegments.find(item => item.micro_segment_id === microId) : null
+    const segmentId = queryResultSegmentId(row) || micro?.parent_segment_id || null
+    if (segmentId) setSelectedSegmentId(segmentId)
+    if (microId) setSelectedMicroId(microId)
   }
 
   const totalDuration = segments.reduce((sum, segment) => sum + Number(segment.duration_sec || 0), 0)
@@ -518,8 +536,8 @@ export default function KeyActionIndex() {
                         </div>
                       </div>
                       <div className="grid gap-4 p-4 lg:grid-cols-2">
-                        <VideoPanel title="第一视角" clip={selectedSegment.first_person} experimentId={id} />
-                        <VideoPanel title="第三视角" clip={selectedSegment.third_person} experimentId={id} />
+                        <VideoPanel title="第三人称（俯视桌面）" clip={selectedSegment.third_person} experimentId={id} />
+                        <VideoPanel title="第一人称（操作者视角）" clip={selectedSegment.first_person} experimentId={id} />
                       </div>
                     </EvidenceCard>
 
@@ -568,6 +586,7 @@ export default function KeyActionIndex() {
                   loading={queryLoading}
                   error={queryError}
                   onSubmit={runQuery}
+                  onFocusResult={focusQueryResult}
                 />
                 <SelectionDetail segment={selectedSegment} micro={selectedMicro} advanced={viewMode === 'advanced'} />
                 {viewMode === 'advanced' && <DetectorPanel results={results} config={config} experimentId={id} />}
@@ -589,6 +608,7 @@ function ExperimentTabs({ experimentId }: { experimentId: string }) {
       <Link to={`/experiments/${experimentId}/materials`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'materials')} onFocus={() => prefetchExperimentRoute(experimentId, 'materials')} className={tabClass}>关键素材</Link>
       <Link to={`/experiments/${experimentId}/materials/timeline`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'materialTimeline')} onFocus={() => prefetchExperimentRoute(experimentId, 'materialTimeline')} className={tabClass}>素材时间轴</Link>
       <Link to={`/experiments/${experimentId}/key-actions`} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-bold text-white">关键动作</Link>
+      <Link to={`/experiments/${experimentId}/key-actions/review`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'reviewQueue')} onFocus={() => prefetchExperimentRoute(experimentId, 'reviewQueue')} className={tabClass}>Review Queue</Link>
     </nav>
   )
 }
@@ -862,6 +882,7 @@ function QueryPanel({
   loading,
   error,
   onSubmit,
+  onFocusResult,
 }: {
   query: string
   setQuery: (value: string) => void
@@ -878,6 +899,7 @@ function QueryPanel({
   loading: boolean
   error: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onFocusResult: (row: QueryRow) => void
 }) {
   return (
     <EvidenceCard className="p-4">
@@ -937,7 +959,13 @@ function QueryPanel({
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold text-slate-500">
               <span className="rounded bg-slate-50 px-2 py-1">{queryResultLevel(row)}</span>
-              {recordString(row, 'segment_id') && <span className="rounded bg-slate-50 px-2 py-1">{recordString(row, 'segment_id')}</span>}
+              {queryResultSegmentId(row) && <span className="rounded bg-slate-50 px-2 py-1">{queryResultSegmentId(row)}</span>}
+              {queryResultMicroId(row) && <span className="rounded bg-slate-50 px-2 py-1">{queryResultMicroId(row)}</span>}
+              {(queryResultSegmentId(row) || queryResultMicroId(row)) && (
+                <button type="button" onClick={() => onFocusResult(row)} className="rounded bg-blue-50 px-2 py-1 font-black text-blue-700 hover:bg-blue-100">
+                  定位证据
+                </button>
+              )}
             </div>
           </div>
         ))}

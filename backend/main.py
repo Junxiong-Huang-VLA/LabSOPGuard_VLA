@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 import uuid
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -509,16 +509,6 @@ async def app_lifespan(_: FastAPI):
     finally:
         if auth_refresh_task is not None:
             auth_refresh_task.cancel()
-        try:
-            from backend.camera_proxy import shutdown_camera_service
-            shutdown_camera_service()
-        except Exception:
-            pass
-        try:
-            from backend.ptz_proxy import shutdown_ptz_service_process
-            shutdown_ptz_service_process()
-        except Exception:
-            pass
 
 
 def _recover_orphaned_tasks() -> None:
@@ -534,7 +524,7 @@ def _recover_orphaned_tasks() -> None:
     if task_dir.exists():
         for task_file in task_dir.glob("*.json"):
             try:
-                task = json.loads(task_file.read_text(encoding="utf-8"))
+                task = json.loads(task_file.read_text(encoding="utf-8-sig"))
                 if task.get("status") in {"running", "queued"}:
                     task["status"] = "failed"
                     task["error_type"] = "server_restart"
@@ -564,26 +554,6 @@ app = FastAPI(
     version="2.0.0",
     lifespan=app_lifespan,
 )
-
-try:
-    from backend.camera_proxy import router as camera_router
-    app.include_router(camera_router)
-    logger.info("Camera proxy routes registered at /api/v1/cameras")
-except Exception as _cam_err:
-    logger.warning("Camera proxy module not loaded: %s", _cam_err)
-    try:
-        from backend.camera_streaming_degraded import router as camera_router
-        app.include_router(camera_router)
-        logger.warning("Degraded camera streaming routes registered at /api/v1/cameras")
-    except Exception as _fallback_cam_err:
-        logger.warning("Degraded camera streaming module not loaded: %s", _fallback_cam_err)
-
-try:
-    from backend.ptz_proxy import router as ptz_router
-    app.include_router(ptz_router)
-    logger.info("PTZ proxy routes registered at /api/v1/ptz-tracker")
-except Exception as _ptz_err:
-    logger.warning("PTZ tracker module not loaded: %s", _ptz_err)
 
 if make_asgi_app is not None:
     metrics_app = make_asgi_app()
@@ -1212,7 +1182,7 @@ def _load_experiments() -> List[Dict[str, Any]]:
                 json_file = exp_sub / "experiment.json"
                 if json_file.exists():
                     try:
-                        loaded.append(json.loads(json_file.read_text(encoding="utf-8")))
+                        loaded.append(json.loads(json_file.read_text(encoding="utf-8-sig")))
                     except Exception:
                         pass
     return loaded
@@ -1282,7 +1252,7 @@ def _normalize_experiment_dict(exp: Dict[str, Any]) -> Dict[str, Any]:
 
 def _load_json_if_exists(path: Path):
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     return None
 
 
@@ -2192,8 +2162,66 @@ def _read_jsonl_rows(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-def _material_reference_rows(exp_dir: Path) -> List[Dict[str, Any]]:
-    ref_root = exp_dir / "material_references"
+def _material_delivery_safe_name(value: str) -> str:
+    return re.sub(r'[<>:"/\\|?*\s]+', "_", value).strip("._") or "material"
+
+
+def _material_delivery_date_label(value: str) -> str:
+    if value:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).strftime("%Y%m%d")
+        except ValueError:
+            pass
+        match = re.search(r"(?<!\d)(20\d{2})[-_]?([01]\d)[-_]?([0-3]\d)(?!\d)", value)
+        if match:
+            return "".join(match.groups())
+    return datetime.now().strftime("%Y%m%d")
+
+
+def _formal_material_reference_root_for_exp(exp_dir: Path) -> Path:
+    local_root = exp_dir / "material_references"
+    for meta_path in (local_root / "manifest.json", local_root / "素材索引.json"):
+        payload = _load_json_if_exists(meta_path)
+        if not isinstance(payload, dict):
+            continue
+        candidate = payload.get("formal_material_references") or payload.get("simplified_material_references")
+        if candidate:
+            return Path(str(candidate))
+
+    exp = _load_json_if_exists(exp_dir / "experiment.json") or {}
+    title = str(
+        exp.get("title")
+        or exp.get("experiment_title")
+        or exp.get("experiment_name")
+        or exp.get("name")
+        or exp_dir.name
+    )
+    date = _material_delivery_date_label(str(exp.get("created_at") or exp.get("experiment_date") or exp.get("date") or exp_dir.name))
+    label = _material_delivery_safe_name(f"{title}_{date}")
+    outputs_dir = exp_dir.parent.parent if exp_dir.parent.name == "experiments" else exp_dir.parent
+    return outputs_dir / "material_references" / label
+
+
+def _material_reference_root_candidates(exp_dir: Path) -> List[Path]:
+    formal_root = _formal_material_reference_root_for_exp(exp_dir)
+    local_root = exp_dir / "material_references"
+    roots: List[Path] = []
+    for root in (formal_root, local_root):
+        if root not in roots:
+            roots.append(root)
+    return roots
+
+
+def _material_reference_root_and_rows(exp_dir: Path) -> tuple[Path, List[Dict[str, Any]]]:
+    fallback_root = exp_dir / "material_references"
+    for ref_root in _material_reference_root_candidates(exp_dir):
+        rows = _material_reference_rows_from_root(ref_root)
+        if rows:
+            return ref_root, rows
+    return fallback_root, []
+
+
+def _material_reference_rows_from_root(ref_root: Path) -> List[Dict[str, Any]]:
     index_jsonl = ref_root / "素材索引.jsonl"
     rows = _read_jsonl_rows(index_jsonl)
     if rows:
@@ -2201,6 +2229,10 @@ def _material_reference_rows(exp_dir: Path) -> List[Dict[str, Any]]:
     payload = _load_json_if_exists(ref_root / "素材索引.json")
     records = payload.get("records") if isinstance(payload, dict) else None
     return [row for row in (records or []) if isinstance(row, dict)]
+
+
+def _material_reference_rows(exp_dir: Path) -> List[Dict[str, Any]]:
+    return _material_reference_root_and_rows(exp_dir)[1]
 
 
 def _material_row_path(row: Dict[str, Any], root: Path) -> Optional[Path]:
@@ -2231,9 +2263,9 @@ def _object_labels_from_material_row(row: Dict[str, Any]) -> List[str]:
 
 
 def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, Any]:
-    ref_root = exp_dir / "material_references"
+    ref_root, rows = _material_reference_root_and_rows(exp_dir)
     items: List[Dict[str, Any]] = []
-    for index, row in enumerate(_material_reference_rows(exp_dir), start=1):
+    for index, row in enumerate(rows, start=1):
         asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
         if asset_kind == "专业报告":
             continue
@@ -2279,6 +2311,42 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
         "items": items,
         "source": str(ref_root),
     }
+
+
+def _workspace_published_payload_with_media_urls(payload: Dict[str, Any]) -> Dict[str, Any]:
+    items = payload.get("items") if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        return payload
+    updated_items: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            updated_items.append(item)
+            continue
+        updated = dict(item)
+        experiment_id = str(updated.get("experiment_id") or "").strip()
+        if experiment_id:
+            published_paths = updated.get("published_paths") if isinstance(updated.get("published_paths"), dict) else {}
+            preview_source = updated.get("preview_path") or published_paths.get("preview") or published_paths.get("keyframe")
+            clip_source = updated.get("clip_path") or published_paths.get("clip")
+            if not updated.get("preview_url") and preview_source:
+                updated["preview_url"] = _experiment_file_api_path(Path(str(preview_source)), experiment_id)
+            if not updated.get("clip_url") and clip_source:
+                updated["clip_url"] = _experiment_file_api_path(Path(str(clip_source)), experiment_id)
+        updated_items.append(updated)
+    return {**payload, "items": updated_items}
+
+
+def _rebuild_workspace_published_materials_index_quietly() -> Dict[str, Any]:
+    try:
+        from labsopguard.material_maintenance import rebuild_workspace_published_materials_index
+
+        return rebuild_workspace_published_materials_index(
+            PROJECT_ROOT / "outputs" / "experiments",
+            _workspace_published_materials_index_path(),
+        )
+    except Exception as exc:
+        logger.exception("Workspace published material reindex failed")
+        return {"status": "failed", "error": str(exc)}
 
 
 _MATERIAL_REVIEW_QUEUE_DIR_NAME = "_material_review_queue"
@@ -2386,6 +2454,82 @@ def _material_candidates_payload(experiment_id: str) -> Dict[str, Any]:
     }
 
 
+def _auto_publish_key_action_material_candidates(
+    experiment_id: str,
+    candidate_summary: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    enabled = os.environ.get("KEY_ACTION_AUTO_PUBLISH_MATERIAL_CANDIDATES", "1").strip().lower() not in {"0", "false", "no", "off"}
+    result: Dict[str, Any] = {
+        "schema_version": "key_action_material_auto_publish.v1",
+        "enabled": enabled,
+        "status": "skipped",
+        "eligible_count": 0,
+        "approved_count": 0,
+    }
+    if not enabled:
+        result["reason"] = "disabled_by_env"
+        return result
+    if not isinstance(candidate_summary, dict) or candidate_summary.get("status") == "failed":
+        result["reason"] = "candidate_generation_unavailable"
+        return result
+
+    eligible_ids: List[str] = []
+    for row in _material_candidate_rows(experiment_id):
+        if row.get("recommended") is not True:
+            continue
+        if row.get("exists") is False:
+            continue
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if not candidate_id:
+            continue
+        candidate_status = str(row.get("candidate_status") or "pending").lower()
+        review_status = str(row.get("review_status") or "pending").lower()
+        if candidate_status in {"rejected", "not_selected"} or review_status in {"rejected", "not_selected"}:
+            continue
+        yolo_recheck = row.get("yolo_recheck") if isinstance(row.get("yolo_recheck"), dict) else {}
+        if str(yolo_recheck.get("status") or "").lower() != "passed":
+            continue
+        pipeline_status = str(row.get("pipeline_status") or "").lower()
+        if pipeline_status not in {"vlm_assisted_yolo_recheck_passed", "yolo_recheck_passed_frontend_review_required"}:
+            continue
+        vlm_semantics = row.get("vlm_semantics") if isinstance(row.get("vlm_semantics"), dict) else {}
+        if str(vlm_semantics.get("status") or "").lower() in {"error", "uncertain_vlm_review", "weak_but_yolo_preserved"}:
+            continue
+        eligible_ids.append(candidate_id)
+
+    result["eligible_count"] = len(eligible_ids)
+    if not eligible_ids:
+        result["reason"] = "no_recommended_yolo_vlm_passed_candidates"
+        return result
+
+    try:
+        from key_action_indexer.material_references import approve_material_candidates  # type: ignore
+
+        approval = approve_material_candidates(
+            _key_action_output_dir(experiment_id),
+            candidate_ids=eligible_ids,
+            reviewer="key_action_pipeline",
+            notes="Auto-published recommended YOLO/VLM-passed material candidates after upload analysis.",
+        )
+    except Exception as exc:
+        logger.exception("Key-action material auto-publish failed for experiment %s", experiment_id)
+        result.update({"status": "failed", "error": str(exc)})
+        return result
+
+    approved_count = int(approval.get("approved_count") or 0) if isinstance(approval, dict) else 0
+    workspace_reindex = _rebuild_workspace_published_materials_index_quietly() if approved_count else {"status": "skipped", "reason": "no_approved_candidates"}
+    result.update(
+        {
+            "status": "completed",
+            "approved_count": approved_count,
+            "approval": approval,
+            "published_materials": _material_reference_items(_experiment_output_dir(experiment_id), experiment_id),
+            "workspace_published_materials_reindex": workspace_reindex,
+        }
+    )
+    return result
+
+
 def _published_material_items(exp_dir: Path, experiment_id: str) -> Dict[str, Any]:
     payload = _load_json_if_exists(exp_dir / "published_materials.json")
     if isinstance(payload, dict) and payload.get("items"):
@@ -2426,11 +2570,22 @@ def _professional_report_enabled() -> bool:
 
 
 def _experiment_file_api_path(path: Path, experiment_id: str) -> Optional[str]:
+    resolved_path = path.resolve()
+    exp_dir = _experiment_output_dir(experiment_id)
     try:
-        rel = path.resolve().relative_to(_experiment_output_dir(experiment_id).resolve())
+        rel = resolved_path.relative_to(exp_dir.resolve())
     except ValueError:
-        return None
-    return f"/api/v1/experiments/{experiment_id}/files/{rel.as_posix()}"
+        pass
+    else:
+        return f"/api/v1/experiments/{experiment_id}/files/{quote(rel.as_posix(), safe='/')}"
+
+    for ref_root in _material_reference_root_candidates(exp_dir):
+        try:
+            rel = resolved_path.relative_to(ref_root.resolve())
+        except ValueError:
+            continue
+        return f"/api/v1/experiments/{experiment_id}/material-references/files/{quote(rel.as_posix(), safe='/')}"
+    return None
 
 
 def _write_professional_report_html_snapshot(*, sidecar_path: Path, html_path: Path, summary: Dict[str, Any]) -> None:
@@ -2579,11 +2734,19 @@ def _generate_professional_report_for_experiment(
             output_pdf_path=report_paths["pdf"],
             logo_path=logo_path if logo_path.exists() else None,
         )
+        qwen_meta = generated.get("qwen") if isinstance(generated.get("qwen"), dict) else {}
+        report_model = (
+            qwen_meta.get("model")
+            or os.environ.get("QWEN_REPORT_MODEL")
+            or "qwen3.6-max-preview"
+        )
         summary.update(
             {
                 **generated,
                 "status": "completed",
                 "available": report_paths["pdf"].exists(),
+                "model": report_model,
+                "qwen_model": report_model,
                 "pdf_path": str(report_paths["pdf"]),
                 "html_path": str(report_paths["html"]),
                 "sidecar_path": str(report_paths["json"]),
@@ -2660,12 +2823,26 @@ def _default_key_action_yolo_model_path(view: str) -> Optional[str]:
     return None
 
 
+def _default_key_action_yolo_device() -> str:
+    configured = os.environ.get("KEY_ACTION_YOLO_DEVICE")
+    if configured is not None and configured.strip():
+        return configured.strip()
+    try:
+        import torch  # type: ignore
+
+        if torch.cuda.is_available():
+            return os.environ.get("KEY_ACTION_YOLO_CUDA_DEVICE", "0").strip() or "0"
+    except Exception:
+        pass
+    return "cpu"
+
+
 def _with_default_key_action_yolo_config(config: Dict[str, Any]) -> Dict[str, Any]:
     merged = dict(config or {})
     merged.setdefault("detector_backend", "yolo")
     merged.setdefault("yolo_scan_both_views", True)
     merged.setdefault("yolo_preferred_view", "first_person")
-    merged.setdefault("yolo_device", os.environ.get("KEY_ACTION_YOLO_DEVICE", "cpu"))
+    merged.setdefault("yolo_device", _default_key_action_yolo_device())
     merged.setdefault("yolo_conf", float(os.environ.get("KEY_ACTION_YOLO_CONF", "0.25")))
     merged.setdefault("yolo_iou", float(os.environ.get("KEY_ACTION_YOLO_IOU", "0.45")))
     first_model = _default_key_action_yolo_model_path("first_person")
@@ -2745,6 +2922,22 @@ def _read_key_action_status(experiment_id: str) -> Dict[str, Any]:
     return _key_action_status_payload(experiment_id)
 
 
+def _key_action_summary_for_experiment(experiment_id: str) -> Dict[str, Any]:
+    status = _key_action_status_payload(experiment_id)
+    summary = dict(status.get("summary") or {})
+    return {
+        "status": status.get("status", "not_started"),
+        "progress": status.get("progress", 0.0),
+        "message": status.get("message"),
+        "segment_count": int(summary.get("segment_count") or 0),
+        "micro_segment_count": int(summary.get("micro_segment_count") or 0),
+        "interaction_count": int(summary.get("interaction_count") or 0),
+        "vector_count": int(summary.get("vector_count") or 0),
+        "raw_yolo_interaction_count": int(summary.get("raw_yolo_interaction_count") or 0),
+        "source": summary.get("source"),
+    }
+
+
 def _key_action_file_url(experiment_id: str, path_value: Any) -> Optional[str]:
     if not path_value:
         return None
@@ -2802,6 +2995,8 @@ def _reconcile_key_action_status_summary(experiment_id: str, status_payload: Dic
     cv_dir = output_dir / "cv_outputs"
     segment_rows = _jsonl_row_count(metadata_dir / "key_action_segments.jsonl")
     micro_rows = _jsonl_row_count(metadata_dir / "micro_segments.jsonl")
+    vector_rows = _jsonl_row_count(metadata_dir / "vector_metadata.jsonl")
+    micro_vector_rows = _jsonl_row_count(metadata_dir / "micro_vector_metadata.jsonl")
     yolo_frame_rows = _jsonl_row_count(cv_dir / "yolo_frame_rows.jsonl")
     raw_interactions = _yolo_interaction_count_from_rows(cv_dir / "yolo_frame_rows.jsonl") if yolo_frame_rows else 0
     pipeline_summary = _load_json_if_exists(output_dir / "pipeline_summary.json") or {}
@@ -2822,6 +3017,10 @@ def _reconcile_key_action_status_summary(experiment_id: str, status_payload: Dic
             summary["raw_micro_segment_count"] = pipeline_summary.get("raw_micro_segment_count")
     if yolo_frame_rows:
         summary["yolo_frame_row_count"] = yolo_frame_rows
+    if vector_rows or micro_vector_rows:
+        summary["vector_count"] = vector_rows + micro_vector_rows
+        summary["segment_vector_count"] = vector_rows
+        summary["micro_vector_count"] = micro_vector_rows
     if raw_interactions:
         summary["interaction_count"] = raw_interactions
         summary["raw_yolo_interaction_count"] = raw_interactions
@@ -3184,6 +3383,126 @@ def _key_action_results_payload(experiment_id: str) -> Dict[str, Any]:
     }
 
 
+def _key_action_review_url(experiment_id: str, path_value: Any) -> Optional[str]:
+    if not path_value:
+        return None
+    path = Path(str(path_value))
+    if not path.is_absolute():
+        output_candidate = _key_action_output_dir(experiment_id) / path
+        exp_candidate = _experiment_output_dir(experiment_id) / path
+        path = output_candidate if output_candidate.exists() else exp_candidate
+    return _experiment_file_api_path(path, experiment_id)
+
+
+def _enrich_key_action_review_item_urls(experiment_id: str, item: Dict[str, Any]) -> Dict[str, Any]:
+    enriched = copy.deepcopy(item)
+    enriched["preview_urls"] = [
+        url
+        for url in (_key_action_review_url(experiment_id, path) for path in enriched.get("preview_paths") or [])
+        if url
+    ]
+    enriched["clip_urls"] = [
+        url
+        for url in (_key_action_review_url(experiment_id, path) for path in enriched.get("clip_paths") or [])
+        if url
+    ]
+    return enriched
+
+
+def _key_action_quality_payload(experiment_id: str) -> Dict[str, Any]:
+    try:
+        from key_action_indexer.review_queue import build_quality_convergence  # type: ignore
+
+        payload = build_quality_convergence(_key_action_output_dir(experiment_id))
+    except Exception as exc:
+        logger.exception("Key-action quality convergence failed for %s", experiment_id)
+        payload = {
+            "schema_version": "key_action_quality_convergence.error",
+            "experiment_id": experiment_id,
+            "status": "failed",
+            "error": str(exc),
+        }
+    payload["experiment_id"] = experiment_id
+    return payload
+
+
+def _key_action_review_queue_payload(experiment_id: str) -> Dict[str, Any]:
+    try:
+        from key_action_indexer.review_queue import build_review_queue  # type: ignore
+
+        payload = build_review_queue(
+            _key_action_output_dir(experiment_id),
+            material_candidates=_material_candidates_payload(experiment_id),
+        )
+    except Exception as exc:
+        logger.exception("Key-action review queue failed for %s", experiment_id)
+        payload = {
+            "schema_version": "key_action_review_queue.error",
+            "experiment_id": experiment_id,
+            "summary": {"total": 0, "pending": 0, "approved": 0, "rejected": 0, "needs_review": 0},
+            "items": [],
+            "quality": _key_action_quality_payload(experiment_id),
+            "error": str(exc),
+        }
+    payload["experiment_id"] = experiment_id
+    payload["items"] = [
+        _enrich_key_action_review_item_urls(experiment_id, item)
+        for item in (payload.get("items") or [])
+        if isinstance(item, dict)
+    ]
+    return payload
+
+
+def _key_action_evidence_adapter_payload(experiment_id: str) -> Dict[str, Any]:
+    output_dir = _key_action_output_dir(experiment_id)
+    metadata = output_dir / "metadata"
+    files = {
+        "object_tracks": metadata / "object_tracks.jsonl",
+        "panel_ocr": metadata / "panel_ocr.jsonl",
+        "equipment_panel_states": metadata / "equipment_panel_states.jsonl",
+        "liquid_state": metadata / "liquid_state.jsonl",
+        "liquid_segmentation": metadata / "liquid_segmentation.jsonl",
+        "container_state": metadata / "container_state.jsonl",
+        "container_state_events": metadata / "container_state_events.jsonl",
+        "model_observation_events": metadata / "model_observation_events.jsonl",
+        "advanced_vision_evidence": metadata / "advanced_vision_evidence.jsonl",
+    }
+    counts = {name: _jsonl_row_count(path) for name, path in files.items()}
+    try:
+        from key_action_indexer.evidence_adapter_validation import validate_evidence_adapters  # type: ignore
+
+        validation = validate_evidence_adapters(output_dir)
+    except Exception as exc:
+        logger.exception("Key-action evidence adapter validation failed for %s", experiment_id)
+        validation = {
+            "schema_version": "key_action_evidence_adapter_validation.error",
+            "status": "fail",
+            "error": str(exc),
+        }
+    return {
+        "schema_version": "key_action_advanced_evidence_adapters.v1",
+        "experiment_id": experiment_id,
+        "metadata_dir": str(metadata),
+        "protocol_doc": str(PROJECT_ROOT.parent / "docs" / "advanced_evidence_input_protocol.md"),
+        "input_contracts": {
+            "object_tracks.jsonl": "object trajectory, bbox track points, motion and identity confidence",
+            "panel_ocr.jsonl": "equipment OCR, readout, button, knob, switch or control state rows",
+            "liquid_state.jsonl": "liquid level, meniscus, flow, mask, volume or stream direction rows",
+            "container_state.jsonl": "open/closed, cap/lid, color, liquid-level or container state rows",
+        },
+        "accepted_aliases": {
+            "panel_ocr.jsonl": ["equipment_panel_states.jsonl", "equipment_panel_ocr.jsonl", "equipment_control_states.jsonl"],
+            "liquid_state.jsonl": ["liquid_segmentation.jsonl", "liquid_level_events.jsonl", "liquid_flow_events.jsonl"],
+            "container_state.jsonl": ["container_state_events.jsonl", "container_open_close_events.jsonl", "container_color_events.jsonl"],
+        },
+        "counts": counts,
+        "validation": validation,
+        "adapters": validation.get("adapters") if isinstance(validation, dict) else {},
+        "summary": validation.get("summary") if isinstance(validation, dict) else {},
+        "ready": bool(counts.get("model_observation_events") or counts.get("advanced_vision_evidence")),
+    }
+
+
 def _infer_key_action_start_time(*names: str) -> str:
     for name in names:
         match = re.search(r"(20\d{6})[-_]?(\d{6})", str(name or ""))
@@ -3199,14 +3518,18 @@ def _infer_key_action_start_time(*names: str) -> str:
 
 def _infer_key_action_camera_id(path_value: Optional[str], *, view: str) -> str:
     name = Path(str(path_value or "")).name.lower()
+    if any(token in name for token in ("bottom_view", "usb", "front_view", "front-view", "front view")):
+        return "bottom_view"
+    if any(token in name for token in ("top_view", "rgb", "top-view", "top view")):
+        return "top_view"
+    if "bottom" in name and "top" not in name:
+        return "bottom_view"
+    if "top" in name:
+        return "top_view"
     if view == "third_person":
-        if "top" in name:
-            return "top_view"
         if "overview" in name:
             return "overview"
         return "third_person"
-    if "bottom" in name:
-        return "bottom_view"
     if "first" in name or "fpv" in name or "ego" in name:
         return "first_person"
     return "first_person"
@@ -3239,6 +3562,7 @@ def _run_key_action_index_task(
             from key_action_indexer.validation import validate_video_source  # type: ignore
             from key_action_indexer.yolo_analysis import (  # type: ignore
                 enrich_key_action_index_with_yolo,
+                run_yolo_on_experiment_focus_clips,
                 run_yolo_on_segment_clips,
             )
         except Exception as exc:
@@ -3337,9 +3661,62 @@ def _run_key_action_index_task(
         except Exception as exc:
             logger.exception("Key-action material candidate generation failed for experiment %s", experiment_id)
             candidate_summary = {"status": "failed", "error": str(exc)}
+        _write_key_action_status(
+            experiment_id,
+            {
+                "progress": 0.965,
+                "message": "Publishing recommended YOLO/VLM-passed key materials",
+                "material_candidates": candidate_summary,
+            },
+        )
+        material_auto_publish = _auto_publish_key_action_material_candidates(experiment_id, candidate_summary)
+        if isinstance(candidate_summary, dict):
+            candidate_summary["auto_publish"] = material_auto_publish
         summary["material_candidates"] = candidate_summary
+        summary["material_auto_publish"] = material_auto_publish
+        try:
+            _write_key_action_status(
+                experiment_id,
+                {"progress": 0.975, "message": "Rendering continuous experiment-focus dual-view YOLO clips"},
+            )
+            focus_clip_summary = run_yolo_on_experiment_focus_clips(
+                output_dir,
+                model_path=detection_config.get("yolo_model_path"),
+                project_root=PROJECT_ROOT,
+                preferred_view=str(detection_config.get("yolo_preferred_view") or "first_person"),
+                views=["third_person"] + (["first_person"] if first_person_video_path else []),
+                model_paths_by_view={
+                    "first_person": detection_config.get("yolo_first_person_model_path"),
+                    "third_person": detection_config.get("yolo_third_person_model_path"),
+                },
+                conf=float(detection_config.get("yolo_conf", 0.25)),
+                iou=float(detection_config.get("yolo_iou", 0.45)),
+                device=str(detection_config.get("yolo_device") or os.environ.get("KEY_ACTION_YOLO_DEVICE", "cpu")),
+                detect_fps=float(os.environ.get("KEY_ACTION_YOLO_EXPERIMENT_FOCUS_FPS", os.environ.get("KEY_ACTION_YOLO_ANNOTATION_FPS", "5.0"))),
+                class_thresholds=detection_config.get("yolo_class_thresholds")
+                if isinstance(detection_config.get("yolo_class_thresholds"), dict)
+                else None,
+            )
+            summary["yolo_experiment_focus_clips"] = focus_clip_summary
+        except Exception as exc:
+            logger.exception("YOLO experiment-focus clip generation failed for experiment %s", experiment_id)
+            summary["yolo_experiment_focus_clips"] = {"available": False, "error": str(exc)}
         _write_json(output_dir / "pipeline_summary.json", summary)
         result = _key_action_results_payload(experiment_id)
+        quality_payload = _key_action_quality_payload(experiment_id)
+        quality_gate = quality_payload.get("quality_gate") if isinstance(quality_payload, dict) else None
+        if not isinstance(quality_gate, dict):
+            quality_gate = {}
+        can_mark_complete = bool(quality_gate.get("can_mark_complete"))
+        final_key_action_status = "completed" if can_mark_complete else "needs_review"
+        final_task_status = "completed" if can_mark_complete else "partial_failed"
+        final_message = (
+            "Key-action pipeline and professional report completed"
+            if can_mark_complete
+            else "Key-action outputs generated; quality gate requires review before completion"
+        )
+        summary["quality_gate"] = quality_gate
+        summary["quality_convergence"] = quality_payload
 
         exp = _load_json_if_exists(_experiment_output_dir(experiment_id) / "experiment.json") or {}
         if isinstance(exp, dict) and exp:
@@ -3359,24 +3736,54 @@ def _run_key_action_index_task(
             exp.setdefault("output_paths", {})
             exp["output_paths"] = output_paths
             exp["key_action_index"] = {
-                "status": "completed",
+                "status": final_key_action_status,
                 "segment_count": len(result.get("segments") or []),
                 "output_dir": str(output_dir),
                 "report": str(output_dir / "reports" / "mvp_validation_report.md"),
                 "material_candidates": candidate_summary,
+                "quality_gate": quality_gate,
             }
             exp.setdefault("metadata", {})["professional_report"] = professional_report
+            completed_at = _now_iso()
+            projected_step_groups = _key_action_step_groups_for_overview(experiment_id)
+            task_id = exp.get("analysis_job_id") or exp.get("run_id") or f"key_action_{experiment_id}"
+            exp["status"] = ExperimentStatus.ANALYZED.value if can_mark_complete else "partial_failed"
             exp["processing_stage"] = ProcessStage.OUTPUT_GENERATION.value
+            exp["completed_at"] = completed_at if can_mark_complete else None
+            exp["analyzed_at"] = completed_at
+            exp["analysis_job_id"] = task_id
+            exp["total_steps"] = len(projected_step_groups.get("candidate") or []) + len(projected_step_groups.get("inferred") or [])
             _save_experiment(exp)
+            _persist_experiment_task_state(
+                experiment_id,
+                {
+                    "task_id": task_id,
+                    "experiment_id": experiment_id,
+                    "status": final_task_status,
+                    "current_stage": ProcessStage.OUTPUT_GENERATION.value,
+                    "progress": 1.0 if can_mark_complete else 0.98,
+                    "message": final_message,
+                    "video_path": third_person_video_path,
+                    "started_at": _read_key_action_status(experiment_id).get("started_at"),
+                    "completed_at": completed_at if can_mark_complete else None,
+                    "output_paths": output_paths,
+                    "professional_report": professional_report,
+                    "key_action_index": exp.get("key_action_index"),
+                    "quality_gate": quality_gate,
+                    "error_type": None,
+                    "error_message": None,
+                },
+            )
 
         _write_key_action_status(
             experiment_id,
             {
-                "status": "completed",
-                "progress": 1.0,
-                "message": "Key-action pipeline and professional report completed",
-                "completed_at": _now_iso(),
+                "status": final_key_action_status,
+                "progress": 1.0 if can_mark_complete else 0.98,
+                "message": final_message,
+                "completed_at": _now_iso() if can_mark_complete else None,
                 "summary": summary,
+                "quality_gate": quality_gate,
                 "material_candidates": candidate_summary,
             },
         )
@@ -3464,14 +3871,19 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
     playable_clip_count = 0
     long_clip_count = 0
     durations: List[float] = []
+    evidence_items: List[Dict[str, Any]] = []
 
     for item in items:
         paths = _material_published_paths(item)
         clip_path = paths.get("clip") or item.get("clip_file_path") or item.get("clip_path")
         preview_path = paths.get("preview") or item.get("preview_path")
+        if not preview_path:
+            preview_path = paths.get("keyframe") or item.get("frame_path")
         keyframe_paths = paths.get("keyframes") or item.get("keyframe_paths") or []
         if not isinstance(keyframe_paths, list):
             keyframe_paths = [keyframe_paths]
+        if not keyframe_paths and paths.get("keyframe"):
+            keyframe_paths = [paths.get("keyframe")]
 
         if clip_path:
             clip_count += 1
@@ -3499,6 +3911,37 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
             warnings_count += 1
             warnings_by_type[warning_type] = warnings_by_type.get(warning_type, 0) + 1
 
+        material_path = clip_path or preview_path
+        material_url = _experiment_file_api_path(Path(str(material_path)), experiment_id) if material_path else None
+        yolo_recheck = item.get("yolo_recheck") if isinstance(item.get("yolo_recheck"), dict) else {}
+        vlm_semantics = item.get("vlm_semantics") if isinstance(item.get("vlm_semantics"), dict) else {}
+        source_candidate_file = item.get("source_candidate_file") or item.get("source_reference_file")
+        evidence_items.append(
+            {
+                "item_id": item.get("item_id") or item.get("material_id") or item.get("candidate_id") or item.get("event_id"),
+                "candidate_id": item.get("candidate_id"),
+                "candidate_group_id": item.get("candidate_group_id"),
+                "asset_kind": item.get("asset_kind") or item.get("material_type"),
+                "display_name": item.get("display_name") or item.get("action_name") or item.get("event_type"),
+                "formal_material_reference": bool(item.get("formal_material_reference")),
+                "review_status": item.get("review_status"),
+                "approved_by": item.get("approved_by"),
+                "approved_at": item.get("approved_at"),
+                "yolo_recheck_status": yolo_recheck.get("status"),
+                "yolo_valid_evidence_count": yolo_recheck.get("valid_evidence_count"),
+                "vlm_status": vlm_semantics.get("status"),
+                "vlm_model": vlm_semantics.get("model"),
+                "vlm_description": vlm_semantics.get("description"),
+                "source_file": item.get("source_file"),
+                "source_candidate_file": source_candidate_file,
+                "stored_file": item.get("stored_file") or material_path,
+                "material_path": material_path,
+                "material_exists": _material_path_exists(material_path),
+                "material_url": material_url,
+                "url_accessible": bool(material_url and _material_path_exists(material_path)),
+            }
+        )
+
     return {
         "experiment_id": experiment_id,
         "published_total": int(payload.get("total", len(items))) if isinstance(payload, dict) else len(items),
@@ -3513,6 +3956,9 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
         "warnings_by_type": warnings_by_type,
         "playable_clip_count": playable_clip_count,
         "broken_clip_paths": broken_clip_paths,
+        "formal_material_reference_count": sum(1 for item in evidence_items if item.get("formal_material_reference")),
+        "url_accessible_count": sum(1 for item in evidence_items if item.get("url_accessible")),
+        "evidence_items": evidence_items,
     }
 
 
@@ -3614,7 +4060,11 @@ def _experiment_task_state(experiment_id: str) -> Dict[str, Any]:
     task_file = EXPERIMENT_TASK_STORE.base_dir / f"{experiment_id}.json"
     if not task_file.exists():
         return {}
-    return json.loads(task_file.read_text(encoding="utf-8"))
+    try:
+        return json.loads(task_file.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        logger.warning("Ignoring invalid experiment task state %s: %s", task_file, exc)
+        return {}
 
 
 def _merge_experiment_with_task(exp: Dict[str, Any]) -> Dict[str, Any]:
@@ -3678,14 +4128,10 @@ def _persist_experiment_task_state(experiment_id: str, payload: Dict[str, Any]) 
     return current
 
 
-EXPECTED_MULTI_MONITOR_SOURCES = [
-    {"camera_id": "wireless_1", "source_group": "multi_monitor", "source_type": "wireless", "view_type": "third_person"},
-    {"camera_id": "wireless_2", "source_group": "multi_monitor", "source_type": "wireless", "view_type": "third_person"},
-    {"camera_id": "wireless_3", "source_group": "multi_monitor", "source_type": "wireless", "view_type": "third_person"},
-    {"camera_id": "usb0", "source_group": "multi_monitor", "source_type": "wired", "view_type": "first_person"},
-    {"camera_id": "usb1", "source_group": "multi_monitor", "source_type": "wired", "view_type": "first_person"},
+EXPECTED_KEY_ACTION_DUAL_VIEW_SOURCES = [
+    {"camera_id": "top_view", "source_group": "key_action_dual_view", "source_type": "file", "view_type": "third_person"},
+    {"camera_id": "bottom_view", "source_group": "key_action_dual_view", "source_type": "file", "view_type": "first_person"},
 ]
-EXPECTED_PTZ_SOURCE = {"camera_id": "ptz", "source_group": "ptz", "source_type": "ptz", "view_type": "overview"}
 
 
 def _ensure_experiment_run_metadata(exp: Dict[str, Any]) -> Dict[str, Any]:
@@ -3705,18 +4151,11 @@ def _infer_stream_contract(descriptor: Dict[str, Any], index: int) -> Dict[str, 
     view_type = str(descriptor.get("view_type") or descriptor.get("role") or "").strip().lower()
     camera_key = camera_id.lower()
     if not view_type:
-        if camera_key in {"ptz", "ptz_tracker", "pan_tilt"} or source_type == "ptz":
-            view_type = "overview"
-        elif camera_key.startswith("wireless") or source_type in {"rtsp", "http", "rtmp", "udp"}:
-            view_type = "third_person"
-        elif camera_key.startswith("usb") or source_type in {"usb", "wired"}:
-            view_type = "first_person"
-        else:
-            view_type = "first_person"
+        view_type = "third_person" if camera_key in {"top", "top_view", "overview", "third_person"} else "first_person"
     source_group = str(descriptor.get("source_group") or "").strip().lower()
     if not source_group:
-        source_group = "ptz" if view_type == "overview" else ("multi_monitor" if camera_key.startswith(("wireless", "usb")) or source_type in {"rtsp", "http", "rtmp", "udp", "usb", "wired"} else "uploaded")
-    normalized_source_type = "wired" if source_type == "usb" else source_type
+        source_group = "key_action_dual_view"
+    normalized_source_type = "file" if source_type in {"usb", "wired"} else source_type
     return {
         "camera_id": camera_id,
         "source_group": source_group,
@@ -4233,13 +4672,9 @@ def _write_experiment_run_artifacts(
         "global_t0_wall_time": exp.get("metadata", {}).get("global_t0_wall_time"),
         "status": exp.get("status"),
         "source_contract": {
-            "multi_monitor": {
-                "description": "3 wireless + 2 wired streams; camera transport is managed outside this manifest.",
-                "expected_sources": EXPECTED_MULTI_MONITOR_SOURCES,
-            },
-            "ptz": {
-                "description": "PTZ camera is a separate overview source and is not counted in multi_monitor.",
-                "expected_sources": [EXPECTED_PTZ_SOURCE],
+            "key_action_dual_view": {
+                "description": "Dual-view key-action inputs only; PTZ and multi-camera transport live outside this project.",
+                "expected_sources": EXPECTED_KEY_ACTION_DUAL_VIEW_SOURCES,
             },
         },
         "artifact_paths": {
@@ -4259,9 +4694,8 @@ def _write_experiment_run_artifacts(
             status: sum(1 for item in registered_streams if item.get("alignment_status") == status)
             for status in ("pending", "explicit", "shared_recording", "calibrated")
         },
-        "expected_multi_monitor_count": 5,
-        "expected_ptz_count": 1,
-        "expected_sources": [*EXPECTED_MULTI_MONITOR_SOURCES, EXPECTED_PTZ_SOURCE],
+        "expected_key_action_dual_view_count": 2,
+        "expected_sources": [*EXPECTED_KEY_ACTION_DUAL_VIEW_SOURCES],
         "registered_streams": registered_streams,
     }
     alignment_streams = []
@@ -4451,109 +4885,6 @@ def _queue_experiment_auto_analysis(
             task_id=task_id,
         )
     return task_state
-
-
-def _camera_service_request(method: str, path: str, *, json_payload: Optional[Dict[str, Any]] = None, timeout: float = 30.0) -> Dict[str, Any]:
-    try:
-        from backend.camera_proxy import CAMERA_SERVICE_BASE, ensure_camera_service
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Camera service proxy not available: {exc}") from exc
-    ensure_camera_service()
-    url = f"{CAMERA_SERVICE_BASE}/api/v1/cameras{path}"
-    try:
-        resp = requests.request(method, url, json=json_payload, timeout=timeout)
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=502, detail=f"Camera service request failed: {exc}") from exc
-    try:
-        payload = resp.json()
-    except ValueError:
-        payload = {"raw": resp.text}
-    if resp.status_code >= 400:
-        raise HTTPException(status_code=resp.status_code, detail=payload)
-    return payload
-
-
-def _default_multi_monitor_camera_ids() -> List[str]:
-    try:
-        payload = _camera_service_request("GET", "", timeout=10.0)
-        cameras = payload.get("cameras", []) if isinstance(payload, dict) else []
-        wireless = [item.get("camera_id") for item in cameras if isinstance(item, dict) and item.get("source") == "wireless" and item.get("camera_id")]
-        wired = [item.get("camera_id") for item in cameras if isinstance(item, dict) and item.get("source") == "usb" and item.get("camera_id")]
-        selected = [*wireless[:3], *wired[:2]]
-        if selected:
-            return [str(item) for item in selected]
-    except Exception:
-        pass
-    return [item["camera_id"] for item in EXPECTED_MULTI_MONITOR_SOURCES]
-
-
-def _register_recordings_as_experiment_inputs(
-    *,
-    experiment_id: str,
-    exp: Dict[str, Any],
-    recordings: Dict[str, Any],
-) -> List[Dict[str, Any]]:
-    from labsopguard.video_input_schema import VideoInputValidationError, normalize_video_input
-
-    exp.setdefault("video_paths", [])
-    exp.setdefault("video_metadata", [])
-    exp.setdefault("video_inputs", [])
-    _ensure_experiment_run_metadata(exp)
-    descriptors: List[Dict[str, Any]] = []
-    sync_group = exp.get("run_id") or f"run_{experiment_id}"
-    for camera_id, info in recordings.items():
-        if not isinstance(info, dict):
-            continue
-        raw_path = info.get("path")
-        if not raw_path:
-            continue
-        path = Path(str(raw_path))
-        if not path.exists():
-            continue
-        index = len(exp["video_inputs"])
-        contract = _infer_stream_contract(
-            {
-                "camera_id": camera_id,
-                "source_type": "usb" if str(camera_id).lower().startswith("usb") else "rtsp",
-                "source_group": "multi_monitor",
-            },
-            index,
-        )
-        raw_descriptor = {
-            "video_index": index,
-            "video_path": str(path),
-            "source": str(path),
-            "source_type": "file",
-            "ingest_mode": "file",
-            "camera_id": camera_id,
-            "view_type": contract["view_type"],
-            "role": contract["role"],
-            "source_group": "multi_monitor",
-            "sync_group": sync_group,
-            "sync_method": "shared_recording_session",
-            "start_offset_sec": 0.0,
-            "offset_source": "shared_recording_session",
-            "sync_confidence": 0.85,
-            "recording_frames": info.get("frames"),
-        }
-        try:
-            descriptor, _ = normalize_video_input(raw_descriptor, index=index, strict=True)
-        except VideoInputValidationError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        exp["video_inputs"].append(descriptor)
-        exp["video_metadata"].append(dict(descriptor))
-        if str(path) not in exp["video_paths"]:
-            exp["video_paths"].append(str(path))
-        descriptors.append(descriptor)
-    if descriptors:
-        exp["video_asset_id"] = exp.get("video_asset_id") or f"{experiment_id}:video:0"
-        if exp.get("status") in {"created", "waiting_for_sources", ExperimentStatus.CREATED.value, ExperimentStatus.DRAFT.value}:
-            exp["status"] = ExperimentStatus.VIDEO_UPLOADED.value
-        exp["output_paths"] = {
-            **(exp.get("output_paths") or {}),
-            **_write_experiment_run_artifacts(experiment_id, exp),
-        }
-    return descriptors
 
 
 @app.get("/api/v1/diagnostics", tags=["diagnostics"])
@@ -5717,6 +6048,21 @@ class MaterialCandidateApprovalRequest(BaseModel):
     selected_clip_ids: Optional[List[str]] = None
 
 
+class KeyActionReviewDecisionRequest(BaseModel):
+    decision: str
+    reviewer: Optional[str] = "frontend_reviewer"
+    note: Optional[str] = ""
+    boundary_start_sec: Optional[float] = None
+    boundary_end_sec: Optional[float] = None
+
+
+class KeyActionReviewBulkRequest(BaseModel):
+    item_ids: Optional[List[str]] = None
+    decision: str
+    reviewer: Optional[str] = "frontend_reviewer"
+    note: Optional[str] = ""
+
+
 class ExperimentRecordingStartRequest(BaseModel):
     camera_ids: Optional[List[str]] = None
     fps: float = 15.0
@@ -5740,6 +6086,10 @@ async def list_experiments(
     """."""
     all_exps = [_merge_experiment_with_task(exp) for exp in _load_experiments()]
     all_exps = _scope_filter_experiments(auth_ctx, all_exps)
+    for exp in all_exps:
+        experiment_id = str(exp.get("experiment_id") or "")
+        if experiment_id:
+            exp["key_action_summary"] = _key_action_summary_for_experiment(experiment_id)
     all_exps.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {
         "total": len(all_exps),
@@ -5924,25 +6274,23 @@ async def upload_and_run_key_actions(
     third_upload = (
         third_person_video
         if has_upload(third_person_video)
-        else top_video
-        if has_upload(top_video)
         else bottom_video
         if has_upload(bottom_video)
-        else first_person_video
-        if has_upload(first_person_video)
         else None
     )
     first_upload = (
         first_person_video
-        if has_upload(first_person_video) and first_person_video is not third_upload
-        else bottom_video
-        if has_upload(bottom_video) and bottom_video is not third_upload
+        if has_upload(first_person_video)
+        else top_video
+        if has_upload(top_video)
         else None
     )
+    if first_upload is third_upload:
+        first_upload = None
     if third_upload is None:
-        raise HTTPException(status_code=400, detail="A third_person_video/top_video/bottom_video file is required")
+        raise HTTPException(status_code=400, detail="A third_person_video/bottom_video file is required")
 
-    upload_dir = PROJECT_ROOT / "uploads" / "experiments" / safe_experiment_id / "key_actions"
+    upload_dir = _experiment_output_dir(safe_experiment_id) / "raw"
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     third_name = _sanitize_upload_filename(third_upload.filename, default_name="third_person.mp4")
@@ -5996,6 +6344,8 @@ async def upload_and_run_key_actions(
     detection_config = _with_default_key_action_yolo_config(detection_config)
 
     exp["video_asset_id"] = exp.get("video_asset_id") or f"{safe_experiment_id}:key-action-video:0"
+    task_id = exp.get("analysis_job_id") or exp.get("run_id") or f"key_action_{safe_experiment_id}"
+    exp["analysis_job_id"] = task_id
     if exp.get("status") in {"created", ExperimentStatus.CREATED.value, ExperimentStatus.DRAFT.value}:
         exp["status"] = ExperimentStatus.VIDEO_UPLOADED.value
     _ensure_experiment_run_metadata(exp)
@@ -6024,6 +6374,23 @@ async def upload_and_run_key_actions(
             "session_start_time": inferred_start,
             "detection_config": detection_config,
             "output_dir": str(_key_action_output_dir(safe_experiment_id)),
+        },
+    )
+    _persist_experiment_task_state(
+        safe_experiment_id,
+        {
+            "task_id": task_id,
+            "experiment_id": safe_experiment_id,
+            "status": "queued",
+            "current_stage": "key_action_index",
+            "progress": 0.0,
+            "message": "Videos uploaded; key-action pipeline queued",
+            "video_path": str(third_path),
+            "started_at": None,
+            "completed_at": None,
+            "output_paths": exp.get("output_paths", {}),
+            "error_type": None,
+            "error_message": None,
         },
     )
     background_tasks.add_task(
@@ -6214,88 +6581,6 @@ async def update_experiment_timeline_alignment(
     }
 
 
-@app.post("/api/v1/experiments/{experiment_id}/multi-monitor/recording/start", tags=["experiments"])
-async def start_experiment_multi_monitor_recording(
-    experiment_id: str,
-    req: ExperimentRecordingStartRequest,
-    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
-):
-    """Start multi-monitor recording for an experiment without changing camera stream wiring."""
-    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
-    exp = await get_experiment_dict(safe_experiment_id)
-    camera_ids = req.camera_ids or _default_multi_monitor_camera_ids()
-    if not camera_ids:
-        raise HTTPException(status_code=400, detail="No multi-monitor cameras available")
-    _ensure_experiment_run_metadata(exp)
-    exp["status"] = "capturing"
-    exp["processing_stage"] = "capturing"
-    exp["output_paths"] = {
-        **(exp.get("output_paths") or {}),
-        **_write_experiment_run_artifacts(safe_experiment_id, exp),
-    }
-    _save_experiment(exp)
-    result = _camera_service_request(
-        "POST",
-        "/recording/start",
-        json_payload={"camera_ids": camera_ids, "fps": req.fps},
-        timeout=30.0,
-    )
-    return {
-        "experiment_id": safe_experiment_id,
-        "run_id": exp.get("run_id"),
-        "camera_ids": camera_ids,
-        "recording": result,
-    }
-
-
-@app.post("/api/v1/experiments/{experiment_id}/multi-monitor/recording/stop", tags=["experiments"])
-async def stop_experiment_multi_monitor_recording(
-    experiment_id: str,
-    background_tasks: BackgroundTasks,
-    req: Optional[ExperimentRecordingStopRequest] = None,
-    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
-):
-    """Stop multi-monitor recording, attach resulting MP4s, then auto-queue experiment analysis."""
-    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
-    exp = await get_experiment_dict(safe_experiment_id)
-    req = req or ExperimentRecordingStopRequest()
-    result = _camera_service_request("POST", "/recording/stop", json_payload={}, timeout=60.0)
-    recordings = result.get("recordings", {}) if isinstance(result, dict) else {}
-    if not isinstance(recordings, dict) or not recordings:
-        return {
-            "experiment_id": safe_experiment_id,
-            "run_id": exp.get("run_id"),
-            "recording": result,
-            "attached_streams": [],
-            "analysis_task": _experiment_task_state(safe_experiment_id),
-        }
-    attached = _register_recordings_as_experiment_inputs(
-        experiment_id=safe_experiment_id,
-        exp=exp,
-        recordings=recordings,
-    )
-    _save_experiment(exp)
-    analysis_task = None
-    if req.auto_analyze and attached:
-        analysis_task = _queue_experiment_auto_analysis(
-            experiment_id=safe_experiment_id,
-            background_tasks=background_tasks,
-            source_ref=attached[0].get("video_path"),
-            source_type="file",
-            sample_interval=req.sample_interval,
-            max_frames=req.max_frames,
-            trigger="multi_monitor_recording_stop",
-            force_service_only=True,
-        )
-    return {
-        "experiment_id": safe_experiment_id,
-        "run_id": exp.get("run_id"),
-        "recording": result,
-        "attached_streams": attached,
-        "analysis_task": analysis_task,
-    }
-
-
 @app.get("/api/v1/experiments/{experiment_id}/video", tags=["experiments"])
 async def get_experiment_video(
     experiment_id: str,
@@ -6372,6 +6657,34 @@ async def serve_experiment_file(
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     return _serve_project_file(_browser_playable_material_clip(target), request)
+
+
+@app.get("/api/v1/experiments/{experiment_id}/material-references/files/{file_path:path}", tags=["experiments"])
+async def serve_experiment_material_reference_file(
+    experiment_id: str,
+    file_path: str,
+    request: Request,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    """Serve approved material-reference files from the experiment's formal delivery folder."""
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    rel = Path(file_path)
+    if rel.is_absolute():
+        raise HTTPException(status_code=403, detail="Path traversal not allowed")
+    checked_inside_delivery = False
+    for root in _material_reference_root_candidates(_experiment_output_dir(safe_experiment_id)):
+        root_resolved = root.resolve()
+        target = (root / rel).resolve()
+        try:
+            target.relative_to(root_resolved)
+        except ValueError:
+            continue
+        checked_inside_delivery = True
+        if target.exists() and target.is_file():
+            return _serve_project_file(_browser_playable_material_clip(target), request)
+    if checked_inside_delivery:
+        raise HTTPException(status_code=404, detail="File not found")
+    raise HTTPException(status_code=403, detail="Path traversal not allowed")
 
 
 @app.get("/api/v1/experiments/{experiment_id}/materials/search", tags=["experiments"])
@@ -6580,6 +6893,10 @@ async def get_published_experiment_materials(
     signature_parts: Dict[str, Any] = {
         "experiment": _experiment_state_cache_token(exp),
         "published_json": _path_cache_token(published_json),
+        "material_reference_roots": [
+            _directory_tree_cache_token(root, max_entries=128)
+            for root in _material_reference_root_candidates(exp_dir)
+        ],
         "limit": effective_limit,
     }
     if not published_json.exists():
@@ -6642,12 +6959,14 @@ async def approve_experiment_material_candidate(
     except Exception as exc:
         logger.exception("Material candidate approval failed for %s", safe_experiment_id)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    workspace_reindex = _rebuild_workspace_published_materials_index_quietly()
     return {
         "experiment_id": safe_experiment_id,
         "candidate_group_id": candidate_group_id,
         "approval": approval,
         "candidates": _material_candidates_payload(safe_experiment_id),
         "published_materials": _material_reference_items(_experiment_output_dir(safe_experiment_id), safe_experiment_id),
+        "workspace_published_materials_reindex": workspace_reindex,
     }
 
 
@@ -6759,6 +7078,20 @@ async def rebuild_workspace_published_materials_api(
     )
 
 
+@app.get("/api/v1/materials/published/health", tags=["materials"])
+async def get_workspace_published_materials_health(
+    auto_rebuild: bool = True,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    from labsopguard.material_maintenance import check_workspace_published_materials_lifecycle
+
+    return check_workspace_published_materials_lifecycle(
+        PROJECT_ROOT / "outputs" / "experiments",
+        _workspace_published_materials_index_path(),
+        auto_rebuild=auto_rebuild,
+    )
+
+
 @app.get("/api/v1/materials/published", tags=["materials"])
 async def get_workspace_published_materials(
     text: Optional[str] = None,
@@ -6770,13 +7103,16 @@ async def get_workspace_published_materials(
     sort_order: str = "asc",
     auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
 ):
-    from labsopguard.material_maintenance import query_workspace_published_materials, rebuild_workspace_published_materials_index
+    from labsopguard.material_maintenance import check_workspace_published_materials_lifecycle, query_workspace_published_materials
 
     index_path = _workspace_published_materials_index_path()
-    if not index_path.exists():
-        rebuild_workspace_published_materials_index(PROJECT_ROOT / "outputs" / "experiments", index_path)
+    index_lifecycle = check_workspace_published_materials_lifecycle(
+        PROJECT_ROOT / "outputs" / "experiments",
+        index_path,
+        auto_rebuild=True,
+    )
     actor_filter = actor_name or auth_ctx.get("actor_scope")
-    return query_workspace_published_materials(
+    payload = query_workspace_published_materials(
         index_path,
         text=text,
         event_type=event_type,
@@ -6788,6 +7124,8 @@ async def get_workspace_published_materials(
         operator_role=auth_ctx["operator_role"],
         allowed_experiment_ids=auth_ctx["allowed_experiment_ids"],
     )
+    payload["index_lifecycle"] = index_lifecycle
+    return _workspace_published_payload_with_media_urls(payload)
 
 
 @app.post("/api/v1/materials/published/usage/click", tags=["materials"])
@@ -7147,6 +7485,349 @@ def _extract_scene_sections(frame: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _parse_datetime_value(value: Any) -> Optional[datetime]:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        return datetime.fromisoformat(text)
+    except Exception:
+        return None
+
+
+def _key_action_session_start_dt(experiment_id: str) -> Optional[datetime]:
+    output_dir = _key_action_output_dir(experiment_id)
+    manifest = _load_json_if_exists(output_dir / "manifest.json") or {}
+    status_payload = _load_json_if_exists(_key_action_status_path(experiment_id)) or {}
+    candidates = [
+        manifest.get("session_start_time") if isinstance(manifest, dict) else None,
+        status_payload.get("session_start_time") if isinstance(status_payload, dict) else None,
+    ]
+    videos = manifest.get("videos") if isinstance(manifest, dict) else {}
+    if isinstance(videos, dict):
+        for video in videos.values():
+            if isinstance(video, dict):
+                candidates.append(video.get("start_time"))
+    for candidate in candidates:
+        parsed = _parse_datetime_value(candidate)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _seconds_from_key_action_start(experiment_id: str, value: Any) -> Optional[float]:
+    parsed = _parse_datetime_value(value)
+    start = _key_action_session_start_dt(experiment_id)
+    if parsed is None or start is None:
+        return None
+    if parsed.tzinfo is not None and start.tzinfo is None:
+        start = start.replace(tzinfo=parsed.tzinfo)
+    if parsed.tzinfo is None and start.tzinfo is not None:
+        parsed = parsed.replace(tzinfo=start.tzinfo)
+    try:
+        return max(0.0, (parsed - start).total_seconds())
+    except Exception:
+        return None
+
+
+def _enrich_overview_evidence_refs(experiment_id: str, refs: Any) -> List[Dict[str, Any]]:
+    enriched: List[Dict[str, Any]] = []
+    for ref in refs or []:
+        if not isinstance(ref, dict):
+            continue
+        row = copy.deepcopy(ref)
+        path_value = row.get("path") or row.get("clip_path") or row.get("keyframe_path")
+        if path_value:
+            url = _key_action_file_url(experiment_id, path_value)
+            if url:
+                row["url"] = url
+        enriched.append(row)
+    return enriched
+
+
+def _process_step_status_for_overview(raw_status: Any) -> str:
+    status = str(raw_status or "").strip().lower()
+    if status in {"not_observed", "inferred_missing", "missing", "skipped", "branch_not_taken"}:
+        return "inferred"
+    return "candidate"
+
+
+def _key_action_step_groups_for_overview(experiment_id: str) -> Dict[str, List[Dict[str, Any]]]:
+    output_dir = _key_action_output_dir(experiment_id)
+    timeline_rows = _read_jsonl_rows(output_dir / "metadata" / "experiment_process_timeline.jsonl")
+    steps: List[Dict[str, Any]] = []
+    for index, item in enumerate(timeline_rows, start=1):
+        if str(item.get("event_type") or "") != "experiment_step":
+            continue
+        start_sec = item.get("start_time_sec")
+        if start_sec is None:
+            start_sec = _seconds_from_key_action_start(experiment_id, item.get("global_time"))
+        end_sec = item.get("end_time_sec")
+        if end_sec is None:
+            end_sec = _seconds_from_key_action_start(experiment_id, item.get("global_end_time"))
+        status = _process_step_status_for_overview(item.get("status"))
+        step_id = str(item.get("step_id") or item.get("timeline_event_id") or f"key_action_step_{index:03d}")
+        row = {
+            "step_id": step_id,
+            "experiment_id": experiment_id,
+            "step_index": item.get("order") or index,
+            "step_name": item.get("text") or item.get("name") or step_id,
+            "step_description": item.get("reasoning") or "",
+            "status": status,
+            "source_status": item.get("status"),
+            "start_time_sec": start_sec,
+            "end_time_sec": end_sec,
+            "duration_sec": (float(end_sec) - float(start_sec)) if start_sec is not None and end_sec is not None else None,
+            "confidence": item.get("confidence"),
+            "step_confidence": "high" if _float_value(item.get("confidence"), 0.0) >= 0.75 else "medium",
+            "completed_by_inference": True,
+            "requires_human_confirmation": bool(item.get("requires_human_confirmation")),
+            "evidence_refs": _enrich_overview_evidence_refs(experiment_id, item.get("evidence_refs")),
+            "parameters": [],
+            "created_at": item.get("global_time"),
+            "updated_at": item.get("global_end_time") or item.get("global_time"),
+            "metadata_version": "key_action_process_projection.v1",
+        }
+        steps.append(row)
+    if not steps:
+        process = _load_json_if_exists(output_dir / "metadata" / "experiment_process.json") or {}
+        for index, item in enumerate(process.get("steps") or [], start=1):
+            if not isinstance(item, dict):
+                continue
+            start_sec = _seconds_from_key_action_start(experiment_id, item.get("global_start_time"))
+            end_sec = _seconds_from_key_action_start(experiment_id, item.get("global_end_time"))
+            status = _process_step_status_for_overview(item.get("status"))
+            step_id = str(item.get("step_id") or f"key_action_step_{index:03d}")
+            steps.append(
+                {
+                    "step_id": step_id,
+                    "experiment_id": experiment_id,
+                    "step_index": item.get("order") or index,
+                    "step_name": item.get("name") or step_id,
+                    "step_description": "; ".join(item.get("confidence_reasons") or []),
+                    "status": status,
+                    "source_status": item.get("status"),
+                    "start_time_sec": start_sec,
+                    "end_time_sec": end_sec,
+                    "duration_sec": (float(end_sec) - float(start_sec)) if start_sec is not None and end_sec is not None else None,
+                    "confidence": item.get("confidence"),
+                    "step_confidence": "high" if _float_value(item.get("confidence"), 0.0) >= 0.75 else "medium",
+                    "completed_by_inference": True,
+                    "requires_human_confirmation": bool(item.get("requires_human_confirmation")),
+                    "evidence_refs": _enrich_overview_evidence_refs(experiment_id, item.get("evidence_refs")),
+                    "parameters": item.get("parameters") or [],
+                    "metadata_version": "key_action_process_projection.v1",
+                }
+            )
+    candidate = [step for step in steps if step.get("status") != "inferred"]
+    inferred = [step for step in steps if step.get("status") == "inferred"]
+    return {"official": [], "candidate": candidate, "inferred": inferred}
+
+
+def _key_action_overview_counts(experiment_id: str) -> Dict[str, Any]:
+    output_dir = _key_action_output_dir(experiment_id)
+    metadata_dir = output_dir / "metadata"
+    cv_dir = output_dir / "cv_outputs"
+    yolo_clip_summary = _load_json_if_exists(metadata_dir / "yolo_clip_summary.json") or {}
+    video_understanding_summary = _load_json_if_exists(metadata_dir / "video_understanding_summary.json") or {}
+    pipeline_summary = _load_json_if_exists(output_dir / "pipeline_summary.json") or {}
+    if not yolo_clip_summary and isinstance(pipeline_summary, dict):
+        yolo_clip_summary = pipeline_summary.get("yolo_annotated_clips") or {}
+    return {
+        "segment_count": _jsonl_row_count(metadata_dir / "key_action_segments.jsonl"),
+        "micro_segment_count": _jsonl_row_count(metadata_dir / "micro_segments.jsonl"),
+        "yolo_frame_row_count": _jsonl_row_count(cv_dir / "yolo_frame_rows.jsonl"),
+        "yolo_annotated_clip_count": int((yolo_clip_summary or {}).get("clips") or 0),
+        "yolo_detection_count": int((yolo_clip_summary or {}).get("detections") or 0),
+        "video_event_count": int((video_understanding_summary or {}).get("video_event_count") or 0),
+        "normalized_object_counts": (video_understanding_summary or {}).get("normalized_object_counts") or {},
+        "event_type_counts": (video_understanding_summary or {}).get("event_type_counts") or {},
+        "yolo_clip_summary": yolo_clip_summary or {},
+        "video_understanding_summary": video_understanding_summary or {},
+    }
+
+
+def _key_action_scene_summary_for_overview(experiment_id: str, counts: Dict[str, Any]) -> Dict[str, Any]:
+    if not _key_action_output_dir(experiment_id).exists():
+        return {}
+    objects = [
+        key
+        for key, _value in sorted(
+            (counts.get("normalized_object_counts") or {}).items(),
+            key=lambda item: int(item[1] or 0),
+            reverse=True,
+        )
+    ][:12]
+    activities = [
+        key
+        for key, _value in sorted(
+            (counts.get("event_type_counts") or {}).items(),
+            key=lambda item: int(item[1] or 0),
+            reverse=True,
+        )
+    ][:10]
+    process = _load_json_if_exists(_key_action_output_dir(experiment_id) / "metadata" / "experiment_process.json") or {}
+    step_indicators = [
+        f"{step.get('name') or step.get('step_id')}: {step.get('status')}"
+        for step in (process.get("steps") or [])
+        if isinstance(step, dict)
+    ][:8]
+    segment_count = int(counts.get("segment_count") or 0)
+    micro_count = int(counts.get("micro_segment_count") or 0)
+    detection_count = int(counts.get("yolo_detection_count") or 0)
+    event_count = int(counts.get("video_event_count") or 0)
+    description = (
+        f"关键动作索引已生成 {segment_count} 个关键片段、{micro_count} 个微片段、"
+        f"{detection_count} 个 YOLO 检测框和 {event_count} 条视频理解事件。"
+        f"主要对象包括：{', '.join(objects[:8]) if objects else '暂无对象统计'}。"
+    )
+    return {
+        "description": description,
+        "activities": activities,
+        "objects": objects,
+        "visible_lab_objects": objects,
+        "uncertain_objects": [],
+        "step_indicators": step_indicators,
+        "ppe_assessment": {},
+        "alerts": [],
+        "detections": [
+            {"class_name": key, "count": value}
+            for key, value in (counts.get("normalized_object_counts") or {}).items()
+        ],
+        "evidence_source": "key_action_index/video_understanding_summary",
+        "raw": counts.get("video_understanding_summary") or {},
+    }
+
+
+def _key_action_video_path(experiment_id: str, view: str) -> Optional[Path]:
+    output_dir = _key_action_output_dir(experiment_id)
+    manifest = _load_json_if_exists(output_dir / "manifest.json") or {}
+    videos = manifest.get("videos") if isinstance(manifest, dict) else {}
+    if isinstance(videos, dict):
+        row = videos.get(view)
+        if isinstance(row, dict) and row.get("path"):
+            return Path(str(row.get("path")))
+    status_payload = _load_json_if_exists(_key_action_status_path(experiment_id)) or {}
+    key = f"{view}_video_path"
+    if isinstance(status_payload, dict) and status_payload.get(key):
+        return Path(str(status_payload.get(key)))
+    return None
+
+
+def _artifact_metadata_for_experiment_path(
+    name: str,
+    experiment_id: str,
+    path: Optional[Path],
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    public_url = _experiment_file_api_path(path, experiment_id) if path else None
+    payload = _artifact_metadata(name, path, public_url)
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def _key_action_media_artifacts_for_overview(experiment_id: str) -> Dict[str, Dict[str, Any]]:
+    output_dir = _key_action_output_dir(experiment_id)
+    segment_rows = _read_jsonl_rows(output_dir / "metadata" / "key_action_segments.jsonl")
+    first_segment = segment_rows[0] if segment_rows else {}
+    focus_window = _load_json_if_exists(output_dir / "metadata" / "experiment_focus_window.json") or {}
+    focus_extra = {
+        "time_start_sec": focus_window.get("start_sec"),
+        "true_start_sec": focus_window.get("true_start_sec"),
+        "time_end_sec": focus_window.get("end_sec"),
+        "duration_sec": focus_window.get("duration_sec"),
+        "global_start_time": focus_window.get("global_start_time"),
+        "global_end_time": focus_window.get("global_end_time"),
+        "focus_source": focus_window.get("source"),
+        "focus_anchor": focus_window.get("anchor"),
+    } if isinstance(focus_window, dict) and focus_window.get("start_sec") is not None else {}
+
+    def clip_path(view: str, annotated: bool) -> Optional[Path]:
+        ref = first_segment.get(view) if isinstance(first_segment, dict) else None
+        if not isinstance(ref, dict):
+            return None
+        value = ref.get("annotated_clip_path") if annotated else ref.get("clip_path")
+        return Path(str(value)) if value else None
+
+    def focus_path(view: str, annotated: bool) -> Optional[Path]:
+        suffix = f"{view}_yolo_annotated.mp4" if annotated else f"{view}.mp4"
+        return output_dir / "clips" / "experiment_focus" / suffix
+
+    def prefer_existing(*paths: Optional[Path]) -> Optional[Path]:
+        for path in paths:
+            if path and path.exists():
+                return path
+        for path in paths:
+            if path:
+                return path
+        return None
+
+    first_video = _key_action_video_path(experiment_id, "first_person")
+    third_video = _key_action_video_path(experiment_id, "third_person")
+    first_focus_annotated = focus_path("first_person", annotated=True)
+    third_focus_annotated = focus_path("third_person", annotated=True)
+    first_focus_clip = focus_path("first_person", annotated=False)
+    third_focus_clip = focus_path("third_person", annotated=False)
+    artifacts = {
+        "first_person_video": _artifact_metadata_for_experiment_path("first_person_video", experiment_id, first_video),
+        "third_person_video": _artifact_metadata_for_experiment_path("third_person_video", experiment_id, third_video),
+        "first_person_experiment_focus_annotated_video": _artifact_metadata_for_experiment_path(
+            "first_person_experiment_focus_annotated_video",
+            experiment_id,
+            first_focus_annotated,
+            focus_extra,
+        ),
+        "third_person_experiment_focus_annotated_video": _artifact_metadata_for_experiment_path(
+            "third_person_experiment_focus_annotated_video",
+            experiment_id,
+            third_focus_annotated,
+            focus_extra,
+        ),
+        "first_person_experiment_focus_video": _artifact_metadata_for_experiment_path(
+            "first_person_experiment_focus_video",
+            experiment_id,
+            first_focus_clip,
+            focus_extra,
+        ),
+        "third_person_experiment_focus_video": _artifact_metadata_for_experiment_path(
+            "third_person_experiment_focus_video",
+            experiment_id,
+            third_focus_clip,
+            focus_extra,
+        ),
+        "first_person_annotated_video": _artifact_metadata_for_experiment_path(
+            "first_person_annotated_video",
+            experiment_id,
+            prefer_existing(first_focus_annotated, clip_path("first_person", annotated=True)),
+            focus_extra,
+        ),
+        "third_person_annotated_video": _artifact_metadata_for_experiment_path(
+            "third_person_annotated_video",
+            experiment_id,
+            prefer_existing(third_focus_annotated, clip_path("third_person", annotated=True)),
+            focus_extra,
+        ),
+        "first_person_key_action_clip": _artifact_metadata_for_experiment_path(
+            "first_person_key_action_clip",
+            experiment_id,
+            prefer_existing(first_focus_clip, clip_path("first_person", annotated=False)),
+            focus_extra,
+        ),
+        "third_person_key_action_clip": _artifact_metadata_for_experiment_path(
+            "third_person_key_action_clip",
+            experiment_id,
+            prefer_existing(third_focus_clip, clip_path("third_person", annotated=False)),
+            focus_extra,
+        ),
+    }
+    return artifacts
+
+
 def _contract_alerts(frames: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     alerts: List[Dict[str, Any]] = []
     for frame in frames:
@@ -7195,6 +7876,13 @@ def _build_analysis_overview(exp: Dict[str, Any]) -> Dict[str, Any]:
     experiment_id = exp["experiment_id"]
     artifacts = _experiment_output_artifact_paths(experiment_id, exp)
     task_state = _experiment_task_state(experiment_id)
+    key_action_available = _key_action_output_dir(experiment_id).exists() or _key_action_status_path(experiment_id).exists()
+    key_action_state = _read_key_action_status(experiment_id) if key_action_available else {}
+    if key_action_state.get("status") == "not_started":
+        key_action_state = {}
+    effective_task_state = key_action_state or task_state
+    key_action_counts = _key_action_overview_counts(experiment_id) if key_action_available else {}
+    key_action_media_artifacts = _key_action_media_artifacts_for_overview(experiment_id) if key_action_available else {}
     timeline = _load_json_if_exists(artifacts["timeline_json"]) or _empty_timeline_payload(exp)
     steps = _load_json_if_exists(artifacts["steps_json"]) or timeline.get("steps", []) or []
     # Merge status/time from step_candidates.json into steps when available
@@ -7227,28 +7915,51 @@ def _build_analysis_overview(exp: Dict[str, Any]) -> Dict[str, Any]:
     else:
         groups = _step_groups(steps)
         display_steps = steps
+        if key_action_available and not (groups["official"] or groups["candidate"] or groups["inferred"]):
+            groups = _key_action_step_groups_for_overview(experiment_id)
+            display_steps = groups["official"] + groups["candidate"] + groups["inferred"]
     frames = _load_json_if_exists(artifacts["analysis_json"]) or []
     material_stream = _load_json_if_exists(artifacts["material_stream_json"]) or []
     writeback = _load_json_if_exists(_experiment_output_dir(experiment_id) / "qwen_frame_writeback.json") or {}
-    status = _contract_status(exp.get("status"), task_state.get("current_stage") or exp.get("processing_stage"), task_state.get("status"))
+    status = _contract_status(
+        exp.get("status"),
+        effective_task_state.get("current_stage")
+        or effective_task_state.get("stage")
+        or effective_task_state.get("message")
+        or exp.get("processing_stage"),
+        effective_task_state.get("status"),
+    )
     has_writeback_report = bool(writeback and not writeback.get("failures"))
     has_material_writeback = bool(material_stream and exp.get("output_paths"))
+    key_action_has_summary = bool(key_action_counts.get("segment_count") or key_action_counts.get("video_event_count"))
+    key_action_has_steps = bool(groups["official"] or groups["candidate"] or groups["inferred"])
+    key_action_has_artifacts = bool(key_action_counts.get("segment_count") or _material_reference_items(_experiment_output_dir(experiment_id), experiment_id).get("items"))
+    key_action_has_annotated = any(
+        item.get("ready")
+        for name, item in key_action_media_artifacts.items()
+        if "annotated" in name
+    )
+    key_action_completed = str(key_action_state.get("status") or "").lower() == "completed"
     readiness = {
-        "summary_ready": bool(frames or material_stream or display_steps),
-        "steps_ready": bool(groups["official"] or groups["candidate"] or groups["inferred"]),
-        "alerts_ready": bool(frames or material_stream),
-        "artifacts_ready": bool(artifacts["material_stream_json"].exists() if artifacts.get("material_stream_json") else False),
-        "annotated_video_ready": bool(artifacts["annotated_video"] and artifacts["annotated_video"].exists()),
-        "writeback_ready": bool(has_writeback_report or has_material_writeback),
+        "summary_ready": bool(frames or material_stream or display_steps or key_action_has_summary),
+        "steps_ready": bool(key_action_has_steps),
+        "alerts_ready": bool(frames or material_stream or key_action_has_summary),
+        "artifacts_ready": bool((artifacts["material_stream_json"].exists() if artifacts.get("material_stream_json") else False) or key_action_has_artifacts),
+        "annotated_video_ready": bool((artifacts["annotated_video"] and artifacts["annotated_video"].exists()) or key_action_has_annotated),
+        "writeback_ready": bool(has_writeback_report or has_material_writeback or key_action_completed or artifacts.get("professional_report_pdf")),
     }
 
-    if exp.get("status") in {"completed", "analyzed"} and not all(readiness.values()):
+    if status == "completed" and key_action_completed and key_action_has_summary:
+        status = "completed" if readiness["summary_ready"] and readiness["steps_ready"] and readiness["artifacts_ready"] else "partial_failed"
+    elif exp.get("status") in {"completed", "analyzed"} and not all(readiness.values()):
         status = "partial_failed"
     elif exp.get("status") in {"completed", "analyzed"} and all(readiness.values()):
         status = "completed"
     elif status == "completed" and not all(readiness.values()):
-        status = "partial_failed" if task_state.get("status") == "completed" else status
+        status = "partial_failed" if effective_task_state.get("status") == "completed" else status
     total_detections = sum(len(f.get("detections", [])) for f in frames if isinstance(f, dict))
+    if not total_detections:
+        total_detections = int(key_action_counts.get("yolo_detection_count") or 0)
     alerts = _contract_alerts([f for f in frames if isinstance(f, dict)])
     candidate_count = len(groups["candidate"])
     official_count = len(groups["official"])
@@ -7264,10 +7975,17 @@ def _build_analysis_overview(exp: Dict[str, Any]) -> Dict[str, Any]:
             artifacts.get("material_stream_json"),
             artifacts.get("semantic_sync_anchors_json"),
             _experiment_output_dir(experiment_id) / "qwen_frame_writeback.json",
+            _key_action_output_dir(experiment_id) / "pipeline_summary.json",
+            _key_action_output_dir(experiment_id) / "metadata" / "experiment_process_timeline.jsonl",
+            _key_action_output_dir(experiment_id) / "metadata" / "video_understanding_summary.json",
+            _key_action_output_dir(experiment_id) / "metadata" / "yolo_clip_summary.json",
         ],
     )
-    run_id = str(task_state.get("task_id") or exp.get("analysis_job_id") or f"{experiment_id}:{result_version}")
+    run_id = str(effective_task_state.get("task_id") or exp.get("analysis_job_id") or f"{experiment_id}:{result_version}")
     scene_frame = next((f for f in frames if isinstance(f, dict) and (f.get("scene_description") or f.get("detections") or f.get("alerts"))), frames[0] if frames else {})
+    scene_summary = _extract_scene_sections(scene_frame if isinstance(scene_frame, dict) else {})
+    if key_action_available and not str(scene_summary.get("description") or "").strip():
+        scene_summary = _key_action_scene_summary_for_overview(experiment_id, key_action_counts)
     return {
         "schema_version": "analysis_overview.v1",
         "experiment": {
@@ -7279,15 +7997,15 @@ def _build_analysis_overview(exp: Dict[str, Any]) -> Dict[str, Any]:
             "run_id": run_id,
             "result_version": result_version,
             "status": status,
-            "stage": task_state.get("current_stage") or exp.get("processing_stage") or status,
-            "progress": float(task_state.get("progress") or (1.0 if status in {"completed", "partial_failed"} else 0.0)),
-            "message": task_state.get("message") or "",
-            "updated_at": task_state.get("updated_at") or exp.get("completed_at") or exp.get("analyzed_at") or exp.get("created_at"),
+            "stage": effective_task_state.get("current_stage") or effective_task_state.get("stage") or exp.get("processing_stage") or status,
+            "progress": float(effective_task_state.get("progress") or (1.0 if status in {"completed", "partial_failed"} else 0.0)),
+            "message": effective_task_state.get("message") or "",
+            "updated_at": effective_task_state.get("updated_at") or effective_task_state.get("completed_at") or exp.get("completed_at") or exp.get("analyzed_at") or exp.get("created_at"),
             "trace_id": f"{experiment_id}:{run_id}:{result_version}",
         },
         "readiness": readiness,
         "summary": {
-            "frame_count": len(frames) if frames else len(material_stream),
+            "frame_count": len(frames) if frames else len(material_stream) or int(key_action_counts.get("yolo_frame_row_count") or key_action_counts.get("video_event_count") or 0),
             "detection_count": total_detections or sum(len(i.get("detected_objects", [])) for i in material_stream if isinstance(i, dict)),
             "alert_count": len(alerts),
             "official_step_count": official_count,
@@ -7298,7 +8016,7 @@ def _build_analysis_overview(exp: Dict[str, Any]) -> Dict[str, Any]:
             "model_name": (_experiment_model_status().get("yolo_model_name") or "unknown"),
         },
         "steps": groups,
-        "scene_summary": _extract_scene_sections(scene_frame if isinstance(scene_frame, dict) else {}),
+        "scene_summary": scene_summary,
         "alerts": alerts,
         "markers": {
             "steps": [{"id": s.get("step_id"), "label": s.get("step_name"), "timestamp_sec": s.get("start_time_sec"), "kind": "step"} for s in display_steps],
@@ -7339,11 +8057,15 @@ def _build_analysis_overview(exp: Dict[str, Any]) -> Dict[str, Any]:
                 artifacts.get("professional_report_manifest_json"),
                 f"/api/v1/experiments/{experiment_id}/artifacts/professional_report_manifest_json",
             ),
+            **key_action_media_artifacts,
         },
         "debug": {
             "local_output_dir": str(_experiment_output_dir(experiment_id)),
             "raw_paths": {k: str(v) if v else None for k, v in artifacts.items()},
-            "task_state": task_state,
+            "task_state": effective_task_state,
+            "legacy_task_state": task_state,
+            "key_action_state": key_action_state,
+            "key_action_counts": key_action_counts,
             "legacy_status": exp.get("status"),
             "legacy_processing_stage": exp.get("processing_stage"),
         },
@@ -7426,6 +8148,204 @@ async def get_key_action_results(
     safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
     await get_experiment_dict(safe_experiment_id)
     return _key_action_results_payload(safe_experiment_id)
+
+
+@app.get("/api/v1/experiments/{experiment_id}/key-actions/quality", tags=["experiments"])
+async def get_key_action_quality(
+    experiment_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    return _key_action_quality_payload(safe_experiment_id)
+
+
+@app.get("/api/v1/experiments/{experiment_id}/key-actions/review-queue", tags=["experiments"])
+async def get_key_action_review_queue(
+    experiment_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    return _key_action_review_queue_payload(safe_experiment_id)
+
+
+@app.post("/api/v1/experiments/{experiment_id}/key-actions/review/items/{item_id}/decision", tags=["experiments"])
+async def decide_key_action_review_item(
+    experiment_id: str,
+    item_id: str,
+    request: KeyActionReviewDecisionRequest,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    try:
+        from key_action_indexer.review_queue import apply_review_decision  # type: ignore
+
+        decision = apply_review_decision(
+            _key_action_output_dir(safe_experiment_id),
+            item_id=item_id,
+            decision=request.decision,
+            reviewer=request.reviewer or "frontend_reviewer",
+            note=request.note or "",
+            boundary_start_sec=request.boundary_start_sec,
+            boundary_end_sec=request.boundary_end_sec,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Key-action review decision failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {
+        "experiment_id": safe_experiment_id,
+        "item_id": item_id,
+        "decision": decision,
+        "queue": _key_action_review_queue_payload(safe_experiment_id),
+    }
+
+
+@app.post("/api/v1/experiments/{experiment_id}/key-actions/review/bulk", tags=["experiments"])
+async def bulk_decide_key_action_review_items(
+    experiment_id: str,
+    request: KeyActionReviewBulkRequest,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    queue = _key_action_review_queue_payload(safe_experiment_id)
+    item_ids = request.item_ids or [
+        str(item.get("item_id"))
+        for item in queue.get("items", [])
+        if isinstance(item, dict) and str(item.get("review_status") or "pending") == "pending"
+    ]
+    if not item_ids:
+        raise HTTPException(status_code=400, detail="No review items selected")
+    try:
+        from key_action_indexer.review_queue import apply_review_decision  # type: ignore
+
+        decisions = [
+            apply_review_decision(
+                _key_action_output_dir(safe_experiment_id),
+                item_id=item_id,
+                decision=request.decision,
+                reviewer=request.reviewer or "frontend_reviewer",
+                note=request.note or "",
+            )
+            for item_id in item_ids
+        ]
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Key-action bulk review decision failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {
+        "experiment_id": safe_experiment_id,
+        "decision_count": len(decisions),
+        "decisions": decisions,
+        "queue": _key_action_review_queue_payload(safe_experiment_id),
+    }
+
+
+@app.get("/api/v1/experiments/{experiment_id}/key-actions/review/export", tags=["experiments"])
+async def export_key_action_review_queue(
+    experiment_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    try:
+        from key_action_indexer.review_queue import export_review_queue  # type: ignore
+
+        queue = _key_action_review_queue_payload(safe_experiment_id)
+        return export_review_queue(_key_action_output_dir(safe_experiment_id), queue=queue)
+    except Exception as exc:
+        logger.exception("Key-action review export failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/v1/experiments/{experiment_id}/key-actions/review/freeze", tags=["experiments"])
+async def freeze_key_action_reviewed_dataset(
+    experiment_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    try:
+        from key_action_indexer.reviewed_dataset import freeze_reviewed_dataset, load_reviewed_export  # type: ignore
+
+        manifest = freeze_reviewed_dataset(_key_action_output_dir(safe_experiment_id))
+        return {
+            "experiment_id": safe_experiment_id,
+            "manifest": manifest,
+            "release": manifest.get("release") if isinstance(manifest, dict) else None,
+            "reviewed_export": load_reviewed_export(_key_action_output_dir(safe_experiment_id)),
+            "queue": _key_action_review_queue_payload(safe_experiment_id),
+        }
+    except Exception as exc:
+        logger.exception("Key-action reviewed dataset freeze failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/v1/experiments/{experiment_id}/key-actions/review/rollback", tags=["experiments"])
+async def rollback_key_action_reviewed_release(
+    experiment_id: str,
+    request: Request,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    payload = await request.json() if request.headers.get("content-length") not in {None, "0"} else {}
+    version = str(payload.get("version") or "").strip() or None
+    try:
+        from key_action_indexer.reviewed_dataset import load_reviewed_export, rollback_reviewed_release  # type: ignore
+
+        rollback = rollback_reviewed_release(_key_action_output_dir(safe_experiment_id), version=version)
+        return {
+            "experiment_id": safe_experiment_id,
+            "rollback": rollback,
+            "reviewed_export": load_reviewed_export(_key_action_output_dir(safe_experiment_id)),
+            "queue": _key_action_review_queue_payload(safe_experiment_id),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Key-action reviewed release rollback failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/experiments/{experiment_id}/key-actions/evidence/adapters", tags=["experiments"])
+async def get_key_action_evidence_adapters(
+    experiment_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    return _key_action_evidence_adapter_payload(safe_experiment_id)
+
+
+@app.post("/api/v1/experiments/{experiment_id}/key-actions/retrieval/evaluate", tags=["experiments"])
+async def evaluate_key_action_retrieval(
+    experiment_id: str,
+    request: Request,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    payload = await request.json() if request.headers.get("content-length") not in {None, "0"} else {}
+    try:
+        query_count = max(20, min(50, int(payload.get("query_count") or 50)))
+    except (TypeError, ValueError):
+        query_count = 50
+    try:
+        from key_action_indexer.retrieval_eval import run_default_chinese_query_eval  # type: ignore
+
+        return {
+            "experiment_id": safe_experiment_id,
+            "evaluation": run_default_chinese_query_eval(_key_action_output_dir(safe_experiment_id), query_count=query_count),
+        }
+    except Exception as exc:
+        logger.exception("Key-action retrieval evaluation failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.post("/api/v1/experiments/{experiment_id}/key-actions/query", tags=["experiments"])
@@ -8343,7 +9263,7 @@ async def get_experiment_dict(experiment_id: str) -> Dict[str, Any]:
         return _normalize_experiment_dict(_EXPERIMENTS[safe_experiment_id])
     exp_file = _experiment_output_dir(safe_experiment_id) / "experiment.json"
     if exp_file.exists():
-        exp = _normalize_experiment_dict(json.loads(exp_file.read_text(encoding="utf-8")))
+        exp = _normalize_experiment_dict(json.loads(exp_file.read_text(encoding="utf-8-sig")))
         _EXPERIMENTS[safe_experiment_id] = exp
         return exp
     raise HTTPException(status_code=404, detail="Experiment not found")

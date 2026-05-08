@@ -8,6 +8,9 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
+DEFAULT_VLM_MODEL = "qwen3.6-plus"
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -507,7 +510,7 @@ def make_inferred_step(
     end_time_sec: Optional[float] = None,
     confidence: float = 0.6,
     inference_method: str = "qwen_vl_temporal_reasoning",
-    inference_model: str = "qwen-vl-max",
+    inference_model: str = DEFAULT_VLM_MODEL,
     description: str = "",
     evidence_refs: Optional[List[EvidenceRef]] = None,
     linked_context: Optional[List[str]] = None,
@@ -550,7 +553,7 @@ def make_inferred_parameter(
     unit: Optional[str] = None,
     confidence: float = 0.7,
     method: str = "qwen_vl_ocr",
-    model: str = "qwen-vl-max",
+    model: str = DEFAULT_VLM_MODEL,
 ) -> StepParameter:
     return StepParameter(
         name=name,

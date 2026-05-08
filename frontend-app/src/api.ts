@@ -8,13 +8,19 @@ import type {
   Experiment,
   ExperimentTaskStatus,
   KeyActionResults,
+  KeyActionReviewQueue,
+  KeyActionEvidenceAdapters,
+  KeyActionRetrievalEvaluation,
   KeyActionStatus,
   MaterialCandidatesResponse,
+  MaterialDiagnosticsResponse,
   MaterialHealthResponse,
   MaterialSearchResponse,
   MaterialTimelineResponse,
   StepRecord,
   UpdateStepRequest,
+  WorkspacePublishedHealthResponse,
+  WorkspacePublishedMaterialsResponse,
 } from './types'
 
 type ApiCacheOptions = { ttlMs?: number; force?: boolean }
@@ -73,6 +79,15 @@ function prefetchGet<T>(url: string, params?: Record<string, unknown>, options?:
   void cachedGet<T>(url, params, options).catch(() => undefined)
 }
 
+function workspaceOperatorHeaders() {
+  const role = String(import.meta.env.VITE_OPERATOR_ROLE || 'admin')
+  const allowedExperiments = String(import.meta.env.VITE_ALLOWED_EXPERIMENTS || '')
+  return {
+    'X-Operator-Role': role,
+    ...(allowedExperiments ? { 'X-Allowed-Experiments': allowedExperiments } : {}),
+  }
+}
+
 export function invalidateApiCache(match?: string) {
   if (!match) {
     apiGetCache.clear()
@@ -92,7 +107,7 @@ export function prefetchExperimentsList() {
   prefetchGet<{ total: number; experiments: Experiment[] }>('/experiments', { limit: 50 }, { ttlMs: 20_000 })
 }
 
-export function prefetchExperimentRoute(id: string, route: 'workspace' | 'materials' | 'materialTimeline' | 'steps' | 'json' | 'report') {
+export function prefetchExperimentRoute(id: string, route: 'workspace' | 'materials' | 'materialTimeline' | 'steps' | 'json' | 'report' | 'keyActions' | 'reviewQueue') {
   if (!id) return
   if (route === 'workspace' || route === 'report' || route === 'steps') {
     prefetchGet<AnalysisOverview>(`/experiments/${id}/analysis-overview`, undefined, { ttlMs: 15_000 })
@@ -102,6 +117,13 @@ export function prefetchExperimentRoute(id: string, route: 'workspace' | 'materi
   }
   if (route === 'materialTimeline') {
     prefetchGet<MaterialTimelineResponse>(`/experiments/${id}/materials/timeline`, { limit: 1000 }, { ttlMs: 60_000 })
+  }
+  if (route === 'keyActions') {
+    prefetchGet<KeyActionStatus>(`/experiments/${id}/key-actions/status`, undefined, { ttlMs: 15_000 })
+    prefetchGet<KeyActionResults>(`/experiments/${id}/key-actions/results`, undefined, { ttlMs: 15_000 })
+  }
+  if (route === 'reviewQueue') {
+    prefetchGet<KeyActionReviewQueue>(`/experiments/${id}/key-actions/review-queue`, undefined, { ttlMs: 15_000 })
   }
 }
 
@@ -226,6 +248,11 @@ export const experimentApi = {
     return data
   },
 
+  getMaterialDiagnostics: async (id: string) => {
+    const { data } = await api.get<MaterialDiagnosticsResponse>(`/experiments/${id}/materials/diagnostics`)
+    return data
+  },
+
   reindexMaterials: async (id: string, force = true) => {
     const { data } = await api.post(`/experiments/${id}/materials/reindex`, null, { params: { force } })
     return data
@@ -259,6 +286,45 @@ export const experimentApi = {
     return data
   },
 
+  getKeyActionReviewQueue: (id: string, options?: ApiCacheOptions) => cachedGet<KeyActionReviewQueue>(`/experiments/${id}/key-actions/review-queue`, undefined, { ttlMs: 15_000, ...options }),
+
+  decideKeyActionReviewItem: async (id: string, itemId: string, request: { decision: string; reviewer?: string; note?: string; boundary_start_sec?: number | null; boundary_end_sec?: number | null }) => {
+    const { data } = await api.post<{ queue: KeyActionReviewQueue }>(`/experiments/${id}/key-actions/review/items/${encodeURIComponent(itemId)}/decision`, request)
+    invalidateExperimentCache(id)
+    return data
+  },
+
+  bulkDecideKeyActionReviewItems: async (id: string, request: { item_ids?: string[]; decision: string; reviewer?: string; note?: string }) => {
+    const { data } = await api.post<{ queue: KeyActionReviewQueue }>(`/experiments/${id}/key-actions/review/bulk`, request)
+    invalidateExperimentCache(id)
+    return data
+  },
+
+  exportKeyActionReview: async (id: string) => {
+    const { data } = await api.get<Record<string, unknown>>(`/experiments/${id}/key-actions/review/export`)
+    return data
+  },
+
+  freezeKeyActionReviewedDataset: async (id: string) => {
+    const { data } = await api.post<{ queue: KeyActionReviewQueue; manifest: Record<string, unknown>; release?: Record<string, unknown> | null; reviewed_export: Record<string, unknown> }>(`/experiments/${id}/key-actions/review/freeze`)
+    invalidateExperimentCache(id)
+    return data
+  },
+
+  rollbackKeyActionReviewedRelease: async (id: string, version?: string) => {
+    const { data } = await api.post<{ queue: KeyActionReviewQueue; rollback: Record<string, unknown>; reviewed_export: Record<string, unknown> }>(`/experiments/${id}/key-actions/review/rollback`, { version })
+    invalidateExperimentCache(id)
+    return data
+  },
+
+  getKeyActionEvidenceAdapters: (id: string, options?: ApiCacheOptions) => cachedGet<KeyActionEvidenceAdapters>(`/experiments/${id}/key-actions/evidence/adapters`, undefined, { ttlMs: 30_000, ...options }),
+
+  evaluateKeyActionRetrieval: async (id: string, queryCount = 50) => {
+    const { data } = await api.post<KeyActionRetrievalEvaluation>(`/experiments/${id}/key-actions/retrieval/evaluate`, { query_count: queryCount })
+    invalidateExperimentCache(id)
+    return data
+  },
+
   queryKeyActions: async (id: string, query: string, topK = 5, options?: { indexLevel?: 'segment' | 'micro_segment' | 'all'; primaryObject?: string; interactionType?: string }) => {
     const { data } = await api.post<{ experiment_id: string; query: string; results: Array<Record<string, unknown>> }>(`/experiments/${id}/key-actions/query`, {
       query,
@@ -266,6 +332,24 @@ export const experimentApi = {
       index_level: options?.indexLevel ?? 'all',
       primary_object: options?.primaryObject ?? null,
       interaction_type: options?.interactionType ?? null,
+    })
+    return data
+  },
+}
+
+export const workspaceMaterialApi = {
+  getPublishedMaterials: async (params?: { text?: string; event_type?: string; actor_name?: string; limit?: number; cursor?: string; sort_by?: string; sort_order?: string }) => {
+    const { data } = await api.get<WorkspacePublishedMaterialsResponse>('/materials/published', {
+      params,
+      headers: workspaceOperatorHeaders(),
+    })
+    return data
+  },
+
+  getPublishedHealth: async (autoRebuild = true) => {
+    const { data } = await api.get<WorkspacePublishedHealthResponse>('/materials/published/health', {
+      params: { auto_rebuild: autoRebuild },
+      headers: workspaceOperatorHeaders(),
     })
     return data
   },

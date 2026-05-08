@@ -1,24 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, BadgeCheck, Boxes, CheckCircle2, Clock3, Filter, Image, Search, ShieldAlert, Video } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Boxes, CheckCircle2, Clock3, Filter, Image, Search, ShieldAlert } from 'lucide-react'
 import { experimentApi, prefetchExperimentRoute } from '../api'
 import { EmptyEvidence, EvidenceBadge, EvidenceCard, MetricTile, PageHero, primaryButtonClass, secondaryButtonClass, toneForStatus } from '../components/EvidenceUI'
 import { cleanDisplayText } from '../displayText'
-import { mediaUrl } from '../mediaUrl'
-import type { MaterialCandidateFile, MaterialCandidateGroup, MaterialSearchItem } from '../types'
+import { experimentFileUrl, mediaUrl } from '../mediaUrl'
+import type { MaterialCandidateFile, MaterialCandidateGroup, MaterialDiagnosticsEvidenceItem, MaterialDiagnosticsResponse, MaterialSearchItem } from '../types'
 
 function asArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(item => String(item)) : []
 }
 
-function itemPreview(item: MaterialSearchItem) {
+function itemPreview(item: MaterialSearchItem, experimentId?: string) {
   const paths = item.published_paths || {}
-  return mediaUrl(item.preview_url || item.frame_path || paths.preview || paths.keyframe || undefined)
+  return experimentFileUrl(item.preview_url || item.frame_path || paths.preview || paths.keyframe || undefined, experimentId)
 }
 
-function itemClip(item: MaterialSearchItem) {
+function itemClip(item: MaterialSearchItem, experimentId?: string) {
   const paths = item.published_paths || {}
-  return mediaUrl(item.clip_url || item.clip_file_path || paths.clip || undefined)
+  return experimentFileUrl(item.clip_url || item.clip_file_path || paths.clip || undefined, experimentId)
 }
 
 function formatRange(item: MaterialSearchItem) {
@@ -44,6 +44,10 @@ function candidateFileKey(file: MaterialCandidateFile, index: number) {
   return keyed(file.candidate_id || file.url || file.path || file.preview_url || file.clip_url, index, 'candidate-file')
 }
 
+function candidateFileId(file: MaterialCandidateFile, index: number) {
+  return String(file.candidate_id || file.item_id || file.url || file.path || file.preview_url || file.clip_url || `candidate-${index}`)
+}
+
 function candidateFileUrl(item: MaterialCandidateFile) {
   return mediaUrl(item.url || item.preview_url || item.clip_url || item.frame_path || item.clip_file_path || undefined)
 }
@@ -52,18 +56,21 @@ function candidateCanApprove(group: MaterialCandidateGroup) {
   const status = String(group.status || group.review_status || '').toLowerCase()
   const yoloStatus = String(group.yolo_recheck?.status || group.pipeline_status || '').toLowerCase()
   const blocked = ['blocked', 'rejected', 'failed'].some(keyword => status.includes(keyword) || yoloStatus.includes(keyword))
-  return !blocked && ['pending', 'review', 'candidate', ''].some(keyword => status.includes(keyword))
+  if (blocked || ['approved', 'accepted'].some(keyword => status.includes(keyword))) return false
+  return !status || ['pending', 'review', 'candidate', 'needs_review'].some(keyword => status.includes(keyword))
 }
 
 export default function MaterialSearch() {
   const { id } = useParams<{ id: string }>()
   const [items, setItems] = useState<MaterialSearchItem[]>([])
   const [candidateGroups, setCandidateGroups] = useState<MaterialCandidateGroup[]>([])
+  const [diagnostics, setDiagnostics] = useState<MaterialDiagnosticsResponse | null>(null)
   const [query, setQuery] = useState('')
   const [objectFilter, setObjectFilter] = useState('')
   const [actionFilter, setActionFilter] = useState('')
   const [reviewFilter, setReviewFilter] = useState('all')
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null)
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -72,12 +79,14 @@ export default function MaterialSearch() {
     setLoading(true)
     setError(null)
     try {
-      const [published, candidates] = await Promise.all([
+      const [published, candidates, nextDiagnostics] = await Promise.all([
         experimentApi.getPublishedMaterials(id, undefined, { force: true }),
         experimentApi.getMaterialCandidates(id, { force: true }).catch(() => ({ items: [] })),
+        experimentApi.getMaterialDiagnostics(id).catch(() => null),
       ])
       setItems((published.items || []) as MaterialSearchItem[])
       setCandidateGroups(candidates.items || [])
+      setDiagnostics(nextDiagnostics)
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : '关键素材加载失败')
     } finally {
@@ -105,17 +114,39 @@ export default function MaterialSearch() {
 
   const strong = items.filter(item => String(item.evidence_level || item.payload?.evidence_level || '').toLowerCase().includes('strong')).length
   const pending = items.filter(item => String(item.review_status || item.payload?.review_status || '').toLowerCase().includes('pending')).length
-  const clips = items.filter(item => Boolean(itemClip(item))).length
+  const clips = items.filter(item => Boolean(itemClip(item, id))).length
   const pendingCandidates = candidateGroups.filter(candidateCanApprove).length
+
+  function selectedIdsForGroup(group: MaterialCandidateGroup) {
+    const selected = selectedCandidateIds[group.candidate_group_id]
+    if (selected?.length) return selected
+    return [...group.keyframes, ...group.clips]
+      .filter(file => file.recommended || file.exists !== false)
+      .map(candidateFileId)
+  }
+
+  function toggleCandidate(group: MaterialCandidateGroup, file: MaterialCandidateFile, fileIndex: number) {
+    const candidateId = candidateFileId(file, fileIndex)
+    setSelectedCandidateIds(previous => {
+      const current = new Set(previous[group.candidate_group_id] || selectedIdsForGroup(group))
+      if (current.has(candidateId)) current.delete(candidateId)
+      else current.add(candidateId)
+      return { ...previous, [group.candidate_group_id]: Array.from(current) }
+    })
+  }
 
   async function approveCandidate(group: MaterialCandidateGroup) {
     if (!id || !candidateCanApprove(group)) return
+    const selectedIds = selectedIdsForGroup(group)
     setApprovingGroup(group.candidate_group_id)
     setError(null)
     try {
       await experimentApi.approveMaterialCandidate(id, group.candidate_group_id, {
         reviewer: 'frontend-review',
-        notes: 'Approved from key evidence library',
+        notes: `Approved from key evidence library (${selectedIds.length} selected assets)`,
+        candidate_ids: selectedIds,
+        selected_keyframe_ids: selectedIds,
+        selected_clip_ids: selectedIds,
       })
       await load()
     } catch (exc) {
@@ -140,7 +171,13 @@ export default function MaterialSearch() {
         tabs={id ? <Tabs id={id} /> : null}
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section
+        className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+        data-smoke="experiment-material-metrics"
+        data-total={items.length}
+        data-pending={pending + pendingCandidates}
+        data-clips={clips}
+      >
         <MetricTile label="素材总数" value={items.length} helper={`${filtered.length} visible`} tone="blue" Icon={Boxes} />
         <MetricTile label="待审核" value={pending + pendingCandidates} helper={`${pendingCandidates} candidate groups`} tone="amber" Icon={Filter} />
         <MetricTile label="强证据" value={strong} helper="strong evidence" tone="emerald" Icon={BadgeCheck} />
@@ -161,6 +198,8 @@ export default function MaterialSearch() {
               const canApprove = candidateCanApprove(group)
               const yoloStatus = String(group.yolo_recheck?.status || group.pipeline_status || 'unknown')
               const vlmStatus = String(group.vlm_semantics?.status || group.pipeline_stage || 'not_available')
+              const selectedIds = selectedIdsForGroup(group)
+              const candidateFiles = [...group.keyframes.slice(0, 3), ...group.clips.slice(0, 2)]
               return (
                 <div key={candidateGroupKey(group, groupIndex)} className="rounded-lg border border-slate-200 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -173,22 +212,34 @@ export default function MaterialSearch() {
                       <EvidenceBadge tone={toneForStatus(yoloStatus)}>{yoloStatus}</EvidenceBadge>
                     </div>
                   </div>
-                  <div className="mt-3 grid gap-2 text-xs font-bold text-slate-600 sm:grid-cols-3">
+                  <div className="mt-3 grid gap-2 text-xs font-bold text-slate-600 sm:grid-cols-4">
                     <span>关键帧 {group.keyframes.length}</span>
                     <span>关键片段 {group.clips.length}</span>
-                    <span>VLM {vlmStatus}</span>
+                    <span>推荐 {group.recommended_count ?? selectedIds.length}</span>
+                    <span>质量 {group.quality_score == null ? '-' : Number(group.quality_score).toFixed(2)}</span>
+                  </div>
+                  <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600 sm:grid-cols-3">
+                    <Gate label="YOLO" value={yoloStatus} />
+                    <Gate label="VLM" value={vlmStatus} />
+                    <Gate label="Pipeline" value={group.pipeline_status || group.pipeline_stage || group.status || 'pending'} />
                   </div>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {[...group.keyframes.slice(0, 2), ...group.clips.slice(0, 1)].map((file, fileIndex) => (
-                      <CandidatePreview key={candidateFileKey(file, fileIndex)} file={file} />
+                    {candidateFiles.map((file, fileIndex) => (
+                      <CandidatePreview
+                        key={candidateFileKey(file, fileIndex)}
+                        file={file}
+                        selected={selectedIds.includes(candidateFileId(file, fileIndex))}
+                        disabled={!canApprove}
+                        onToggle={() => toggleCandidate(group, file, fileIndex)}
+                      />
                     ))}
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs font-semibold text-slate-500">{cleanDisplayText(group.review_gate_policy || '前端审核通过后同步到 material_references')}</p>
+                    <p className="text-xs font-semibold text-slate-500">{cleanDisplayText(group.review_gate_policy || '前端审核通过后同步到 material_references')} · 已选 {selectedIds.length}</p>
                     <button
                       type="button"
                       onClick={() => void approveCandidate(group)}
-                      disabled={!canApprove || approvingGroup === group.candidate_group_id}
+                      disabled={!canApprove || selectedIds.length === 0 || approvingGroup === group.candidate_group_id}
                       className={`${canApprove ? primaryButtonClass('emerald') : secondaryButtonClass()} disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       <CheckCircle2 className="h-4 w-4" />
@@ -208,6 +259,8 @@ export default function MaterialSearch() {
         </EvidenceCard>
       )}
 
+      {diagnostics?.evidence_items?.length ? <MaterialDiagnosticsPanel diagnostics={diagnostics} /> : null}
+
       <EvidenceCard className="p-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem]">
           <label className="relative">
@@ -222,21 +275,21 @@ export default function MaterialSearch() {
 
       {error && <EvidenceCard className="border-red-200 bg-red-50 p-4 text-red-700">{error}</EvidenceCard>}
       {loading ? <EmptyEvidence title="正在加载关键素材..." /> : filtered.length === 0 ? <EmptyEvidence title="暂无匹配素材" /> : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-smoke="experiment-material-grid" data-count={filtered.length}>
           {filtered.map((item, itemIndex) => (
-            <EvidenceCard key={materialKey(item, itemIndex)} className="overflow-hidden">
-              {itemPreview(item) ? <img src={itemPreview(item)} alt={cleanDisplayText(item.display_name || item.item_id, 'material')} className="aspect-video w-full bg-slate-100 object-cover" /> : <div className="flex aspect-video items-center justify-center bg-slate-100 text-sm font-semibold text-slate-400">no preview</div>}
+            <EvidenceCard key={materialKey(item, itemIndex)} className="overflow-hidden" data-smoke="experiment-material-card">
+              <MaterialPreview item={item} experimentId={id} />
               <div className="p-4">
                 <div className="mb-2 flex flex-wrap gap-2">
                   <EvidenceBadge tone="blue">{formatRange(item)}</EvidenceBadge>
-                  <EvidenceBadge tone={itemClip(item) ? 'emerald' : 'slate'}>{itemClip(item) ? 'clip' : 'frame'}</EvidenceBadge>
+                  <EvidenceBadge tone={itemClip(item, id) ? 'emerald' : 'slate'}>{itemClip(item, id) ? 'clip' : 'frame'}</EvidenceBadge>
                   {item.review_status && <EvidenceBadge tone="amber">{item.review_status}</EvidenceBadge>}
                 </div>
                 <h3 className="line-clamp-2 font-black text-slate-950">{cleanDisplayText(item.display_name || item.event_type || item.item_id, '关键素材')}</h3>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {[...(item.object_labels || []), ...(item.actions || []), item.event_type].filter(Boolean).slice(0, 8).map((label, labelIndex) => <span key={keyed(label, labelIndex, 'material-label')} className="rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">{cleanDisplayText(label)}</span>)}
                 </div>
-                {itemClip(item) && <a href={itemClip(item)} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-bold text-blue-700 hover:text-blue-900">打开片段</a>}
+                {itemClip(item, id) && <a href={itemClip(item, id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-bold text-blue-700 hover:text-blue-900">打开片段</a>}
               </div>
             </EvidenceCard>
           ))}
@@ -246,22 +299,118 @@ export default function MaterialSearch() {
   )
 }
 
-function CandidatePreview({ file }: { file: MaterialCandidateFile }) {
+function shortPath(value: unknown) {
+  const text = String(value || '')
+  if (!text) return '-'
+  const normalized = text.replace(/\\/g, '/')
+  const parts = normalized.split('/')
+  return parts.slice(-3).join('/')
+}
+
+function MaterialDiagnosticsPanel({ diagnostics }: { diagnostics: MaterialDiagnosticsResponse }) {
+  const rows = diagnostics.evidence_items || []
+  const accessible = rows.filter(item => item.url_accessible).length
+  return (
+    <EvidenceCard className="p-5" data-smoke="material-diagnostics-panel" data-count={rows.length} data-url-accessible={accessible}>
+      <details open>
+        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-black text-slate-950">证据链诊断</h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500">确认正式素材来自已审批候选，并且文件与 URL 都能交付。</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <EvidenceBadge tone="blue">正式 {diagnostics.formal_material_reference_count ?? rows.length}</EvidenceBadge>
+            <EvidenceBadge tone={accessible === rows.length ? 'emerald' : 'amber'}>URL 200 {accessible}/{rows.length}</EvidenceBadge>
+          </div>
+        </summary>
+        <div className="mt-4 grid gap-3">
+          {rows.map((item, index) => (
+            <DiagnosticsRow key={`${item.candidate_id || item.material_url || 'diagnostic'}-${index}`} item={item} />
+          ))}
+        </div>
+      </details>
+    </EvidenceCard>
+  )
+}
+
+function DiagnosticsRow({ item }: { item: MaterialDiagnosticsEvidenceItem }) {
+  return (
+    <div
+      className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-600 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]"
+      data-smoke="material-diagnostics-row"
+      data-url-accessible={item.url_accessible ? 'true' : 'false'}
+      data-file-exists={item.material_exists ? 'true' : 'false'}
+    >
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap gap-2">
+          <EvidenceBadge tone="slate">{item.asset_kind || 'material'}</EvidenceBadge>
+          <EvidenceBadge tone={item.material_exists ? 'emerald' : 'red'}>file {item.material_exists ? 'ok' : 'missing'}</EvidenceBadge>
+          <EvidenceBadge tone={item.url_accessible ? 'emerald' : 'red'}>url {item.url_accessible ? '200' : 'fail'}</EvidenceBadge>
+        </div>
+        <div className="break-all font-black text-slate-900">{item.candidate_id || '-'}</div>
+        <div className="mt-1 break-all text-slate-500">{item.candidate_group_id || '-'}</div>
+      </div>
+      <div className="min-w-0 space-y-1">
+        <div><span className="text-slate-400">审批人</span> {item.approved_by || '-'}</div>
+        <div><span className="text-slate-400">YOLO</span> {item.yolo_recheck_status || '-'} · {item.yolo_valid_evidence_count ?? '-'}</div>
+        <div><span className="text-slate-400">VLM</span> {item.vlm_model || item.vlm_status || '-'}</div>
+      </div>
+      <div className="min-w-0 space-y-1">
+        <div><span className="text-slate-400">源文件</span> {shortPath(item.source_candidate_file || item.source_file)}</div>
+        <div><span className="text-slate-400">正式文件</span> {shortPath(item.stored_file)}</div>
+        {item.material_url && <a href={item.material_url} target="_blank" rel="noreferrer" className="inline-flex max-w-full break-all font-black text-blue-700 hover:text-blue-900">打开正式 URL</a>}
+      </div>
+    </div>
+  )
+}
+
+function MaterialPreview({ item, experimentId }: { item: MaterialSearchItem; experimentId?: string }) {
+  const preview = itemPreview(item, experimentId)
+  const clip = itemClip(item, experimentId)
+  if (preview) {
+    return <img src={preview} alt={cleanDisplayText(item.display_name || item.item_id, 'material')} className="aspect-video w-full bg-slate-100 object-cover" data-smoke="experiment-formal-image" />
+  }
+  if (clip) {
+    return <video src={clip} className="aspect-video w-full bg-slate-950 object-contain" controls preload="metadata" data-smoke="experiment-formal-video" />
+  }
+  return <div className="flex aspect-video items-center justify-center bg-slate-100 text-sm font-semibold text-slate-400">no preview</div>
+}
+
+function Gate({ label, value }: { label: string; value: unknown }) {
+  return (
+    <span className="rounded-lg bg-slate-50 px-2 py-1">
+      <b className="mr-1 text-slate-400">{label}</b>
+      {cleanDisplayText(String(value || 'unknown'))}
+    </span>
+  )
+}
+
+function CandidatePreview({ file, selected, disabled, onToggle }: { file: MaterialCandidateFile; selected: boolean; disabled: boolean; onToggle: () => void }) {
   const url = candidateFileUrl(file)
-  const isClip = file.asset_kind === '关键片段' || Boolean(file.clip_url)
+  const isClip = file.asset_kind === '关键片段' || Boolean(file.clip_url) || String(file.material_type || '').includes('clip')
   if (!url) {
     return <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400">no file</div>
   }
+  const overlay = (
+    <label className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-xs font-black text-slate-700 shadow-sm">
+      <input type="checkbox" checked={selected} disabled={disabled} onChange={onToggle} className="h-3.5 w-3.5 accent-emerald-600" />
+      入库
+    </label>
+  )
   if (isClip) {
     return (
-      <a href={url} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-        <div className="flex aspect-video items-center justify-center">
-          <Video className="h-5 w-5 text-slate-500 group-hover:text-blue-600" />
-        </div>
-      </a>
+      <div className="relative">
+        {overlay}
+        <video src={url} className={`aspect-video w-full rounded-lg border bg-slate-950 object-contain ${selected ? 'border-emerald-300' : 'border-slate-200'}`} controls preload="metadata" />
+      </div>
     )
   }
-  return <img src={url} alt={cleanDisplayText(file.display_name || file.candidate_id, 'candidate')} className="aspect-video rounded-lg border border-slate-200 bg-slate-100 object-cover" />
+  return (
+    <div className="relative">
+      {overlay}
+      <img src={url} alt={cleanDisplayText(file.display_name || file.candidate_id, 'candidate')} className={`aspect-video rounded-lg border bg-slate-100 object-cover ${selected ? 'border-emerald-300' : 'border-slate-200'}`} />
+    </div>
+  )
 }
 
 function Tabs({ id }: { id: string }) {

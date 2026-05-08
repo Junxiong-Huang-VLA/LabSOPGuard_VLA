@@ -46,9 +46,10 @@ from experiment.models import (
 
 # DashScope VLM 客户端
 try:
-    from experiment.vlm_client import DashScopeVLClient, get_vlm_client, set_vlm_client
+    from experiment.vlm_client import DashScopeVLClient, default_vlm_model, get_vlm_client, set_vlm_client
 except ImportError:
     DashScopeVLClient = None
+    default_vlm_model = None
     get_vlm_client = None
     set_vlm_client = None
 
@@ -765,7 +766,7 @@ class ExperimentService:
         self,
         vlm_api_key: Optional[str] = None,
         vlm_base_url: Optional[str] = None,
-        vlm_model: str = "qwen-vl-max",
+        vlm_model: Optional[str] = None,
         frame_sample_interval: float = 2.0,
         max_frames: int = 30,
         yolo26_weights_path: Optional[str] = None,
@@ -787,14 +788,22 @@ class ExperimentService:
 
         # VLM 客户端
         self._vlm_client: Optional[DashScopeVLClient] = None
+        resolved_vlm_model = (
+            vlm_model
+            or (default_vlm_model() if default_vlm_model is not None else None)
+            or os.environ.get("KEY_ACTION_VLM_MODEL")
+            or os.environ.get("QWEN_VL_MODEL")
+            or os.environ.get("VLM_MODEL")
+            or "qwen3.6-plus"
+        )
         if vlm_api_key and DashScopeVLClient:
             try:
                 self._vlm_client = DashScopeVLClient(
                     api_key=vlm_api_key,
                     base_url=vlm_base_url,
-                    model=vlm_model,
+                    model=resolved_vlm_model,
                 )
-                print(f"[ExperimentService] VLM client initialized: {vlm_model}")
+                print(f"[ExperimentService] VLM client initialized: {resolved_vlm_model}")
             except Exception as e:
                 print(f"[ExperimentService] VLM init failed: {e}")
 

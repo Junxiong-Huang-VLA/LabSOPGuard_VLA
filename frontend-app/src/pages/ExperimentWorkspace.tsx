@@ -5,8 +5,8 @@ import { experimentApi, prefetchExperimentRoute } from '../api'
 import DualVideoPlayer from '../components/DualVideoPlayer'
 import { EmptyEvidence, EvidenceBadge, EvidenceCard, MetricTile, PageHero, ProgressStrip, primaryButtonClass, secondaryButtonClass, toneForStatus } from '../components/EvidenceUI'
 import { cleanDisplayText } from '../displayText'
-import { mediaUrl } from '../mediaUrl'
-import type { AnalysisOverview, KeyActionResults, MaterialSearchItem, StepRecord } from '../types'
+import { experimentFileUrl, mediaUrl } from '../mediaUrl'
+import type { AnalysisOverview, KeyActionClipRef, KeyActionResults, KeyActionSegment, MaterialSearchItem, StepRecord } from '../types'
 
 const generatingStatuses = new Set(['analyzing', 'running', 'generating_outputs', 'writing_back', 'queued', 'capturing'])
 
@@ -40,6 +40,36 @@ function artifactUrl(overview: AnalysisOverview, keys: string[]) {
     if (artifact?.ready && artifact.url) return mediaUrl(artifact.url)
   }
   return undefined
+}
+
+function artifactNumber(overview: AnalysisOverview, keys: string[], field: 'time_start_sec' | 'true_start_sec' | 'time_end_sec') {
+  for (const key of keys) {
+    const artifact = overview.artifacts[key]
+    const value = artifact?.[field]
+    if (artifact?.ready && typeof value === 'number' && Number.isFinite(value)) return value
+  }
+  return undefined
+}
+
+function keyActionClipUrl(clip: KeyActionClipRef | null | undefined, experimentId: string | undefined) {
+  return experimentFileUrl(
+    clip?.annotated_clip_url || clip?.annotated_clip_path || clip?.clip_url || clip?.clip_path || undefined,
+    experimentId,
+  )
+}
+
+function stepEvidenceValues(step: StepRecord | null | undefined, key: string) {
+  const refs = Array.isArray(step?.evidence_refs) ? step?.evidence_refs || [] : []
+  return new Set(refs.map(ref => String(ref?.[key] || '')).filter(Boolean))
+}
+
+function segmentMatchesStep(segment: KeyActionSegment, step: StepRecord | null | undefined) {
+  if (!step) return false
+  const segmentIds = stepEvidenceValues(step, 'segment_id')
+  if (segmentIds.has(segment.segment_id)) return true
+  const microIds = stepEvidenceValues(step, 'micro_segment_id')
+  if (microIds.size === 0) return false
+  return (segment.micro_segments || []).some(micro => microIds.has(micro.micro_segment_id))
 }
 
 export default function ExperimentWorkspace() {
@@ -87,8 +117,40 @@ export default function ExperimentWorkspace() {
   }, [overview?.run.status, id])
 
   const steps = useMemo(() => (overview ? visibleSteps(overview) : []), [overview])
-  const sourceUrl = overview ? artifactUrl(overview, ['source_video', 'first_person_video', 'video']) : undefined
-  const annotatedUrl = overview ? artifactUrl(overview, ['annotated_video', 'third_person_video']) : undefined
+  const activeSegment = useMemo(() => {
+    const segments = keyResults?.segments || []
+    return segments.find(segment => segmentMatchesStep(segment, selectedStep)) || segments[0] || null
+  }, [keyResults, selectedStep])
+  const experimentVideoKeys = [
+    'first_person_experiment_focus_annotated_video',
+    'first_person_annotated_video',
+    'first_person_experiment_focus_video',
+    'first_person_key_action_clip',
+    'first_person_video',
+    'source_video',
+    'video',
+  ]
+  const thirdPersonVideoKeys = [
+    'third_person_experiment_focus_annotated_video',
+    'third_person_annotated_video',
+    'third_person_experiment_focus_video',
+    'third_person_key_action_clip',
+    'third_person_video',
+    'annotated_video',
+  ]
+  const firstPersonUrl = overview ? (
+    artifactUrl(overview, experimentVideoKeys)
+    || keyActionClipUrl(activeSegment?.first_person, overview.experiment.experiment_id)
+  ) : undefined
+  const thirdPersonUrl = overview ? (
+    artifactUrl(overview, thirdPersonVideoKeys)
+    || keyActionClipUrl(activeSegment?.third_person, overview.experiment.experiment_id)
+  ) : undefined
+  const videoTimeOffsetSec = overview ? (
+    artifactNumber(overview, experimentVideoKeys, 'time_start_sec')
+    ?? artifactNumber(overview, thirdPersonVideoKeys, 'time_start_sec')
+    ?? 0
+  ) : 0
   const showGeneratingSteps = Boolean(overview && !overview.readiness.steps_ready && generatingStatuses.has(String(overview.run.status)))
   const noStructuredSteps = Boolean(overview && overview.run.status === 'completed' && steps.length === 0)
 
@@ -177,7 +239,7 @@ export default function ExperimentWorkspace() {
               <PlayCircle className="h-4 w-4 text-blue-600" />
               <h3 className="font-black text-slate-950">双视角视频</h3>
             </div>
-            <DualVideoPlayer firstPersonUrl={sourceUrl} thirdPersonUrl={annotatedUrl} seekRequest={seekRequest} />
+            <DualVideoPlayer firstPersonUrl={firstPersonUrl} thirdPersonUrl={thirdPersonUrl} seekRequest={seekRequest} timeOffsetSec={videoTimeOffsetSec} />
           </EvidenceCard>
 
           <EvidenceCard className="p-4">

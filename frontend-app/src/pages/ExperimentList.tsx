@@ -5,9 +5,11 @@ import {
   BarChart3,
   CheckCircle2,
   CircleDot,
+  ClipboardCheck,
   Clock3,
   FileText,
   FlaskConical,
+  Layers3,
   MoreVertical,
   Plus,
   RefreshCw,
@@ -141,6 +143,22 @@ function displayDescription(item: Experiment) {
 
 function confidenceValue(item: Experiment) {
   return item.avg_confidence === null || item.avg_confidence === undefined ? Number.NEGATIVE_INFINITY : Number(item.avg_confidence)
+}
+
+function keyActionSummary(item: Experiment) {
+  const summary = item.key_action_summary || {}
+  return {
+    status: String(summary.status || 'not_started'),
+    segments: Number(summary.segment_count || 0),
+    micros: Number(summary.micro_segment_count || 0),
+    interactions: Number(summary.interaction_count || summary.raw_yolo_interaction_count || 0),
+    vectors: Number(summary.vector_count || 0),
+  }
+}
+
+function keyActionReady(item: Experiment) {
+  const summary = keyActionSummary(item)
+  return summary.status === 'completed' && (summary.segments > 0 || summary.micros > 0 || summary.vectors > 0)
 }
 
 export default function ExperimentList() {
@@ -409,7 +427,9 @@ export default function ExperimentList() {
                 <Info label="创建时间" value={formatDate(item.created_at)} wide />
               </dl>
 
-              <div className="mt-auto grid grid-cols-1 gap-2 pt-5 sm:grid-cols-2">
+              <KeyActionReadiness item={item} />
+
+              <div className="mt-auto grid grid-cols-1 gap-2 pt-5 sm:grid-cols-2 xl:grid-cols-4">
                 <Link
                   to={`/experiments/${item.experiment_id}/workspace`}
                   onMouseEnter={() => prefetchExperimentRoute(item.experiment_id, 'workspace')}
@@ -417,6 +437,26 @@ export default function ExperimentList() {
                 >
                   <FlaskConical className="h-4 w-4" />
                   查看详情
+                </Link>
+                <Link
+                  to={`/experiments/${item.experiment_id}/key-actions`}
+                  onMouseEnter={() => prefetchExperimentRoute(item.experiment_id, 'keyActions')}
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition ${
+                    keyActionReady(item)
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Layers3 className="h-4 w-4" />
+                  关键动作
+                </Link>
+                <Link
+                  to={`/experiments/${item.experiment_id}/key-actions/review`}
+                  onMouseEnter={() => prefetchExperimentRoute(item.experiment_id, 'reviewQueue')}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 text-sm font-bold text-amber-700 transition hover:bg-white"
+                >
+                  <ClipboardCheck className="h-4 w-4" />
+                  Review
                 </Link>
                 <Link
                   to={`/experiments/${item.experiment_id}/report`}
@@ -471,6 +511,27 @@ function Info({ label, value, wide = false }: { label: string; value: string; wi
     <div className={`rounded-lg bg-slate-50 px-3 py-2 ${wide ? 'col-span-2' : ''}`}>
       <dt className="text-xs font-bold text-slate-400">{label}</dt>
       <dd className="mt-1 truncate font-semibold text-slate-800">{value}</dd>
+    </div>
+  )
+}
+
+function KeyActionReadiness({ item }: { item: Experiment }) {
+  const summary = keyActionSummary(item)
+  const ready = keyActionReady(item)
+  return (
+    <div className={`mt-4 rounded-lg border px-3 py-2 ${ready ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className={`text-xs font-black ${ready ? 'text-emerald-700' : 'text-slate-500'}`}>
+          Key Action {ready ? 'Ready' : 'Pending'}
+        </span>
+        <span className="text-xs font-bold text-slate-500">{summary.status}</span>
+      </div>
+      <div className="mt-2 grid grid-cols-4 gap-2 text-center text-xs font-bold text-slate-600">
+        <span><b className="block text-sm text-slate-950">{summary.segments}</b>segment</span>
+        <span><b className="block text-sm text-slate-950">{summary.micros}</b>micro</span>
+        <span><b className="block text-sm text-slate-950">{summary.interactions}</b>交互</span>
+        <span><b className="block text-sm text-slate-950">{summary.vectors}</b>索引</span>
+      </div>
     </div>
   )
 }

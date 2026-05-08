@@ -4,16 +4,16 @@ import { ArrowLeft, Clock3, Filter, Layers3, Video } from 'lucide-react'
 import { experimentApi, prefetchExperimentRoute } from '../api'
 import { EmptyEvidence, EvidenceBadge, EvidenceCard, MetricTile, PageHero, primaryButtonClass, secondaryButtonClass } from '../components/EvidenceUI'
 import { cleanDisplayText } from '../displayText'
-import { mediaUrl } from '../mediaUrl'
+import { experimentFileUrl } from '../mediaUrl'
 import type { MaterialSearchItem } from '../types'
 
 function itemTime(item: MaterialSearchItem) {
   return Number(item.timestamp_sec ?? item.time_start ?? item.local_timestamp_sec ?? 0)
 }
 
-function itemClip(item: MaterialSearchItem) {
+function itemClip(item: MaterialSearchItem, experimentId?: string) {
   const paths = item.published_paths || {}
-  return mediaUrl(item.clip_url || item.clip_file_path || paths.clip || undefined)
+  return experimentFileUrl(item.clip_url || item.clip_file_path || paths.clip || undefined, experimentId)
 }
 
 export default function MaterialTimelineView() {
@@ -59,7 +59,7 @@ export default function MaterialTimelineView() {
       <section className="grid gap-4 md:grid-cols-3">
         <MetricTile label="时间点" value={items.length} helper={`${filtered.length} visible`} tone="blue" Icon={Clock3} />
         <MetricTile label="机位" value={cameras.length} helper="camera / stream" tone="cyan" Icon={Video} />
-        <MetricTile label="片段" value={items.filter(item => Boolean(itemClip(item))).length} helper="clip assets" tone="emerald" Icon={Layers3} />
+        <MetricTile label="片段" value={items.filter(item => Boolean(itemClip(item, id))).length} helper="clip assets" tone="emerald" Icon={Layers3} />
       </section>
 
       <EvidenceCard className="p-4">
@@ -83,7 +83,7 @@ export default function MaterialTimelineView() {
                   </div>
                 </div>
                 <div className="flex items-start justify-end gap-2">
-                  {itemClip(item) && <a href={itemClip(item)} target="_blank" rel="noreferrer" className={secondaryButtonClass('blue')}>片段</a>}
+                  {itemClip(item, id) && <a href={itemClip(item, id)} target="_blank" rel="noreferrer" className={secondaryButtonClass('blue')}>片段</a>}
                   {item.review_status && <EvidenceBadge tone="amber">{item.review_status}</EvidenceBadge>}
                 </div>
               </div>

@@ -38,6 +38,17 @@ export interface Experiment {
   models_used: string[]
   protocol_text?: string | null
   task?: ExperimentTaskStatus
+  key_action_summary?: {
+    status?: string
+    progress?: number
+    message?: string | null
+    segment_count?: number
+    micro_segment_count?: number
+    interaction_count?: number
+    raw_yolo_interaction_count?: number
+    vector_count?: number
+    source?: string | null
+  }
 }
 
 export interface StepRecord {
@@ -192,6 +203,12 @@ export interface AnalysisOverview {
     size_bytes: number
     updated_at?: string | null
     url?: string | null
+    time_start_sec?: number | null
+    true_start_sec?: number | null
+    time_end_sec?: number | null
+    duration_sec?: number | null
+    focus_source?: string | null
+    focus_anchor?: Record<string, unknown> | null
   }>
   debug: Record<string, unknown>
 }
@@ -235,6 +252,70 @@ export interface MaterialSearchResponse {
   total: number
   returned?: number
   items: MaterialSearchItem[]
+}
+
+export interface WorkspacePublishedMaterialsResponse extends MaterialSearchResponse {
+  schema_version?: string
+  storage?: string
+  index_path?: string
+  next_cursor?: string | null
+  index_lifecycle?: WorkspacePublishedHealthResponse
+  sort?: Record<string, unknown>
+  permission_filter?: Record<string, unknown>
+}
+
+export interface WorkspacePublishedHealthResponse {
+  schema_version?: string
+  status?: string
+  index_path?: string
+  index_exists?: boolean
+  index_mtime?: string | null
+  latest_source_mtime?: string | null
+  sqlite_count?: number | null
+  expected_indexable_count?: number
+  formal_jsonl_material_count?: number
+  formal_report_count?: number
+  experiment_count?: number
+  warnings?: Array<Record<string, unknown>>
+  warnings_before_rebuild?: Array<Record<string, unknown>>
+  rebuild?: Record<string, unknown>
+  experiments?: Array<Record<string, unknown>>
+  [key: string]: unknown
+}
+
+export interface MaterialDiagnosticsEvidenceItem {
+  candidate_id?: string | null
+  candidate_group_id?: string | null
+  asset_kind?: string | null
+  display_name?: string | null
+  review_status?: string | null
+  approved_by?: string | null
+  approved_at?: string | null
+  yolo_recheck_status?: string | null
+  yolo_valid_evidence_count?: number | null
+  vlm_status?: string | null
+  vlm_model?: string | null
+  vlm_description?: string | null
+  source_file?: string | null
+  source_candidate_file?: string | null
+  stored_file?: string | null
+  material_url?: string | null
+  material_exists?: boolean
+  url_accessible?: boolean
+  [key: string]: unknown
+}
+
+export interface MaterialDiagnosticsResponse {
+  schema_version?: string
+  experiment_id: string
+  published_total?: number
+  formal_material_reference_count?: number
+  url_accessible_count?: number
+  missing_clip_count?: number
+  missing_preview_count?: number
+  warnings_count?: number
+  evidence_items?: MaterialDiagnosticsEvidenceItem[]
+  [key: string]: unknown
 }
 
 export interface MaterialCandidateFile {
@@ -609,4 +690,111 @@ export interface KeyActionResults {
     formal_report_url?: string | null
     detector_config?: KeyActionDetectorConfig | null
   }
+}
+
+export interface KeyActionReviewItem {
+  item_id: string
+  item_type: 'qa_warning' | 'segment' | 'micro_segment' | 'material_candidate' | string
+  source_id?: string
+  title?: string
+  summary?: string
+  severity?: 'error' | 'warning' | 'info' | string
+  review_status?: 'pending' | 'approved' | 'rejected' | 'needs_review' | string
+  reviewer?: string | null
+  review_note?: string | null
+  reviewed_at?: string | null
+  segment_id?: string | null
+  micro_segment_id?: string | null
+  confidence?: number | null
+  start_sec?: number | null
+  end_sec?: number | null
+  duration_sec?: number | null
+  adjusted_start_sec?: number | null
+  adjusted_end_sec?: number | null
+  reasons?: string[]
+  preview_urls?: string[]
+  clip_urls?: string[]
+  preview_paths?: string[]
+  clip_paths?: string[]
+  boundary?: Record<string, unknown>
+  payload?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+export interface KeyActionQualityPayload {
+  experiment_id?: string
+  schema_version?: string
+  status?: string
+  health_score?: number
+  core_metrics?: {
+    segment_count?: number
+    micro_segment_count?: number
+    longest_segment_sec?: number | null
+    longest_segment_ratio?: number | null
+    total_action_coverage_ratio?: number | null
+    vector_count?: number
+    unreviewed_count?: number
+    review_decision_counts?: Record<string, number>
+  }
+  health?: Record<string, unknown>
+  boundary_policy?: Record<string, unknown>
+  coverage_check?: Record<string, unknown>
+  quality_gate?: Record<string, unknown>
+  boundary_refinement_candidates?: Array<Record<string, unknown>>
+  long_segment_split_candidates?: Array<Record<string, unknown>>
+  recommendations?: Array<Record<string, unknown>>
+  [key: string]: unknown
+}
+
+export interface KeyActionReviewQueue {
+  schema_version?: string
+  experiment_id: string
+  generated_at?: string
+  summary: {
+    total: number
+    pending: number
+    approved: number
+    rejected: number
+    needs_review: number
+    quality_score?: number
+    segment_count?: number
+    micro_segment_count?: number
+    long_segment_candidate_count?: number
+    boundary_refinement_candidate_count?: number
+  }
+  quality?: KeyActionQualityPayload
+  items: KeyActionReviewItem[]
+}
+
+export interface KeyActionEvidenceAdapters {
+  schema_version?: string
+  experiment_id: string
+  metadata_dir?: string
+  protocol_doc?: string
+  input_contracts?: Record<string, string>
+  accepted_aliases?: Record<string, string[]>
+  counts?: Record<string, number>
+  summary?: Record<string, number>
+  validation?: Record<string, unknown>
+  adapters?: Record<string, {
+    adapter?: string
+    canonical_file?: string
+    present?: boolean
+    row_count?: number
+    valid_row_count?: number
+    error_count?: number
+    warning_count?: number
+    semantic_issue_count?: number
+    status?: string
+    coverage?: Record<string, unknown>
+    views?: string[]
+    issues?: Array<Record<string, unknown>>
+    [key: string]: unknown
+  }>
+  ready?: boolean
+}
+
+export interface KeyActionRetrievalEvaluation {
+  experiment_id: string
+  evaluation: Record<string, unknown>
 }
