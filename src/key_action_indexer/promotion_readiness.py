@@ -291,6 +291,8 @@ def _gold_summary(session: Path, *, query_count: int) -> dict[str, Any]:
         "human_reviewed_query_count": human_reviewed_count,
         "binding_mode": data.get("binding_mode"),
         "id_authoritative": bool(data.get("id_authoritative")),
+        "reviewed_release": data.get("reviewed_release"),
+        "reviewed_release_dir": data.get("reviewed_release_dir"),
         "manual_review_status": data.get("manual_review_status"),
         "source_decisions_path": data.get("source_decisions_path"),
         "decision_files": decision_files,
@@ -331,6 +333,8 @@ def _eval_summary(session: Path, *, query_count: int) -> dict[str, Any]:
         "excluded_query_count": excluded_query_count,
         "required_query_count": query_count,
         "benchmark_binding_mode": data.get("benchmark_binding_mode"),
+        "reviewed_release": data.get("reviewed_release"),
+        "reviewed_release_dir": data.get("reviewed_release_dir"),
         "human_verified_query_count": _as_int(data.get("human_verified_query_count"), 0),
         "human_reviewed_query_count": _as_int(data.get("human_reviewed_query_count"), 0),
         "top1_hit_rate": data.get("top1_hit_rate"),
@@ -656,6 +660,27 @@ def _blockers(
                     None,
                 )
             )
+    enforce_latest_release_binding = _requires_latest_release_binding(releases)
+    if enforce_latest_release_binding and gold.get("available") and releases.get("latest_version"):
+        gold_release = str(gold.get("reviewed_release") or "").strip()
+        latest_version = str(releases.get("latest_version") or "").strip()
+        if not gold_release:
+            blockers.append(
+                _blocker(
+                    "gold_benchmark_release_missing",
+                    "Gold query benchmark is not bound to a reviewed release.",
+                    f"python -m key_action_indexer.cli confirm-gold-query-benchmark --session-dir {session} --decisions <decision_file> --query-count {query_count} --reviewer <reviewer>",
+                )
+            )
+        elif gold_release != latest_version:
+            blockers.append(
+                _blocker(
+                    "gold_benchmark_release_mismatch",
+                    f"Gold query benchmark is bound to {gold_release}, but latest reviewed release is {latest_version}.",
+                    f"python -m key_action_indexer.cli confirm-gold-query-benchmark --session-dir {session} --decisions <decision_file> --query-count {query_count} --reviewer <reviewer>",
+                    details={"reviewed_release": gold_release, "latest_version": latest_version},
+                )
+            )
     if not evaluation.get("available"):
         blockers.append(
             _blocker(
@@ -677,6 +702,26 @@ def _blockers(
                 },
             )
         )
+    elif enforce_latest_release_binding and releases.get("latest_version"):
+        eval_release = str(evaluation.get("reviewed_release") or "").strip()
+        latest_version = str(releases.get("latest_version") or "").strip()
+        if not eval_release:
+            blockers.append(
+                _blocker(
+                    "retrieval_eval_release_missing",
+                    "Default Chinese query retrieval evaluation is not bound to a reviewed release.",
+                    f"python -m key_action_indexer.cli default-query-eval --session-dir {session} --query-count {query_count}",
+                )
+            )
+        elif eval_release != latest_version:
+            blockers.append(
+                _blocker(
+                    "retrieval_eval_release_mismatch",
+                    f"Default Chinese query retrieval evaluation is bound to {eval_release}, but latest reviewed release is {latest_version}.",
+                    f"python -m key_action_indexer.cli default-query-eval --session-dir {session} --query-count {query_count}",
+                    details={"reviewed_release": eval_release, "latest_version": latest_version},
+                )
+            )
     return _dedupe_blockers(blockers)
 
 
@@ -701,6 +746,12 @@ def _readiness_status(*, blockers: list[Mapping[str, Any]], releases: Mapping[st
     if releases.get("latest_available"):
         return "ready_to_promote"
     return "blocked"
+
+
+def _requires_latest_release_binding(releases: Mapping[str, Any]) -> bool:
+    if releases.get("latest_is_promoted"):
+        return True
+    return bool(releases.get("candidate_validation_current"))
 
 
 def _next_actions(

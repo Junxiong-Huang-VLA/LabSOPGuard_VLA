@@ -451,6 +451,8 @@ def validate_queries(
         "acceptance_name": config.get("acceptance_name"),
         "benchmark_version": config.get("benchmark_version"),
         "benchmark_binding_mode": config.get("benchmark_binding_mode"),
+        "reviewed_release": config.get("reviewed_release"),
+        "reviewed_release_dir": config.get("reviewed_release_dir"),
         "human_verified_query_count": config.get("human_verified_query_count"),
         "human_reviewed_query_count": config.get("human_reviewed_query_count"),
         "gold_benchmark_path": config.get("gold_benchmark_path"),

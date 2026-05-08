@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from key_action_indexer.retrieval_eval import confirm_gold_query_benchmark
 from key_action_indexer.review_queue import apply_review_decision
 from key_action_indexer.reviewed_dataset import (
@@ -215,8 +217,10 @@ def test_promote_reviewed_release_requires_gate_eval_and_becomes_default(tmp_pat
     gold = confirm_gold_query_benchmark(session, query_count=3, reviewer="qa", decisions_path=decisions_path)
     promoted = promote_reviewed_release(session, version=release["release"]["version"], reviewer="qa", note="ship", query_count=3)
 
+    assert gold["reviewed_release"] == "v001"
     assert gold["human_verified_query_count"] == 3
     assert promoted["active_version"] == "v001"
+    assert promoted["promotion_requirements"]["gold_benchmark_reviewed_release"] == "v001"
     assert active_reviewed_release(session)["version"] == "v001"
     assert reviewed_index_dir(session) == session / "reviewed_releases" / "v001" / "reviewed_index"
     assert load_reviewed_export(session)["manifest"]["release"]["version"] == "v001"
@@ -261,3 +265,42 @@ def test_failed_promotion_writes_candidate_artifacts_without_overwriting_default
     assert json.loads(default_eval.read_text(encoding="utf-8"))["sentinel"] == "promoted_default"
     assert (metadata / "quality_gate.v001.candidate.json").exists()
     assert (session / "evaluation" / "default_chinese_query_validation.v001.candidate.json").exists()
+
+
+def test_promote_reviewed_release_rejects_gold_bound_to_other_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    session = tmp_path
+    release_dir = session / "reviewed_releases" / "v002"
+    release_dir.mkdir(parents=True)
+    (release_dir / "reviewed_release_manifest.json").write_text(
+        json.dumps({"version": "v002", "release_dir": str(release_dir)}),
+        encoding="utf-8",
+    )
+
+    from key_action_indexer import quality_gate, retrieval_eval
+
+    monkeypatch.setattr(
+        quality_gate,
+        "build_quality_gate",
+        lambda *args, **kwargs: {"status": "pass", "can_mark_complete": True, "summary": {"blocking_count": 0}},
+    )
+    monkeypatch.setattr(
+        retrieval_eval,
+        "run_default_chinese_query_eval",
+        lambda *args, **kwargs: {
+            "status": "pass",
+            "query_count": 1,
+            "total_query_count": 1,
+            "applicable_query_count": 1,
+            "excluded_query_count": 0,
+            "human_verified_query_count": 1,
+            "human_reviewed_query_count": 1,
+            "benchmark_binding_mode": "human_verified_review_file",
+            "reviewed_release": "v001",
+            "top1_hit_rate": 1.0,
+            "topk_hit_rate": 1.0,
+            "expected_id_hit_rate": 1.0,
+        },
+    )
+
+    with pytest.raises(ValueError, match="reviewed_release_mismatch"):
+        promote_reviewed_release(session, version="v002", reviewer="qa", query_count=1)

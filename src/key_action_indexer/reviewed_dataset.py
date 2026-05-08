@@ -254,11 +254,22 @@ def promote_reviewed_release(
     total_queries = _int_or_default(evaluation.get("total_query_count"), query_total)
     applicable_queries = _int_or_default(evaluation.get("applicable_query_count"), query_total)
     excluded_queries = _int_or_default(evaluation.get("excluded_query_count"), 0)
+    gold_reviewed_release = str(evaluation.get("reviewed_release") or "").strip()
     failures: list[dict[str, Any]] = []
     if gate.get("status") != "pass" or not gate.get("can_mark_complete"):
         failures.append({"gate": gate.get("status"), "blocking_checks": gate.get("blocking_checks")})
     if evaluation.get("status") != "pass":
         failures.append({"retrieval_eval": evaluation.get("status"), "threshold_failures": evaluation.get("threshold_failures")})
+    if not gold_reviewed_release:
+        failures.append({"gold_query_benchmark": "reviewed_release_missing", "required_reviewed_release": release_version})
+    elif gold_reviewed_release != release_version:
+        failures.append(
+            {
+                "gold_query_benchmark": "reviewed_release_mismatch",
+                "reviewed_release": gold_reviewed_release,
+                "required_reviewed_release": release_version,
+            }
+        )
     if total_queries < query_count:
         failures.append({"gold_query_benchmark": "incomplete_fixed_query_review", "total_query_count": total_queries, "required": query_count})
     if human_reviewed < total_queries or human_verified < applicable_queries:
@@ -292,6 +303,7 @@ def promote_reviewed_release(
             "retrieval_eval_status": evaluation.get("status"),
             "gold_benchmark_binding_mode": evaluation.get("benchmark_binding_mode"),
             "gold_benchmark_path": evaluation.get("gold_benchmark_path"),
+            "gold_benchmark_reviewed_release": gold_reviewed_release,
             "human_verified_query_count": human_verified,
             "human_reviewed_query_count": human_reviewed,
             "query_count": evaluation.get("query_count"),

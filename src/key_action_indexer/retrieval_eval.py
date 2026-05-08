@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .query_validation import validate_queries
-from .reviewed_dataset import reviewed_metadata_path
+from .reviewed_dataset import active_reviewed_release, reviewed_metadata_path
 from .schemas import read_jsonl
 
 
@@ -88,6 +88,8 @@ def build_default_chinese_query_eval_config(
         "acceptance_name": "fixed_50_chinese_key_action_retrieval_eval",
         "benchmark_version": "2026-05-08.fixed50",
         "gold_benchmark_path": str(metadata / GOLD_QUERY_BENCHMARK_FILENAME),
+        "reviewed_release": gold.get("reviewed_release"),
+        "reviewed_release_dir": gold.get("reviewed_release_dir"),
         "benchmark_binding_mode": gold.get("binding_mode"),
         "human_verified_query_count": gold.get("human_verified_query_count"),
         "human_reviewed_query_count": gold.get("human_reviewed_query_count"),
@@ -124,6 +126,7 @@ def build_gold_query_benchmark(
     session = Path(session_dir)
     metadata = session / "metadata"
     target = Path(output_path) if output_path is not None else metadata / GOLD_QUERY_BENCHMARK_FILENAME
+    release_binding = _active_release_binding(session)
     if target.exists() and not overwrite:
         try:
             data = json.loads(target.read_text(encoding="utf-8-sig"))
@@ -157,6 +160,8 @@ def build_gold_query_benchmark(
         "schema_version": "key_action_gold_query_benchmark.v1",
         "benchmark_version": "2026-05-08.fixed50.human_gt",
         "session_dir": str(session),
+        "reviewed_release": release_binding.get("reviewed_release"),
+        "reviewed_release_dir": release_binding.get("reviewed_release_dir"),
         "query_count": len(rules),
         "total_query_count": len(rules),
         "applicable_query_count": len(rules),
@@ -190,7 +195,19 @@ def confirm_gold_query_benchmark(
     target = Path(output_path) if output_path is not None else session / "metadata" / GOLD_QUERY_BENCHMARK_FILENAME
     gold = build_gold_query_benchmark(session, output_path=target, query_count=query_count)
     queries = [dict(row) for row in gold.get("queries") or []][: max(1, min(query_count, DEFAULT_QUERY_COUNT))]
+    decision_metadata = _gold_query_decision_metadata(Path(decisions_path))
     decisions = _gold_query_decisions_by_id(Path(decisions_path))
+    release_binding = _active_release_binding(session)
+    reviewed_release = (
+        _first_text(decision_metadata, "reviewed_release", "reviewed_release_version", "release_version")
+        or release_binding.get("reviewed_release")
+        or _first_text(gold, "reviewed_release", "reviewed_release_version")
+    )
+    reviewed_release_dir = (
+        _first_text(decision_metadata, "reviewed_release_dir", "release_dir")
+        or release_binding.get("reviewed_release_dir")
+        or _first_text(gold, "reviewed_release_dir", "release_dir")
+    )
     now = _now()
     confirmed = []
     unresolved = []
@@ -296,6 +313,8 @@ def confirm_gold_query_benchmark(
         "schema_version": "key_action_gold_query_benchmark.v1",
         "benchmark_version": "2026-05-08.fixed50.human_review_file",
         "session_dir": str(session),
+        "reviewed_release": reviewed_release or None,
+        "reviewed_release_dir": reviewed_release_dir or None,
         "query_count": len(confirmed),
         "total_query_count": len(confirmed),
         "applicable_query_count": len(applicable),
@@ -520,6 +539,15 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return read_jsonl(path) if path.exists() else []
 
 
+def _gold_query_decision_metadata(path: Path) -> dict[str, Any]:
+    if not path.exists() or path.suffix.lower() in {".jsonl", ".ndjson"}:
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, Mapping):
+        return {}
+    return {key: value for key, value in payload.items() if key != "decisions"}
+
+
 def _gold_query_decisions_by_id(path: Path) -> dict[str, dict[str, Any]]:
     if not path.exists():
         raise FileNotFoundError(f"gold query decision file not found: {path}")
@@ -538,6 +566,17 @@ def _gold_query_decisions_by_id(path: Path) -> dict[str, dict[str, Any]]:
         if key:
             decisions[key] = dict(row)
     return decisions
+
+
+def _active_release_binding(session: Path) -> dict[str, str | None]:
+    release = active_reviewed_release(session) or {}
+    nested = release.get("release") if isinstance(release.get("release"), Mapping) else {}
+    version = _first_text(release, "version", "active_version") or _first_text(nested, "version", "active_version")
+    release_dir = _first_text(release, "release_dir") or _first_text(nested, "release_dir")
+    return {
+        "reviewed_release": version or None,
+        "reviewed_release_dir": release_dir or None,
+    }
 
 
 def _normalize_gold_decision(value: Any) -> str:

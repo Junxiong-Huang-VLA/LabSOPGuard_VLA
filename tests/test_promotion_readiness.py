@@ -226,6 +226,22 @@ def test_promotion_readiness_excludes_marked_historical_session(tmp_path: Path) 
     assert "historical YOLO scratch session" in markdown
 
 
+def test_promotion_readiness_flags_gold_release_mismatch(tmp_path: Path) -> None:
+    session = tmp_path / "exp_1" / "key_action_index"
+    _write_promoted_session(session, version="v002", query_count=2)
+    gold_path = session / "metadata" / "gold_query_benchmark.json"
+    gold = json.loads(gold_path.read_text(encoding="utf-8"))
+    gold["reviewed_release"] = "v001"
+    gold_path.write_text(json.dumps(gold), encoding="utf-8")
+
+    report = build_promotion_readiness_report([session], query_count=2)
+    row = report["sessions"][0]
+    codes = {item["code"] for item in row["blockers"]}
+
+    assert row["readiness_status"] == "blocked"
+    assert "gold_benchmark_release_mismatch" in codes
+
+
 def _write_promoted_session(session: Path, *, version: str, query_count: int) -> None:
     metadata = session / "metadata"
     evaluation = session / "evaluation"
@@ -275,7 +291,13 @@ def _write_promoted_session(session: Path, *, version: str, query_count: int) ->
         json.dumps(
             {
                 "query_count": query_count,
+                "total_query_count": query_count,
+                "applicable_query_count": query_count,
+                "excluded_query_count": 0,
+                "reviewed_release": version,
+                "reviewed_release_dir": str(release_dir),
                 "human_verified_query_count": query_count,
+                "human_reviewed_query_count": query_count,
                 "binding_mode": "human_verified_review_file",
                 "id_authoritative": True,
                 "manual_review_status": "approved",
@@ -289,7 +311,13 @@ def _write_promoted_session(session: Path, *, version: str, query_count: int) ->
             {
                 "status": "pass",
                 "query_count": query_count,
+                "total_query_count": query_count,
+                "applicable_query_count": query_count,
+                "excluded_query_count": 0,
+                "reviewed_release": version,
+                "reviewed_release_dir": str(release_dir),
                 "human_verified_query_count": query_count,
+                "human_reviewed_query_count": query_count,
                 "benchmark_binding_mode": "human_verified_review_file",
                 "top1_hit_rate": 1.0,
                 "topk_hit_rate": 1.0,
