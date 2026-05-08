@@ -2214,10 +2214,27 @@ def _material_reference_root_candidates(exp_dir: Path) -> List[Path]:
 
 def _material_reference_root_and_rows(exp_dir: Path) -> tuple[Path, List[Dict[str, Any]]]:
     fallback_root = exp_dir / "material_references"
+    local_root = exp_dir / "material_references"
     for ref_root in _material_reference_root_candidates(exp_dir):
         rows = _material_reference_rows_from_root(ref_root)
-        if rows:
-            return ref_root, rows
+        if not rows:
+            continue
+        if ref_root.resolve() == local_root.resolve():
+            approved_rows = []
+            for row in rows:
+                candidate_status = str(row.get("candidate_status") or "").lower()
+                review_status = str(row.get("review_status") or "").lower()
+                has_approval_trace = bool(row.get("approved_at") or row.get("approved_by"))
+                if (
+                    row.get("formal_material_reference")
+                    or candidate_status == "approved"
+                    or (review_status == "accepted" and has_approval_trace)
+                ):
+                    approved_rows.append(row)
+            if approved_rows:
+                return ref_root, approved_rows
+            continue
+        return ref_root, rows
     return fallback_root, []
 
 
