@@ -63,6 +63,18 @@ function candidateFileUrl(item: MaterialCandidateFile, experimentId?: string) {
   return experimentFileUrl(pathText(item.url, item.preview_url, item.clip_url, item.frame_path, item.clip_file_path, item.stored_file, item.source_file), experimentId)
 }
 
+function candidateFileName(file: MaterialCandidateFile) {
+  return pathText(file.stored_filename, file.file_name, file.display_name, file.source_file, file.stored_file)?.replace(/\\/g, '/').split('/').pop() || '专业报告'
+}
+
+function formatBytes(value: unknown) {
+  const size = Number(value)
+  if (!Number.isFinite(size) || size <= 0) return ''
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`
+  if (size >= 1024) return `${Math.round(size / 1024)} KB`
+  return `${Math.round(size)} B`
+}
+
 function normalizedCandidateStatus(value: unknown) {
   const status = String(value || '').trim().toLowerCase()
   if (!status || status === 'unknown' || status === 'none' || status === 'null') return 'pending'
@@ -111,6 +123,7 @@ export default function MaterialSearch() {
   const [reviewFilter, setReviewFilter] = useState('all')
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null)
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Record<string, string[]>>({})
+  const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -190,8 +203,9 @@ export default function MaterialSearch() {
     const selectedIds = selectedIdsForGroup(group)
     setApprovingGroup(group.candidate_group_id)
     setError(null)
+    setApprovalNotice(null)
     try {
-      await experimentApi.approveMaterialCandidate(id, group.candidate_group_id, {
+      const response = await experimentApi.approveMaterialCandidate(id, group.candidate_group_id, {
         reviewer: 'frontend-review',
         notes: `Approved from key evidence library (${selectedIds.length} selected assets)`,
         candidate_ids: selectedIds,
@@ -199,6 +213,15 @@ export default function MaterialSearch() {
         selected_clip_ids: selectedIds,
       })
       await load()
+      setSelectedCandidateIds(previous => {
+        const next = { ...previous }
+        delete next[group.candidate_group_id]
+        return next
+      })
+      const published = response?.published_materials as { total?: number; items?: unknown[] } | undefined
+      const publishedTotal = Number(published?.total ?? published?.items?.length ?? 0)
+      const approvedCount = Number(response?.approval?.approved_count ?? selectedIds.length)
+      setApprovalNotice(`已批准入库 ${approvedCount} 个候选文件；正式关键素材库当前 ${publishedTotal} 个素材，已同步到 material_references、正式素材文件夹和全局素材索引。`)
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : '候选素材审批失败')
     } finally {
@@ -233,6 +256,15 @@ export default function MaterialSearch() {
         <MetricTile label="强证据" value={strong} helper="strong evidence" tone="emerald" Icon={BadgeCheck} />
         <MetricTile label="视频片段" value={clips} helper="approved clips" tone="cyan" Icon={Image} />
       </section>
+
+      {approvalNotice && (
+        <EvidenceCard className="border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800" data-smoke="material-approval-notice" aria-live="polite">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            {approvalNotice}
+          </div>
+        </EvidenceCard>
+      )}
 
       {items.length > 0 && (
         <EvidenceCard className="p-5" data-smoke="formal-material-library" data-count={items.length}>
@@ -518,11 +550,22 @@ function CandidatePreview({
     </label>
   )
   if (isReport) {
+    const filename = candidateFileName(file)
+    const ext = filename.includes('.') ? filename.split('.').pop()?.toUpperCase() : 'PDF'
+    const size = formatBytes(file.size_bytes)
     return (
-      <div className={`relative flex aspect-video items-center justify-center rounded-lg border bg-slate-50 ${selected ? 'border-emerald-300' : 'border-slate-200'}`}>
+      <div className={`relative flex aspect-video flex-col items-start justify-between rounded-lg border bg-slate-50 p-4 ${selected ? 'border-emerald-300' : 'border-slate-200'}`}>
         {overlay}
-        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 text-sm font-black text-blue-700">
-          <FileText className="h-5 w-5" /> 专业报告
+        <div className="mt-8 flex w-full min-w-0 items-start gap-3">
+          <span className="rounded-lg bg-blue-50 p-2 text-blue-700"><FileText className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <div className="text-xs font-black uppercase text-blue-700">{ext || 'PDF'} 报告候选</div>
+            <div className="mt-1 line-clamp-2 break-all text-sm font-black text-slate-950">{filename}</div>
+            <div className="mt-1 text-xs font-semibold text-slate-500">{size || '可打开预览'} · {cleanDisplayText(String(file.role || 'professional_report_pdf'))}</div>
+          </div>
+        </div>
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-blue-700 hover:text-blue-900">
+          打开报告
         </a>
       </div>
     )
