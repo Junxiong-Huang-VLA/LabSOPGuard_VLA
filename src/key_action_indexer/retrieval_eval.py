@@ -324,7 +324,7 @@ def _best_match(rows: list[Mapping[str, Any]], objects: list[str], actions: list
     expected_actions = {_norm(item) for item in actions}
     best: tuple[int, Mapping[str, Any]] | None = None
     for row in rows:
-        text = _row_text(row)
+        text = _cached_row_text(row)
         score = sum(1 for item in expected_objects if item and item in text) + sum(2 for item in expected_actions if item and item in text)
         if score <= 0:
             continue
@@ -437,6 +437,18 @@ def _category_for_query(query: str) -> str:
 
 def _row_text(row: Mapping[str, Any]) -> str:
     return json.dumps(row, ensure_ascii=False, sort_keys=True).casefold().replace("-", "_").replace(" ", "_")
+
+
+def _cached_row_text(row: Mapping[str, Any]) -> str:
+    cache_key = "_retrieval_eval_search_text"
+    if isinstance(row, dict):
+        cached = row.get(cache_key)
+        if isinstance(cached, str):
+            return cached
+        text = _row_text(row)
+        row[cache_key] = text
+        return text
+    return _row_text(row)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
