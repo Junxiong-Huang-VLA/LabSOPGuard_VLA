@@ -3699,6 +3699,17 @@ def _run_key_action_index_task(
             "policy": "Keyframes, key clips, and professional reports stay in the candidate queue until manually approved.",
             "approved_count": 0,
         }
+        try:
+            from key_action_indexer.material_references import reset_material_references_to_approved_candidates  # type: ignore
+
+            material_auto_publish["formal_reset"] = reset_material_references_to_approved_candidates(
+                output_dir,
+                approved_rows=[],
+                merge_existing=False,
+            )
+        except Exception as exc:
+            logger.exception("Failed to reset formal material references for candidate-first flow: %s", experiment_id)
+            material_auto_publish["formal_reset"] = {"status": "failed", "error": str(exc)}
         if isinstance(candidate_summary, dict):
             candidate_summary["auto_publish"] = material_auto_publish
         summary["material_candidates"] = candidate_summary
