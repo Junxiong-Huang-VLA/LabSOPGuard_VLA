@@ -154,13 +154,21 @@ def expand_query(query_text: str) -> dict[str, Any]:
             ["recording", "panel_reading", "hand_paper_contact"],
             ["recording", "record", "readout", "balance readout", "reading", "\u8bb0\u5f55", "\u8bfb\u6570", "\u5929\u5e73\u8bfb\u6570"],
         )
-    if "\u6837\u54c1\u5904\u7406" in text or ("\u6837\u54c1" in text and "\u79fb\u6db2" not in text and "\u52a0\u6837" not in text):
+    if any(token in text for token in ("\u522e\u53d6", "\u522e\u52fa", "\u836f\u5319")):
         return _query_payload(
             text,
-            SAMPLE_HANDLING,
-            ["sample_bottle", "sample_bottle_blue", "reagent_bottle", "spatula", "paper", "bottle"],
-            ["hand_object_contact", "hand_sample_bottle_contact", "hand_reagent_bottle_contact", "hand_spatula_contact", "hand_paper_contact"],
-            ["sample handling", "sample", "sample bottle", "spatula", "weighing paper", "\u6837\u54c1", "\u6837\u54c1\u5904\u7406", "\u53d6\u6837", "\u6837\u54c1\u74f6"],
+            USE_SPATULA,
+            ["spatula"],
+            ["hand_spatula_contact", "spatula_sampling"],
+            ["spatula", "\u522e\u53d6", "\u522e\u52fa", "\u836f\u5319", "\u53d6\u6837", "\u6837\u54c1"],
+        )
+    if "\u79f0\u91cf\u7eb8" in text:
+        return _query_payload(
+            text,
+            "weighing_paper_transfer",
+            ["paper", "weighing_paper", "spatula"],
+            ["hand_paper_contact", "hand_spatula_contact", "spatula_sampling"],
+            ["weighing paper", "sample transfer", "\u79f0\u91cf\u7eb8", "\u6837\u54c1", "\u52a0\u5165", "\u53d6\u6837"],
         )
     if "\u79fb\u6db2" in text or "\u52a0\u6837" in text:
         return _query_payload(
@@ -177,6 +185,14 @@ def expand_query(query_text: str) -> dict[str, Any]:
             ["balance", "paper", "weighing_paper", "sample_bottle", "spatula"],
             ["weighing", "hand_balance_contact", "hand_paper_contact", "spatula_sampling"],
             ["weighing", "balance", "weighing paper", "sample mass", "\u79f0\u91cf", "\u5929\u5e73", "\u91cd\u91cf"],
+        )
+    if "\u6837\u54c1\u5904\u7406" in text or ("\u6837\u54c1" in text and "\u79fb\u6db2" not in text and "\u52a0\u6837" not in text):
+        return _query_payload(
+            text,
+            SAMPLE_HANDLING,
+            ["sample_bottle", "sample_bottle_blue", "reagent_bottle", "spatula", "paper", "bottle"],
+            ["hand_object_contact", "hand_sample_bottle_contact", "hand_reagent_bottle_contact", "hand_spatula_contact", "hand_paper_contact"],
+            ["sample handling", "sample", "sample bottle", "spatula", "weighing paper", "\u6837\u54c1", "\u6837\u54c1\u5904\u7406", "\u53d6\u6837", "\u6837\u54c1\u74f6"],
         )
     if any(token in lower for token in ["balance weighing", "weighing", "weigh"]):
         return _query_payload(
@@ -324,6 +340,12 @@ def score_query_metadata_match(query_text: str, metadata: dict[str, Any]) -> dic
     if canonical == SAMPLE_HANDLING and primary == "paper":
         score -= 0.04
         reasons.append("sample_handling_deprioritize_paper_surface")
+    if canonical == "weighing_paper_transfer" and primary == "paper":
+        score += 0.18
+        reasons.append("weighing_paper_surface_priority")
+    if canonical == "weighing_paper_transfer" and (primary == "spatula" or interaction_type == "hand_spatula_contact"):
+        score += 0.12
+        reasons.append("weighing_paper_spatula_transfer_candidate")
     if canonical == RECORDING and primary == "paper":
         score += 0.08
         reasons.append("recording_surface_candidate")
