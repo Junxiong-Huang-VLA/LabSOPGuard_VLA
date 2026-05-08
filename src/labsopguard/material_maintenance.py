@@ -210,7 +210,7 @@ def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[
     items: List[Dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
         asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
-        if asset_kind not in {KEYFRAME_KIND, KEY_CLIP_KIND}:
+        if asset_kind not in {KEYFRAME_KIND, KEY_CLIP_KIND, REPORT_KIND}:
             continue
         path = _material_reference_row_path(row, ref_root)
         if path is None or not path.is_file():
@@ -228,6 +228,7 @@ def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[
             "preview": str(path) if asset_kind == KEYFRAME_KIND else "",
             "clip": str(path) if asset_kind == KEY_CLIP_KIND else "",
             "keyframe": str(path) if asset_kind == KEYFRAME_KIND else "",
+            "report": str(path) if asset_kind == REPORT_KIND else "",
         }
         items.append(
             {
