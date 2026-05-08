@@ -1,0 +1,3085 @@
+{
+  "schema_version": "key_action_batch_refresh.v1",
+  "generated_at": "2026-05-08T09:19:37.341621+00:00",
+  "source_count": 3,
+  "refreshed_count": 3,
+  "error_count": 0,
+  "query_texts": [
+    "balance weighing",
+    "pipetting liquid transfer",
+    "sample handling",
+    "recording balance readout",
+    "查找使用天平称量的片段",
+    "查找移液操作片段",
+    "查找样品处理片段",
+    "查找记录读数片段"
+  ],
+  "sessions": [
+    {
+      "session_dir": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\\key_action_index",
+      "session_id": "2190fe06-3619-45fc-96ef-1bb8afb9bdf9",
+      "status": "refreshed",
+      "steps": {
+        "micro_coverage": {
+          "added_micro_count": 0,
+          "output_micro_count": 8,
+          "skipped_counts": {
+            "already_has_micro": 5
+          }
+        },
+        "micro_quality": {
+          "micro_segment_count": 8,
+          "strong_process_micro_count": 2,
+          "retrieval_candidate_micro_count": 6,
+          "process_evidence_role_counts": {
+            "retrieval_candidate": 6,
+            "strong_process_evidence": 2
+          }
+        },
+        "video_understanding": {
+          "video_event_count": 81,
+          "conclusion_status_counts": {
+            "candidate": 15,
+            "confirmed": 29,
+            "measured": 37
+          },
+          "candidate_rollup": {
+            "enabled": true,
+            "max_gap_sec": 4.0,
+            "input_event_count": 109,
+            "output_event_count": 81,
+            "input_candidate_count": 43,
+            "output_candidate_count": 15,
+            "input_candidate_ratio": 0.394495,
+            "output_candidate_ratio": 0.185185,
+            "rollup_group_count": 16,
+            "primary_group_count": 9,
+            "cross_family_group_count": 3,
+            "weak_bundle_group_count": 4,
+            "rolled_source_event_count": 44,
+            "removed_candidate_event_count": 28,
+            "groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0001:seg_000001:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 6,
+                "source_event_ids": [
+                  "seg_000001_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000001_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_001:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_002:third_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 6
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 6
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-04-24T16:57:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:57:39.267000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0002:seg_000001:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_001:object_movement_candidate",
+                  "seg_000001_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "object_movement": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-04-24T16:57:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:57:39.267000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0003:seg_000002:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000002_micro_001:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000002_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000002",
+                "micro_segment_id": "seg_000002_micro_001",
+                "global_start_time": "2026-04-24T16:57:46.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.033333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0004:seg_000003:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 5,
+                "source_event_ids": [
+                  "seg_000003_micro_003:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000003_micro_003:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_002:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_003:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 5
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 5
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_003",
+                "global_start_time": "2026-04-24T16:58:05.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:07.533000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0005:seg_000003:beaker:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:liquid_transfer_candidate",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_001:third_person:beaker:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0006:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:equipment_control_change:beaker:equipment_panel_operation_candidate",
+                  "seg_000003_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0007:seg_000003:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_002:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000003_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-04-24T16:58:05.233333+08:00",
+                "global_end_time": "2026-04-24T16:58:07.233333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0008:seg_000004:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000004_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000004_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000004_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-04-24T16:58:19.366667+08:00",
+                "global_end_time": "2026-04-24T16:58:21.933000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0009:seg_000005:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000005_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000005_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000005_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000005",
+                "micro_segment_id": "seg_000005_micro_001",
+                "global_start_time": "2026-04-24T16:58:31.100000+08:00",
+                "global_end_time": "2026-04-24T16:58:33.667000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0010:seg_000003:beaker:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:container_open_close:beaker:container_state_change_candidate",
+                  "seg_000003_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0011:seg_000004:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0008:seg_000004:balance:weighing_or_readout:equipment_panel",
+                  "seg_000004_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-04-24T16:58:19.366667+08:00",
+                "global_end_time": "2026-04-24T16:58:21.933000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0012:seg_000005:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0009:seg_000005:balance:weighing_or_readout:equipment_panel",
+                  "seg_000005_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000005",
+                "micro_segment_id": "seg_000005_micro_001",
+                "global_start_time": "2026-04-24T16:58:31.100000+08:00",
+                "global_end_time": "2026-04-24T16:58:33.667000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0013:seg_000001:balance:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_002:container_state_change_candidate",
+                  "seg_000001_micro_002:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "liquid_flow": 1
+                },
+                "source_action_families": {
+                  "liquid_transfer": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "balance",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-04-24T16:57:37.500000+08:00",
+                "global_end_time": "2026-04-24T16:57:39.267000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0014:seg_000002:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0003:seg_000002:paper:weighing_or_readout:equipment_panel",
+                  "seg_000002_micro_001:container_state_change_candidate",
+                  "seg_000002_micro_001:liquid_transfer_candidate",
+                  "seg_000002_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000002",
+                "micro_segment_id": "seg_000002_micro_001",
+                "global_start_time": "2026-04-24T16:57:46.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.033333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0015:seg_000003:beaker:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "candidate_rollup_0005:seg_000003:beaker:liquid_transfer:liquid_flow",
+                  "candidate_rollup_0006:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0010:seg_000003:beaker:container_state:object_movement"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "beaker",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0016:seg_000003:paper:object_tracking:object_movement",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0007:seg_000003:paper:weighing_or_readout:equipment_panel",
+                  "seg_000003_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "object_tracking",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-04-24T16:58:05.233333+08:00",
+                "global_end_time": "2026-04-24T16:58:07.233333+08:00"
+              }
+            ],
+            "primary_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0001:seg_000001:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 6,
+                "source_event_ids": [
+                  "seg_000001_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000001_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_001:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_002:third_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 6
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 6
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-04-24T16:57:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:57:39.267000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0002:seg_000001:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_001:object_movement_candidate",
+                  "seg_000001_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "object_movement": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-04-24T16:57:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:57:39.267000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0003:seg_000002:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000002_micro_001:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000002_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000002",
+                "micro_segment_id": "seg_000002_micro_001",
+                "global_start_time": "2026-04-24T16:57:46.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.033333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0004:seg_000003:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 5,
+                "source_event_ids": [
+                  "seg_000003_micro_003:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000003_micro_003:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_002:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_003:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 5
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 5
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_003",
+                "global_start_time": "2026-04-24T16:58:05.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:07.533000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0005:seg_000003:beaker:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:liquid_transfer_candidate",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_001:third_person:beaker:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0006:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:equipment_control_change:beaker:equipment_panel_operation_candidate",
+                  "seg_000003_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0007:seg_000003:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_002:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000003_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-04-24T16:58:05.233333+08:00",
+                "global_end_time": "2026-04-24T16:58:07.233333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0008:seg_000004:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000004_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000004_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000004_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-04-24T16:58:19.366667+08:00",
+                "global_end_time": "2026-04-24T16:58:21.933000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0009:seg_000005:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000005_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000005_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000005_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000005",
+                "micro_segment_id": "seg_000005_micro_001",
+                "global_start_time": "2026-04-24T16:58:31.100000+08:00",
+                "global_end_time": "2026-04-24T16:58:33.667000+08:00"
+              }
+            ],
+            "cross_family_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0010:seg_000003:beaker:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:container_open_close:beaker:container_state_change_candidate",
+                  "seg_000003_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0011:seg_000004:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0008:seg_000004:balance:weighing_or_readout:equipment_panel",
+                  "seg_000004_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-04-24T16:58:19.366667+08:00",
+                "global_end_time": "2026-04-24T16:58:21.933000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0012:seg_000005:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0009:seg_000005:balance:weighing_or_readout:equipment_panel",
+                  "seg_000005_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000005",
+                "micro_segment_id": "seg_000005_micro_001",
+                "global_start_time": "2026-04-24T16:58:31.100000+08:00",
+                "global_end_time": "2026-04-24T16:58:33.667000+08:00"
+              }
+            ],
+            "weak_bundle_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0013:seg_000001:balance:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_002:container_state_change_candidate",
+                  "seg_000001_micro_002:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "liquid_flow": 1
+                },
+                "source_action_families": {
+                  "liquid_transfer": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "balance",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-04-24T16:57:37.500000+08:00",
+                "global_end_time": "2026-04-24T16:57:39.267000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0014:seg_000002:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0003:seg_000002:paper:weighing_or_readout:equipment_panel",
+                  "seg_000002_micro_001:container_state_change_candidate",
+                  "seg_000002_micro_001:liquid_transfer_candidate",
+                  "seg_000002_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000002",
+                "micro_segment_id": "seg_000002_micro_001",
+                "global_start_time": "2026-04-24T16:57:46.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.033333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0015:seg_000003:beaker:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "candidate_rollup_0005:seg_000003:beaker:liquid_transfer:liquid_flow",
+                  "candidate_rollup_0006:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0010:seg_000003:beaker:container_state:object_movement"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "beaker",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-04-24T16:58:04.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:06.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0016:seg_000003:paper:object_tracking:object_movement",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0007:seg_000003:paper:weighing_or_readout:equipment_panel",
+                  "seg_000003_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "object_tracking",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-04-24T16:58:05.233333+08:00",
+                "global_end_time": "2026-04-24T16:58:07.233333+08:00"
+              }
+            ]
+          }
+        },
+        "stage_scope": {
+          "scope_name": "p2_hand_object_current_scope",
+          "stage": "P2",
+          "status": "active",
+          "out_of_scope_capabilities": [
+            "container_open_closed_detection",
+            "equipment_control_state_detection",
+            "equipment_display_readout",
+            "liquid_level_detection",
+            "liquid_stream_segmentation",
+            "meniscus_detection",
+            "panel_button_knob_detection"
+          ]
+        },
+        "derived_refresh": {
+          "health": {
+            "status": "pass",
+            "gate_status": "pass",
+            "warning_count": 0,
+            "note_count": 1
+          },
+          "quality": {
+            "overall_status": "pass",
+            "overall_score": 0.9153,
+            "status_counts": {
+              "pass": 15
+            }
+          },
+          "artifact_validation": {
+            "valid": true,
+            "issue_count": 0,
+            "artifact_count": 8
+          },
+          "summary": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\2190fe06-3619-45fc-96ef-1bb8afb9bdf9\\key_action_index\\reports\\derived_refresh_summary.json"
+        }
+      }
+    },
+    {
+      "session_dir": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\3ccd635c-217e-40dd-9922-0e1e397739ce\\key_action_index",
+      "session_id": "3ccd635c-217e-40dd-9922-0e1e397739ce",
+      "status": "refreshed",
+      "steps": {
+        "micro_coverage": {
+          "added_micro_count": 0,
+          "output_micro_count": 8,
+          "skipped_counts": {
+            "already_has_micro": 1
+          }
+        },
+        "micro_quality": {
+          "micro_segment_count": 8,
+          "strong_process_micro_count": 6,
+          "retrieval_candidate_micro_count": 2,
+          "process_evidence_role_counts": {
+            "retrieval_candidate": 2,
+            "strong_process_evidence": 6
+          }
+        },
+        "video_understanding": {
+          "video_event_count": 131,
+          "conclusion_status_counts": {
+            "candidate": 14,
+            "confirmed": 72,
+            "measured": 45
+          },
+          "candidate_rollup": {
+            "enabled": true,
+            "max_gap_sec": 4.0,
+            "input_event_count": 180,
+            "output_event_count": 131,
+            "input_candidate_count": 63,
+            "output_candidate_count": 14,
+            "input_candidate_ratio": 0.35,
+            "output_candidate_ratio": 0.10687,
+            "rollup_group_count": 20,
+            "primary_group_count": 15,
+            "cross_family_group_count": 1,
+            "weak_bundle_group_count": 4,
+            "rolled_source_event_count": 69,
+            "removed_candidate_event_count": 49,
+            "groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0001:seg_000001:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 11,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:unassigned:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_002:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:unassigned:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_003:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_004:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_006:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_006:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_007:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_008:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_009:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_010:third_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 11
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 11
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:30.933333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.600000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0002:seg_000001:container:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 9,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:liquid_flow_candidate:unassigned:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_002:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_003:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_004:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_006:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_007:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_008:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_009:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_010:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 9
+                },
+                "source_action_families": {
+                  "liquid_transfer": 9
+                },
+                "normalized_object": "container",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_008",
+                "global_start_time": "2026-04-24T16:57:18+08:00",
+                "global_end_time": "2026-04-24T16:58:37.600000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0003:seg_000001:paper:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_004:container_state_change_candidate",
+                  "seg_000001_micro_006:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0004:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_004:liquid_transfer_candidate",
+                  "seg_000001_micro_006:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0005:seg_000001:paper:object_tracking:object_movement",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_004:object_movement_candidate",
+                  "seg_000001_micro_006:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "object_movement": 2
+                },
+                "source_action_families": {
+                  "object_tracking": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "object_tracking",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0006:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_002:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-04-24T16:57:44.833333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0007:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "seg_000001_micro_004:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_004:equipment_panel_operation_candidate",
+                  "seg_000001_micro_006:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_006:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 4
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 4
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0008:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_008:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_008:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_008",
+                "global_start_time": "2026-04-24T16:58:09.633333+08:00",
+                "global_end_time": "2026-04-24T16:58:26.066666+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0009:seg_000001:reagent_bottle:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "seg_000001_micro_003:container_open_close:reagent_bottle:container_state_change_candidate",
+                  "seg_000001_micro_003:container_state_change_candidate",
+                  "seg_000001_micro_007:container_open_close:reagent_bottle:container_state_change_candidate",
+                  "seg_000001_micro_007:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 4
+                },
+                "source_action_families": {
+                  "container_state": 4
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0010:seg_000001:reagent_bottle:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_010:container_open_close:reagent_bottle:container_state_change_candidate",
+                  "seg_000001_micro_010:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0011:seg_000001:reagent_bottle:container_state:object_movement",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:object_movement_candidate",
+                  "seg_000001_micro_007:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "object_movement": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0012:seg_000001:reagent_bottle:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:liquid_transfer_candidate",
+                  "seg_000001_micro_007:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0013:seg_000001:reagent_bottle:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "seg_000001_micro_003:equipment_control_change:reagent_bottle:equipment_panel_operation_candidate",
+                  "seg_000001_micro_003:equipment_panel_operation_candidate",
+                  "seg_000001_micro_007:equipment_control_change:reagent_bottle:equipment_panel_operation_candidate",
+                  "seg_000001_micro_007:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 4
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 4
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0014:seg_000001:reagent_bottle:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_010:equipment_control_change:reagent_bottle:equipment_panel_operation_candidate",
+                  "seg_000001_micro_010:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0015:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_009:equipment_control_change:spatula:equipment_panel_operation_candidate",
+                  "seg_000001_micro_009:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "spatula",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_009",
+                "global_start_time": "2026-04-24T16:58:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:36.166667+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0016:seg_000001:reagent_bottle:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0010:seg_000001:reagent_bottle:container_state:container_state",
+                  "seg_000001_micro_010:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0017:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0006:seg_000001:paper:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_002:container_state_change_candidate",
+                  "seg_000001_micro_002:liquid_transfer_candidate",
+                  "seg_000001_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-04-24T16:57:44.833333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0018:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0008:seg_000001:paper:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_008:container_state_change_candidate",
+                  "seg_000001_micro_008:liquid_transfer_candidate",
+                  "seg_000001_micro_008:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_008",
+                "global_start_time": "2026-04-24T16:58:09.633333+08:00",
+                "global_end_time": "2026-04-24T16:58:26.066666+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0019:seg_000001:spatula:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0015:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_009:container_state_change_candidate",
+                  "seg_000001_micro_009:liquid_transfer_candidate",
+                  "seg_000001_micro_009:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "spatula",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_009",
+                "global_start_time": "2026-04-24T16:58:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:36.166667+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0020:seg_000001:reagent_bottle:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "candidate_rollup_0014:seg_000001:reagent_bottle:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0016:seg_000001:reagent_bottle:container_state:object_movement",
+                  "seg_000001_micro_010:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              }
+            ],
+            "primary_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0001:seg_000001:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 11,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:unassigned:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_002:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:unassigned:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_003:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_004:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_006:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_006:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_007:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_008:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_009:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_010:third_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 11
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 11
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:30.933333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.600000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0002:seg_000001:container:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 9,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:liquid_flow_candidate:unassigned:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_002:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_003:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_004:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_006:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_007:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_008:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_009:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000001_micro_010:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 9
+                },
+                "source_action_families": {
+                  "liquid_transfer": 9
+                },
+                "normalized_object": "container",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_008",
+                "global_start_time": "2026-04-24T16:57:18+08:00",
+                "global_end_time": "2026-04-24T16:58:37.600000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0003:seg_000001:paper:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_004:container_state_change_candidate",
+                  "seg_000001_micro_006:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0004:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_004:liquid_transfer_candidate",
+                  "seg_000001_micro_006:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0005:seg_000001:paper:object_tracking:object_movement",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_004:object_movement_candidate",
+                  "seg_000001_micro_006:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "object_movement": 2
+                },
+                "source_action_families": {
+                  "object_tracking": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "object_tracking",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0006:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_002:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-04-24T16:57:44.833333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0007:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "seg_000001_micro_004:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_004:equipment_panel_operation_candidate",
+                  "seg_000001_micro_006:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_006:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 4
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 4
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_004",
+                "global_start_time": "2026-04-24T16:57:54.033333+08:00",
+                "global_end_time": "2026-04-24T16:57:58.200000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0008:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_008:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_008:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_008",
+                "global_start_time": "2026-04-24T16:58:09.633333+08:00",
+                "global_end_time": "2026-04-24T16:58:26.066666+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0009:seg_000001:reagent_bottle:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "seg_000001_micro_003:container_open_close:reagent_bottle:container_state_change_candidate",
+                  "seg_000001_micro_003:container_state_change_candidate",
+                  "seg_000001_micro_007:container_open_close:reagent_bottle:container_state_change_candidate",
+                  "seg_000001_micro_007:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 4
+                },
+                "source_action_families": {
+                  "container_state": 4
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0010:seg_000001:reagent_bottle:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_010:container_open_close:reagent_bottle:container_state_change_candidate",
+                  "seg_000001_micro_010:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0011:seg_000001:reagent_bottle:container_state:object_movement",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:object_movement_candidate",
+                  "seg_000001_micro_007:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "object_movement": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0012:seg_000001:reagent_bottle:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:liquid_transfer_candidate",
+                  "seg_000001_micro_007:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0013:seg_000001:reagent_bottle:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "seg_000001_micro_003:equipment_control_change:reagent_bottle:equipment_panel_operation_candidate",
+                  "seg_000001_micro_003:equipment_panel_operation_candidate",
+                  "seg_000001_micro_007:equipment_control_change:reagent_bottle:equipment_panel_operation_candidate",
+                  "seg_000001_micro_007:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 4
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 4
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-04-24T16:57:51.766667+08:00",
+                "global_end_time": "2026-04-24T16:58:01.533333+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0014:seg_000001:reagent_bottle:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_010:equipment_control_change:reagent_bottle:equipment_panel_operation_candidate",
+                  "seg_000001_micro_010:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0015:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_009:equipment_control_change:spatula:equipment_panel_operation_candidate",
+                  "seg_000001_micro_009:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "spatula",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_009",
+                "global_start_time": "2026-04-24T16:58:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:36.166667+08:00"
+              }
+            ],
+            "cross_family_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0016:seg_000001:reagent_bottle:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0010:seg_000001:reagent_bottle:container_state:container_state",
+                  "seg_000001_micro_010:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              }
+            ],
+            "weak_bundle_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0017:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0006:seg_000001:paper:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_002:container_state_change_candidate",
+                  "seg_000001_micro_002:liquid_transfer_candidate",
+                  "seg_000001_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-04-24T16:57:44.833333+08:00",
+                "global_end_time": "2026-04-24T16:57:48.600001+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0018:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0008:seg_000001:paper:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_008:container_state_change_candidate",
+                  "seg_000001_micro_008:liquid_transfer_candidate",
+                  "seg_000001_micro_008:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_008",
+                "global_start_time": "2026-04-24T16:58:09.633333+08:00",
+                "global_end_time": "2026-04-24T16:58:26.066666+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0019:seg_000001:spatula:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0015:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_009:container_state_change_candidate",
+                  "seg_000001_micro_009:liquid_transfer_candidate",
+                  "seg_000001_micro_009:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "spatula",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_009",
+                "global_start_time": "2026-04-24T16:58:34.166667+08:00",
+                "global_end_time": "2026-04-24T16:58:36.166667+08:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0020:seg_000001:reagent_bottle:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "candidate_rollup_0014:seg_000001:reagent_bottle:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0016:seg_000001:reagent_bottle:container_state:object_movement",
+                  "seg_000001_micro_010:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "reagent_bottle",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_010",
+                "global_start_time": "2026-04-24T16:58:34.433333+08:00",
+                "global_end_time": "2026-04-24T16:58:37.967000+08:00"
+              }
+            ]
+          }
+        },
+        "stage_scope": {
+          "scope_name": "p2_hand_object_current_scope",
+          "stage": "P2",
+          "status": "active",
+          "out_of_scope_capabilities": [
+            "container_open_closed_detection",
+            "equipment_control_state_detection",
+            "equipment_display_readout",
+            "liquid_level_detection",
+            "liquid_stream_segmentation",
+            "meniscus_detection",
+            "panel_button_knob_detection"
+          ]
+        },
+        "derived_refresh": {
+          "health": {
+            "status": "warn",
+            "gate_status": "pass",
+            "warning_count": 4,
+            "note_count": 1
+          },
+          "quality": {
+            "overall_status": "needs_review",
+            "overall_score": 0.852,
+            "status_counts": {
+              "needs_review": 3,
+              "pass": 12
+            }
+          },
+          "artifact_validation": {
+            "valid": true,
+            "issue_count": 0,
+            "artifact_count": 8
+          },
+          "summary": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\3ccd635c-217e-40dd-9922-0e1e397739ce\\key_action_index\\reports\\derived_refresh_summary.json"
+        }
+      }
+    },
+    {
+      "session_dir": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\53ca6efe-a100-4e86-b041-7c98e2fcc662\\key_action_index",
+      "session_id": "53ca6efe-a100-4e86-b041-7c98e2fcc662",
+      "status": "refreshed",
+      "steps": {
+        "micro_coverage": {
+          "added_micro_count": 0,
+          "output_micro_count": 10,
+          "skipped_counts": {
+            "already_has_micro": 6
+          }
+        },
+        "micro_quality": {
+          "micro_segment_count": 10,
+          "strong_process_micro_count": 2,
+          "retrieval_candidate_micro_count": 8,
+          "process_evidence_role_counts": {
+            "retrieval_candidate": 8,
+            "strong_process_evidence": 2
+          }
+        },
+        "video_understanding": {
+          "video_event_count": 77,
+          "conclusion_status_counts": {
+            "candidate": 20,
+            "confirmed": 23,
+            "measured": 34
+          },
+          "candidate_rollup": {
+            "enabled": true,
+            "max_gap_sec": 4.0,
+            "input_event_count": 111,
+            "output_event_count": 77,
+            "input_candidate_count": 54,
+            "output_candidate_count": 20,
+            "input_candidate_ratio": 0.486486,
+            "output_candidate_ratio": 0.25974,
+            "rollup_group_count": 22,
+            "primary_group_count": 13,
+            "cross_family_group_count": 4,
+            "weak_bundle_group_count": 5,
+            "rolled_source_event_count": 56,
+            "removed_candidate_event_count": 34,
+            "groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0001:seg_000001:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:unassigned:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_002:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-05-07T23:20:57.190075+00:00",
+                "global_end_time": "2026-05-07T23:21:01.990075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0002:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_002:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-05-07T23:21:01.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:03.890075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0003:seg_000001:pipette:liquid_transfer:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:equipment_control_change:pipette:equipment_panel_operation_candidate",
+                  "seg_000001_micro_003:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "pipette",
+                "action_family": "liquid_transfer",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-05-07T23:21:04.823408+00:00",
+                "global_end_time": "2026-05-07T23:21:05.523408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0004:seg_000001:pipette:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:liquid_flow_candidate_visual:pipette:liquid_flow_candidate_visual",
+                  "seg_000001_micro_003:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "pipette",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-05-07T23:21:04.823408+00:00",
+                "global_end_time": "2026-05-07T23:21:05.523408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0005:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_001:equipment_control_change:spatula:equipment_panel_operation_candidate",
+                  "seg_000001_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "spatula",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-05-07T23:20:57.623408+00:00",
+                "global_end_time": "2026-05-07T23:20:59.623408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0006:seg_000003:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_002:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_004:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_004",
+                "global_start_time": "2026-05-07T23:21:25.856741+00:00",
+                "global_end_time": "2026-05-07T23:21:29.990075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0007:seg_000003:beaker:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_001:third_person:beaker:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "seg_000003_micro_002:liquid_transfer_candidate",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_002:third_person:beaker:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 3
+                },
+                "source_action_families": {
+                  "liquid_transfer": 3
+                },
+                "normalized_object": "beaker",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:25.056741+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0008:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_002:equipment_control_change:beaker:equipment_panel_operation_candidate",
+                  "seg_000003_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-05-07T23:21:26.690075+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0009:seg_000003:container:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:container_open_close:container:container_state_change_candidate",
+                  "seg_000003_micro_001:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "container",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0010:seg_000003:container:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000003_micro_001:liquid_transfer_candidate",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_001:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_004:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 3
+                },
+                "source_action_families": {
+                  "liquid_transfer": 3
+                },
+                "normalized_object": "container",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:29.990075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0011:seg_000003:container:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:equipment_control_change:container:equipment_panel_operation_candidate",
+                  "seg_000003_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "container",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0012:seg_000003:spatula:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_004:equipment_control_change:spatula:equipment_panel_operation_candidate",
+                  "seg_000003_micro_004:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "spatula",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_004",
+                "global_start_time": "2026-05-07T23:21:29.223408+00:00",
+                "global_end_time": "2026-05-07T23:21:30.056408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0013:seg_000004:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000004_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000004_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000004_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-05-07T23:21:41.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:44.456408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0014:seg_000001:pipette:liquid_transfer:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0003:seg_000001:pipette:liquid_transfer:equipment_panel",
+                  "candidate_rollup_0004:seg_000001:pipette:liquid_transfer:liquid_flow",
+                  "seg_000001_micro_003:container_state_change_candidate",
+                  "seg_000001_micro_003:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "liquid_transfer": 4
+                },
+                "normalized_object": "pipette",
+                "action_family": "liquid_transfer",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-05-07T23:21:04.823408+00:00",
+                "global_end_time": "2026-05-07T23:21:05.523408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0015:seg_000003:container:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0009:seg_000003:container:container_state:container_state",
+                  "seg_000003_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "container",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0016:seg_000003:beaker:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_002:container_open_close:beaker:container_state_change_candidate",
+                  "seg_000003_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-05-07T23:21:26.690075+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0017:seg_000004:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0013:seg_000004:balance:weighing_or_readout:equipment_panel",
+                  "seg_000004_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-05-07T23:21:41.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:44.456408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0018:seg_000001:spatula:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0005:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_001:container_state_change_candidate",
+                  "seg_000001_micro_001:liquid_transfer_candidate",
+                  "seg_000001_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "spatula",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-05-07T23:20:57.623408+00:00",
+                "global_end_time": "2026-05-07T23:20:59.623408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0019:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0002:seg_000001:paper:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_002:container_state_change_candidate",
+                  "seg_000001_micro_002:liquid_transfer_candidate",
+                  "seg_000001_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-05-07T23:21:01.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:03.890075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0020:seg_000003:container:container_state:object_movement",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0011:seg_000003:container:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0015:seg_000003:container:container_state:object_movement"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "container",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0021:seg_000003:beaker:container_state:object_movement",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0008:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0016:seg_000003:beaker:container_state:object_movement"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "beaker",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-05-07T23:21:26.690075+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0022:seg_000003:spatula:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0012:seg_000003:spatula:weighing_or_readout:equipment_panel",
+                  "seg_000003_micro_004:container_state_change_candidate",
+                  "seg_000003_micro_004:liquid_transfer_candidate",
+                  "seg_000003_micro_004:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "spatula",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_004",
+                "global_start_time": "2026-05-07T23:21:29.223408+00:00",
+                "global_end_time": "2026-05-07T23:21:30.056408+00:00"
+              }
+            ],
+            "primary_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0001:seg_000001:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:unassigned:third_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000001_micro_002:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-05-07T23:20:57.190075+00:00",
+                "global_end_time": "2026-05-07T23:21:01.990075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0002:seg_000001:paper:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_002:equipment_control_change:paper:equipment_panel_operation_candidate",
+                  "seg_000001_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "paper",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-05-07T23:21:01.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:03.890075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0003:seg_000001:pipette:liquid_transfer:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:equipment_control_change:pipette:equipment_panel_operation_candidate",
+                  "seg_000001_micro_003:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "pipette",
+                "action_family": "liquid_transfer",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-05-07T23:21:04.823408+00:00",
+                "global_end_time": "2026-05-07T23:21:05.523408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0004:seg_000001:pipette:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_003:liquid_flow_candidate_visual:pipette:liquid_flow_candidate_visual",
+                  "seg_000001_micro_003:liquid_transfer_candidate"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 2
+                },
+                "source_action_families": {
+                  "liquid_transfer": 2
+                },
+                "normalized_object": "pipette",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-05-07T23:21:04.823408+00:00",
+                "global_end_time": "2026-05-07T23:21:05.523408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0005:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000001_micro_001:equipment_control_change:spatula:equipment_panel_operation_candidate",
+                  "seg_000001_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "spatula",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-05-07T23:20:57.623408+00:00",
+                "global_end_time": "2026-05-07T23:20:59.623408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0006:seg_000003:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_002:first_person:balance:equipment_control_change:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000003_micro_004:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_004",
+                "global_start_time": "2026-05-07T23:21:25.856741+00:00",
+                "global_end_time": "2026-05-07T23:21:29.990075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0007:seg_000003:beaker:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_001:third_person:beaker:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "seg_000003_micro_002:liquid_transfer_candidate",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_002:third_person:beaker:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 3
+                },
+                "source_action_families": {
+                  "liquid_transfer": 3
+                },
+                "normalized_object": "beaker",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:25.056741+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0008:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_002:equipment_control_change:beaker:equipment_panel_operation_candidate",
+                  "seg_000003_micro_002:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-05-07T23:21:26.690075+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0009:seg_000003:container:container_state:container_state",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:container_open_close:container:container_state_change_candidate",
+                  "seg_000003_micro_001:container_state_change_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 2
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "container",
+                "action_family": "container_state",
+                "event_family": "container_state",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0010:seg_000003:container:liquid_transfer:liquid_flow",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000003_micro_001:liquid_transfer_candidate",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_001:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual",
+                  "lab_model_signal_inputs:liquid_flow_candidate:seg_000003_micro_004:third_person:container:liquid_flow_candidate_visual:liquid_flow_candidate_visual"
+                ],
+                "source_event_families": {
+                  "liquid_flow": 3
+                },
+                "source_action_families": {
+                  "liquid_transfer": 3
+                },
+                "normalized_object": "container",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:29.990075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0011:seg_000003:container:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_001:equipment_control_change:container:equipment_panel_operation_candidate",
+                  "seg_000003_micro_001:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "container",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0012:seg_000003:spatula:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_004:equipment_control_change:spatula:equipment_panel_operation_candidate",
+                  "seg_000003_micro_004:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 2
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "spatula",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_004",
+                "global_start_time": "2026-05-07T23:21:29.223408+00:00",
+                "global_end_time": "2026-05-07T23:21:30.056408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0013:seg_000004:balance:weighing_or_readout:equipment_panel",
+                "rollup_mode": "event_family",
+                "source_event_count": 3,
+                "source_event_ids": [
+                  "seg_000004_micro_001:equipment_control_change:balance:equipment_panel_operation_candidate",
+                  "seg_000004_micro_001:equipment_panel_operation_candidate",
+                  "lab_model_signal_inputs:equipment_panel_interaction_candidate:seg_000004_micro_001:first_person:balance:equipment_control_change:equipment_panel_operation_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 3
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 3
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "equipment_panel",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-05-07T23:21:41.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:44.456408+00:00"
+              }
+            ],
+            "cross_family_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0014:seg_000001:pipette:liquid_transfer:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0003:seg_000001:pipette:liquid_transfer:equipment_panel",
+                  "candidate_rollup_0004:seg_000001:pipette:liquid_transfer:liquid_flow",
+                  "seg_000001_micro_003:container_state_change_candidate",
+                  "seg_000001_micro_003:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "liquid_transfer": 4
+                },
+                "normalized_object": "pipette",
+                "action_family": "liquid_transfer",
+                "event_family": "object_movement",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_003",
+                "global_start_time": "2026-05-07T23:21:04.823408+00:00",
+                "global_end_time": "2026-05-07T23:21:05.523408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0015:seg_000003:container:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0009:seg_000003:container:container_state:container_state",
+                  "seg_000003_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "container",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0016:seg_000003:beaker:container_state:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "seg_000003_micro_002:container_open_close:beaker:container_state_change_candidate",
+                  "seg_000003_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 2
+                },
+                "normalized_object": "beaker",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-05-07T23:21:26.690075+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0017:seg_000004:balance:weighing_or_readout:object_movement",
+                "rollup_mode": "same_micro_cross_family",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0013:seg_000004:balance:weighing_or_readout:equipment_panel",
+                  "seg_000004_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "weighing_or_readout": 2
+                },
+                "normalized_object": "balance",
+                "action_family": "weighing_or_readout",
+                "event_family": "object_movement",
+                "segment_id": "seg_000004",
+                "micro_segment_id": "seg_000004_micro_001",
+                "global_start_time": "2026-05-07T23:21:41.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:44.456408+00:00"
+              }
+            ],
+            "weak_bundle_groups": [
+              {
+                "rollup_event_id": "candidate_rollup_0018:seg_000001:spatula:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0005:seg_000001:spatula:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_001:container_state_change_candidate",
+                  "seg_000001_micro_001:liquid_transfer_candidate",
+                  "seg_000001_micro_001:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "spatula",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_001",
+                "global_start_time": "2026-05-07T23:20:57.623408+00:00",
+                "global_end_time": "2026-05-07T23:20:59.623408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0019:seg_000001:paper:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0002:seg_000001:paper:weighing_or_readout:equipment_panel",
+                  "seg_000001_micro_002:container_state_change_candidate",
+                  "seg_000001_micro_002:liquid_transfer_candidate",
+                  "seg_000001_micro_002:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "paper",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000001",
+                "micro_segment_id": "seg_000001_micro_002",
+                "global_start_time": "2026-05-07T23:21:01.890075+00:00",
+                "global_end_time": "2026-05-07T23:21:03.890075+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0020:seg_000003:container:container_state:object_movement",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0011:seg_000003:container:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0015:seg_000003:container:container_state:object_movement"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "container",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_001",
+                "global_start_time": "2026-05-07T23:21:24.790408+00:00",
+                "global_end_time": "2026-05-07T23:21:26.723408+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0021:seg_000003:beaker:container_state:object_movement",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 2,
+                "source_event_ids": [
+                  "candidate_rollup_0008:seg_000003:beaker:weighing_or_readout:equipment_panel",
+                  "candidate_rollup_0016:seg_000003:beaker:container_state:object_movement"
+                ],
+                "source_event_families": {
+                  "equipment_panel": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "beaker",
+                "action_family": "container_state",
+                "event_family": "object_movement",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_002",
+                "global_start_time": "2026-05-07T23:21:26.690075+00:00",
+                "global_end_time": "2026-05-07T23:21:29.390074+00:00"
+              },
+              {
+                "rollup_event_id": "candidate_rollup_0022:seg_000003:spatula:liquid_transfer:liquid_flow",
+                "rollup_mode": "same_micro_weak_candidate_bundle",
+                "source_event_count": 4,
+                "source_event_ids": [
+                  "candidate_rollup_0012:seg_000003:spatula:weighing_or_readout:equipment_panel",
+                  "seg_000003_micro_004:container_state_change_candidate",
+                  "seg_000003_micro_004:liquid_transfer_candidate",
+                  "seg_000003_micro_004:object_movement_candidate"
+                ],
+                "source_event_families": {
+                  "container_state": 1,
+                  "equipment_panel": 1,
+                  "liquid_flow": 1,
+                  "object_movement": 1
+                },
+                "source_action_families": {
+                  "container_state": 1,
+                  "liquid_transfer": 1,
+                  "object_tracking": 1,
+                  "weighing_or_readout": 1
+                },
+                "normalized_object": "spatula",
+                "action_family": "liquid_transfer",
+                "event_family": "liquid_flow",
+                "segment_id": "seg_000003",
+                "micro_segment_id": "seg_000003_micro_004",
+                "global_start_time": "2026-05-07T23:21:29.223408+00:00",
+                "global_end_time": "2026-05-07T23:21:30.056408+00:00"
+              }
+            ]
+          }
+        },
+        "stage_scope": {
+          "scope_name": "p2_hand_object_current_scope",
+          "stage": "P2",
+          "status": "active",
+          "out_of_scope_capabilities": [
+            "container_open_closed_detection",
+            "equipment_control_state_detection",
+            "equipment_display_readout",
+            "liquid_level_detection",
+            "liquid_stream_segmentation",
+            "meniscus_detection",
+            "panel_button_knob_detection"
+          ]
+        },
+        "derived_refresh": {
+          "health": {
+            "status": "pass",
+            "gate_status": "pass",
+            "warning_count": 0,
+            "note_count": 1
+          },
+          "quality": {
+            "overall_status": "needs_review",
+            "overall_score": 0.8353,
+            "status_counts": {
+              "needs_review": 3,
+              "pass": 12
+            }
+          },
+          "artifact_validation": {
+            "valid": true,
+            "issue_count": 0,
+            "artifact_count": 8
+          },
+          "summary": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\53ca6efe-a100-4e86-b041-7c98e2fcc662\\key_action_index\\reports\\derived_refresh_summary.json"
+        }
+      }
+    }
+  ]
+}

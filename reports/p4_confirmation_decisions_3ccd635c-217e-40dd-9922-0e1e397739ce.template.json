@@ -1,0 +1,43 @@
+{
+  "schema_version": "human_confirmation_decision_template.v1",
+  "session_id": "3ccd635c-217e-40dd-9922-0e1e397739ce",
+  "session_dir": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\3ccd635c-217e-40dd-9922-0e1e397739ce\\key_action_index",
+  "source_recovery_plan": "D:\\LabCapability\\reports\\p4_missing_step_recovery_3ccd635c-217e-40dd-9922-0e1e397739ce.json",
+  "source_review_packet": "D:\\LabCapability\\reports\\p4_recovery_review_packet_3ccd635c-217e-40dd-9922-0e1e397739ce.md",
+  "generated_at": "2026-05-08T09:03:54.098363+00:00",
+  "instructions": [
+    "Inspect candidate clips and keyframes before editing decisions.",
+    "Set decision to approved, rejected, or needs_review.",
+    "Run confirmation-batch only after a human reviewer has filled reviewer and note fields."
+  ],
+  "decisions": [
+    {
+      "confirmation_id": "3ccd635c-217e-40dd-9922-0e1e397739ce:step_001",
+      "step_id": "step_001",
+      "step_name": "Weighing",
+      "decision": "",
+      "reviewer": "",
+      "note": "step_001: reviewed recovery candidates; visual_match=; transcript_support=; decision=",
+      "visual_match": "",
+      "transcript_support": "",
+      "chosen_evidence_ids": [],
+      "best_video_match_score": 0.904,
+      "best_asset_match_score": 0.37,
+      "transcript_candidate_count": 0
+    },
+    {
+      "confirmation_id": "3ccd635c-217e-40dd-9922-0e1e397739ce:step_004",
+      "step_id": "step_004",
+      "step_name": "Recording",
+      "decision": "",
+      "reviewer": "",
+      "note": "step_004: reviewed recovery candidates; visual_match=; transcript_support=; decision=",
+      "visual_match": "",
+      "transcript_support": "",
+      "chosen_evidence_ids": [],
+      "best_video_match_score": 0.5831,
+      "best_asset_match_score": 0.49,
+      "transcript_candidate_count": 0
+    }
+  ]
+}
