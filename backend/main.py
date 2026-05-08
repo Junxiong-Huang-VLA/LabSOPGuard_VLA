@@ -2623,7 +2623,7 @@ def _sync_published_materials_from_references(exp_dir: Path, experiment_id: str)
         "schema_version": "published_materials.approved_material_references.v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": len(payload.get("items") or []),
-        "policy": "Only frontend-approved candidates are synchronized into the key material library.",
+        "policy": "Only frontend-approved keyframes and key clips are synchronized into the key material library. Professional PDF reports are approved into the professional report folder only.",
     }
     _write_json(exp_dir / "published_materials.json", payload)
     return payload

@@ -444,14 +444,14 @@ def test_workspace_published_materials_indexes_formal_material_references_withou
 
     index_path = tmp_path / "published_materials.sqlite"
     rebuild = rebuild_workspace_published_materials_index(experiments_root, index_path)
-    assert rebuild["total"] == 5
+    assert rebuild["total"] == 4
     assert rebuild["experiments"][0]["source"] == "formal_material_references"
-    assert rebuild["experiments"][0]["published_count"] == 5
+    assert rebuild["experiments"][0]["published_count"] == 4
 
     queried = query_workspace_published_materials(index_path, limit=10)
-    assert queried["total"] == 5
-    assert {item["event_type"] for item in queried["items"]} == {"手与容器操作", "手与烧杯操作", "专业报告"}
-    assert sum(1 for item in queried["items"] if item["event_type"] == "专业报告") == 1
+    assert queried["total"] == 4
+    assert {item["event_type"] for item in queried["items"]} == {"手与容器操作", "手与烧杯操作"}
+    assert all(item["event_type"] != "专业报告" for item in queried["items"])
     assert sum(1 for item in queried["items"] if item["preview_path"]) == 2
     assert sum(1 for item in queried["items"] if item["clip_path"]) == 2
     assert query_workspace_published_materials(index_path, text="烧杯", limit=10)["total"] == 2

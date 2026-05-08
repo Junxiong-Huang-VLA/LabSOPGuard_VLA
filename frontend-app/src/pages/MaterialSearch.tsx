@@ -506,7 +506,7 @@ function CandidateStateNotice({ group, canApprove }: { group: MaterialCandidateG
     return (
       <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
         <CheckCircle2 className="h-4 w-4" />
-        已批准入库，正式素材库会显示本组被选中的关键帧、关键片段或专业报告。
+        已批准入库。关键帧和关键片段会显示到正式关键素材库；专业 PDF 只同步到“专业报告”文件夹。
       </div>
     )
   }
