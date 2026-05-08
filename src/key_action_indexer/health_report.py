@@ -397,6 +397,8 @@ def _query_validation_metrics(session: Path) -> dict[str, Any]:
         return {"available": False, "artifact_count": 0, "artifacts": []}
     artifacts = []
     for path in sorted(evaluation.glob("*query_validation*.json")):
+        if ".candidate." in path.name:
+            continue
         data = _read_json(path)
         if not data:
             continue

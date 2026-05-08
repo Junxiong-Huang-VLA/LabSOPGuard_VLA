@@ -104,3 +104,31 @@ def test_health_report_fails_failed_query_validation_artifact(tmp_path: Path) ->
     assert report["gate_status"] == "fail"
     assert any(issue["code"] == "query_validation_failed" for issue in report["errors"])
     assert report["metrics"]["query_validation"]["failed_artifact_count"] == 1
+
+
+def test_health_report_ignores_candidate_query_validation_artifacts(tmp_path: Path) -> None:
+    session = _minimal_session(tmp_path)
+    _write_json(
+        session / "evaluation" / "default_chinese_query_validation.v002.candidate.json",
+        {
+            "status": "fail",
+            "query_count": 1,
+            "failed_query_count": 1,
+            "threshold_failures": [{"metric": "expected_id_hit_rate", "actual": 0.0, "minimum": 1.0}],
+        },
+    )
+    _write_json(
+        session / "evaluation" / "default_chinese_query_validation.json",
+        {
+            "status": "pass",
+            "query_count": 1,
+            "failed_query_count": 0,
+            "threshold_failures": [],
+        },
+    )
+
+    report = build_run_health_report(session)
+
+    assert report["gate_status"] == "pass"
+    assert report["metrics"]["query_validation"]["failed_artifact_count"] == 0
+    assert report["metrics"]["query_validation"]["failed_artifacts"] == []
