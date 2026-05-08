@@ -12,6 +12,7 @@ from .schemas import read_jsonl
 
 ADAPTER_VALIDATION_SCHEMA_VERSION = "key_action_evidence_adapter_validation.v1"
 ADAPTER_VALIDATION_FILENAME = "evidence_adapter_validation.json"
+POINT_EVENT_NEAR_MATCH_TOLERANCE_SEC = 1.0
 
 CANONICAL_ADAPTERS: dict[str, dict[str, Any]] = {
     "object_tracks": {
@@ -130,7 +131,7 @@ def _validate_adapter(
             category = str(issue.get("semantic_category") or "")
             if category in semantic_summary:
                 semantic_summary[category] += 1
-        relation = _row_relation(row, context)
+        relation = _row_relation(row, context, time_tolerance_sec=_semantic_time_tolerance_sec(adapter_name, row))
         if relation.get("segment_id"):
             linked_segments.add(str(relation["segment_id"]))
         if relation.get("micro_segment_id"):
@@ -245,7 +246,7 @@ def _semantic_support_issues(
     context: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
-    relation = _row_relation(row, context)
+    relation = _row_relation(row, context, time_tolerance_sec=_semantic_time_tolerance_sec(adapter_name, row))
     support = _semantic_support(adapter_name, row)
     if not support["supported"]:
         issues.append(
@@ -417,7 +418,7 @@ def _validation_context(metadata: Path) -> dict[str, Any]:
     }
 
 
-def _row_relation(row: Mapping[str, Any], context: Mapping[str, Any]) -> dict[str, Any]:
+def _row_relation(row: Mapping[str, Any], context: Mapping[str, Any], *, time_tolerance_sec: float = 0.0) -> dict[str, Any]:
     start, end = _row_time_window(row)
     segment_id = str(row.get("segment_id") or "")
     micro_id = str(row.get("micro_segment_id") or "")
@@ -426,42 +427,57 @@ def _row_relation(row: Mapping[str, Any], context: Mapping[str, Any]) -> dict[st
     linked_micro = micros_by_id.get(micro_id) if micro_id else None
     linked_segment = segments_by_id.get(segment_id) if segment_id else None
     if not isinstance(linked_micro, Mapping):
-        linked_micro = _best_overlap(row, context.get("micros") if isinstance(context.get("micros"), list) else [])
+        linked_micro = _best_overlap(row, context.get("micros") if isinstance(context.get("micros"), list) else [], time_tolerance_sec=time_tolerance_sec)
     if not isinstance(linked_segment, Mapping):
-        linked_segment = _best_overlap(row, context.get("segments") if isinstance(context.get("segments"), list) else [])
+        linked_segment = _best_overlap(row, context.get("segments") if isinstance(context.get("segments"), list) else [], time_tolerance_sec=time_tolerance_sec)
     if isinstance(linked_micro, Mapping):
         micro_id = str(linked_micro.get("micro_segment_id") or micro_id)
         segment_id = str(linked_micro.get("parent_segment_id") or linked_micro.get("segment_id") or segment_id)
     elif isinstance(linked_segment, Mapping):
         segment_id = str(linked_segment.get("segment_id") or segment_id)
     related = linked_micro if isinstance(linked_micro, Mapping) else linked_segment if isinstance(linked_segment, Mapping) else {}
-    overlap = _interval_overlap((start, end), _row_time_window(related)) if isinstance(related, Mapping) else 0.0
+    related_window = _row_time_window(related) if isinstance(related, Mapping) else (None, None)
+    overlap = _interval_overlap((start, end), related_window) if isinstance(related, Mapping) else 0.0
+    gap = _interval_gap((start, end), related_window) if isinstance(related, Mapping) else None
+    time_overlap_ok = bool(
+        overlap > 0.0
+        or (start is None and end is None)
+        or (time_tolerance_sec > 0.0 and gap is not None and gap <= time_tolerance_sec)
+    )
     return {
         "segment_id": segment_id or None,
         "micro_segment_id": micro_id or None,
         "start_sec": start,
         "end_sec": end,
-        "linked_start_sec": _row_time_window(related)[0] if isinstance(related, Mapping) else None,
-        "linked_end_sec": _row_time_window(related)[1] if isinstance(related, Mapping) else None,
+        "linked_start_sec": related_window[0],
+        "linked_end_sec": related_window[1],
         "time_overlap_sec": round(overlap, 4),
-        "time_overlap_ok": bool(overlap > 0.0 or (start is None and end is None)),
+        "time_gap_sec": round(gap, 4) if gap is not None else None,
+        "time_tolerance_sec": time_tolerance_sec,
+        "time_overlap_ok": time_overlap_ok,
         "linked_action_type": _first_text(related, "action_type", "interaction_type") if isinstance(related, Mapping) else "",
         "linked_objects": sorted(_object_terms(related)) if isinstance(related, Mapping) else [],
     }
 
 
-def _best_overlap(row: Mapping[str, Any], candidates: list[Any]) -> Mapping[str, Any] | None:
+def _best_overlap(row: Mapping[str, Any], candidates: list[Any], *, time_tolerance_sec: float = 0.0) -> Mapping[str, Any] | None:
     row_interval = _row_time_window(row)
     best: tuple[float, Mapping[str, Any]] | None = None
+    nearest: tuple[float, Mapping[str, Any]] | None = None
     for candidate in candidates:
         if not isinstance(candidate, Mapping):
             continue
-        overlap = _interval_overlap(row_interval, _row_time_window(candidate))
+        candidate_interval = _row_time_window(candidate)
+        overlap = _interval_overlap(row_interval, candidate_interval)
         if overlap <= 0:
+            gap = _interval_gap(row_interval, candidate_interval)
+            if time_tolerance_sec > 0.0 and gap is not None and gap <= time_tolerance_sec:
+                if nearest is None or gap < nearest[0]:
+                    nearest = (gap, candidate)
             continue
         if best is None or overlap > best[0]:
             best = (overlap, candidate)
-    return best[1] if best else None
+    return best[1] if best else nearest[1] if nearest else None
 
 
 def _interval_overlap(left: tuple[float | None, float | None], right: tuple[float | None, float | None]) -> float:
@@ -470,6 +486,29 @@ def _interval_overlap(left: tuple[float | None, float | None], right: tuple[floa
     if left_start is None or left_end is None or right_start is None or right_end is None:
         return 0.0
     return max(0.0, min(left_end, right_end) - max(left_start, right_start))
+
+
+def _interval_gap(left: tuple[float | None, float | None], right: tuple[float | None, float | None]) -> float | None:
+    left_start, left_end = left
+    right_start, right_end = right
+    if left_start is None or left_end is None or right_start is None or right_end is None:
+        return None
+    if _interval_overlap(left, right) > 0.0:
+        return 0.0
+    if left_end <= right_start:
+        return right_start - left_end
+    return left_start - right_end
+
+
+def _semantic_time_tolerance_sec(adapter_name: str, row: Mapping[str, Any]) -> float:
+    if adapter_name != "panel_ocr":
+        return 0.0
+    start, end = _row_time_window(row)
+    if start is None or end is None:
+        return 0.0
+    if abs(end - start) <= 0.5:
+        return POINT_EVENT_NEAR_MATCH_TOLERANCE_SEC
+    return 0.0
 
 
 def _semantic_action_mismatch(adapter_name: str, row: Mapping[str, Any], relation: Mapping[str, Any]) -> dict[str, Any] | None:

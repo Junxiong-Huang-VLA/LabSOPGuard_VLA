@@ -117,6 +117,45 @@ def test_validate_evidence_adapters_accepts_nested_measurement_semantics(tmp_pat
     assert result["adapters"]["panel_ocr"]["linked_segment_ids"] == ["seg_1"]
 
 
+def test_validate_evidence_adapters_allows_nearby_panel_point_event(tmp_path: Path) -> None:
+    _base_session(tmp_path)
+    metadata = tmp_path / "metadata"
+    write_jsonl(
+        metadata / "micro_segments.jsonl",
+        [
+            {
+                "segment_id": "seg_1",
+                "micro_segment_id": "micro_1",
+                "start_sec": 9.0,
+                "end_sec": 10.2,
+                "action_type": "recording_or_reading",
+                "primary_object": "balance",
+            }
+        ],
+    )
+    write_jsonl(metadata / "object_tracks.jsonl", [])
+    write_jsonl(
+        metadata / "panel_ocr.jsonl",
+        [
+            {
+                "session_id": "sess_1",
+                "view": "first_person",
+                "time_sec": 10.7,
+                "equipment_label": "balance",
+                "display_text": "0.124 g",
+            }
+        ],
+    )
+    write_jsonl(metadata / "liquid_state.jsonl", [])
+    write_jsonl(metadata / "container_state.jsonl", [])
+
+    result = validate_evidence_adapters(tmp_path)
+
+    panel = result["adapters"]["panel_ocr"]
+    assert panel["semantic_issue_count"] == 0
+    assert panel["linked_micro_segment_ids"] == ["micro_1"]
+
+
 def test_validate_evidence_adapters_classifies_time_and_action_semantic_failures(tmp_path: Path) -> None:
     _base_session(tmp_path)
     metadata = tmp_path / "metadata"
