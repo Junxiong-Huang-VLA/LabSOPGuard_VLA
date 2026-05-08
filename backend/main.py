@@ -8313,6 +8313,47 @@ async def rollback_key_action_reviewed_release(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@app.post("/api/v1/experiments/{experiment_id}/key-actions/review/promote", tags=["experiments"])
+async def promote_key_action_reviewed_release(
+    experiment_id: str,
+    request: Request,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    payload = await request.json() if request.headers.get("content-length") not in {None, "0"} else {}
+    version = str(payload.get("version") or "").strip() or None
+    reviewer = str(payload.get("reviewer") or auth_ctx.get("operator") or "").strip()
+    if not reviewer or reviewer in {"anonymous", "frontend_reviewer"}:
+        raise HTTPException(status_code=400, detail="Promotion requires an explicit reviewer identity")
+    note = str(payload.get("note") or "")
+    try:
+        query_count = max(1, min(50, int(payload.get("query_count") or 50)))
+    except (TypeError, ValueError):
+        query_count = 50
+    try:
+        from key_action_indexer.reviewed_dataset import load_reviewed_export, promote_reviewed_release  # type: ignore
+
+        promotion = promote_reviewed_release(
+            _key_action_output_dir(safe_experiment_id),
+            version=version,
+            reviewer=reviewer,
+            note=note,
+            query_count=query_count,
+        )
+        return {
+            "experiment_id": safe_experiment_id,
+            "promotion": promotion,
+            "reviewed_export": load_reviewed_export(_key_action_output_dir(safe_experiment_id)),
+            "queue": _key_action_review_queue_payload(safe_experiment_id),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Key-action reviewed release promotion failed for %s", safe_experiment_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @app.get("/api/v1/experiments/{experiment_id}/key-actions/evidence/adapters", tags=["experiments"])
 async def get_key_action_evidence_adapters(
     experiment_id: str,

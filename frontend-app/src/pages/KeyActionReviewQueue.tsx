@@ -3,11 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowLeft,
+  BadgeCheck,
   CheckCircle2,
   ClipboardCheck,
   Download,
   FileJson,
   Gauge,
+  Keyboard,
   Layers3,
   Loader2,
   RefreshCw,
@@ -15,6 +17,8 @@ import {
   SearchCheck,
   SlidersHorizontal,
   SplitSquareHorizontal,
+  ZoomIn,
+  ZoomOut,
   XCircle,
 } from 'lucide-react'
 import { experimentApi, prefetchExperimentRoute } from '../api'
@@ -155,7 +159,7 @@ export default function KeyActionReviewQueue() {
     })
   }, [items, statusFilter, typeFilter])
 
-  const selectedItems = filteredItems.filter(item => selectedIds.has(item.item_id))
+  const selectedItems = items.filter(item => selectedIds.has(item.item_id))
   const quality = queue?.quality
   const metrics = quality?.core_metrics || {}
   const adapterCounts = adapters?.counts || {}
@@ -167,6 +171,10 @@ export default function KeyActionReviewQueue() {
       else next.add(itemId)
       return next
     })
+  }
+
+  function replaceSelected(itemIds: string[]) {
+    setSelectedIds(new Set(itemIds))
   }
 
   async function decide(item: KeyActionReviewItem, decision: string) {
@@ -249,6 +257,27 @@ export default function KeyActionReviewQueue() {
     }
   }
 
+  async function promoteReviewedRelease() {
+    if (!id) return
+    const reviewer = window.prompt('Reviewer identity for promotion audit')
+    if (!reviewer?.trim()) return
+    const note = window.prompt('Promotion note')?.trim() || 'Promotion requested from Review Queue after backend gates pass.'
+    setSavingId('promote')
+    try {
+      const payload = await experimentApi.promoteKeyActionReviewedRelease(id, {
+        reviewer: reviewer.trim(),
+        note,
+        query_count: 50,
+      })
+      setQueue(payload.queue)
+      downloadJson(payload.promotion, `${id}-promoted-reviewed-release.json`)
+    } catch (exc) {
+      setError(readError(exc))
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   async function runRetrievalEval() {
     if (!id) return
     setSavingId('retrieval')
@@ -293,6 +322,10 @@ export default function KeyActionReviewQueue() {
             <button type="button" onClick={() => void freezeReviewedDataset()} className={primaryButtonClass('blue')}>
               {savingId === 'freeze' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
               Freeze
+            </button>
+            <button type="button" onClick={() => void promoteReviewedRelease()} className={primaryButtonClass('emerald')}>
+              {savingId === 'promote' ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+              Promote
             </button>
             <button type="button" onClick={() => void rollbackRelease()} className={secondaryButtonClass('amber')}>
               {savingId === 'rollback' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
@@ -376,6 +409,8 @@ export default function KeyActionReviewQueue() {
             selectedIds={selectedIds}
             boundaries={boundaries}
             onSelect={toggleSelected}
+            onSelectMany={replaceSelected}
+            onClearSelection={() => setSelectedIds(new Set())}
             onBoundary={(itemId, value) => setBoundaries(previous => ({ ...previous, [itemId]: { ...(previous[itemId] || {}), ...value } }))}
             onApplySplit={() => void freezeReviewedDataset()}
           />
@@ -420,6 +455,8 @@ function CompactTimeline({
   selectedIds,
   boundaries,
   onSelect,
+  onSelectMany,
+  onClearSelection,
   onBoundary,
   onApplySplit,
 }: {
@@ -428,12 +465,16 @@ function CompactTimeline({
   selectedIds: Set<string>
   boundaries: Record<string, { start?: string; end?: string }>
   onSelect: (itemId: string) => void
+  onSelectMany: (itemIds: string[]) => void
+  onClearSelection: () => void
   onBoundary: (itemId: string, value: { start?: string; end?: string }) => void
   onApplySplit: () => void
 }) {
+  const [zoom, setZoom] = useState(1)
   const timedItems = items.filter(item => item.start_sec != null || item.end_sec != null)
   const adapterRows = Object.entries(adapters?.adapters || {}).map(([name, adapter]) => {
     const coverage = asRecord(adapter.coverage)
+    const semanticIssueCount = Number(adapter.semantic_issue_count ?? 0)
     return {
       name,
       status: adapter.status || 'missing',
@@ -441,8 +482,13 @@ function CompactTimeline({
       end: coverage?.end_sec,
       rowCount: adapter.row_count ?? 0,
       issueCount: (adapter.error_count ?? 0) + (adapter.warning_count ?? 0),
+      semanticIssueCount,
     }
   }).filter(row => row.start != null || row.end != null)
+  const warningItems = timedItems.filter(item => item.item_type === 'qa_warning' || item.item_type === 'evidence_semantic')
+  const segmentItems = timedItems.filter(item => item.item_type === 'segment')
+  const microItems = timedItems.filter(item => item.item_type === 'micro_segment')
+  const conflictItems = timedItems.filter(item => timelineConflict(item))
   const starts = [
     ...timedItems.map(item => numberValue(item.adjusted_start_sec ?? item.start_sec, 0)),
     ...adapterRows.map(row => numberValue(row.start, 0)),
@@ -460,6 +506,8 @@ function CompactTimeline({
   const selectedEnd = selectedItem ? numberValue(boundary.end ?? selectedItem.adjusted_end_sec ?? selectedItem.end_sec, max) : max
   const selectedPreview = selectedItem ? [...(selectedItem.preview_urls || []), ...(selectedItem.clip_urls || [])][0] : null
   const splitCount = items.filter(item => item.item_type === 'segment' && item.reasons?.includes('coarse_long_segment')).length
+  const selectedTimelineCount = timedItems.filter(item => selectedIds.has(item.item_id)).length
+  const zoomWidth = `${Math.round(zoom * 100)}%`
 
   function left(start: unknown) {
     return `${Math.max(0, Math.min(100, ((numberValue(start, min) - min) / span) * 100))}%`
@@ -471,49 +519,133 @@ function CompactTimeline({
     return `${Math.max(0.6, Math.min(100, value))}%`
   }
 
+  function clamp(value: number, lower: number, upper: number) {
+    return Math.max(lower, Math.min(upper, value))
+  }
+
+  function nudgeSelected(delta: number, mode: 'move' | 'start' | 'end') {
+    if (!selectedItem) return
+    const duration = Math.max(0.05, selectedEnd - selectedStart)
+    if (mode === 'move') {
+      const nextStart = clamp(selectedStart + delta, min, Math.max(min, max - duration))
+      onBoundary(selectedItem.item_id, { start: nextStart.toFixed(2), end: (nextStart + duration).toFixed(2) })
+      return
+    }
+    if (mode === 'start') {
+      onBoundary(selectedItem.item_id, { start: clamp(selectedStart + delta, min, selectedEnd - 0.05).toFixed(2) })
+      return
+    }
+    onBoundary(selectedItem.item_id, { end: clamp(selectedEnd + delta, selectedStart + 0.05, max).toFixed(2) })
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!selectedItem || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return
+      const target = event.target as HTMLElement | null
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName)) return
+      event.preventDefault()
+      const direction = event.key === 'ArrowRight' ? 1 : -1
+      const step = event.ctrlKey || event.metaKey ? 0.25 : event.altKey ? 1 : 0.05
+      nudgeSelected(direction * step, event.shiftKey ? 'end' : event.altKey ? 'start' : 'move')
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedItem, selectedStart, selectedEnd, min, max, onBoundary])
+
+  function itemTone(item: KeyActionReviewItem) {
+    if (item.item_type === 'segment') return 'bg-blue-500'
+    if (item.item_type === 'micro_segment') return 'bg-emerald-500'
+    if (item.item_type === 'evidence_semantic') return 'bg-amber-500'
+    if (item.item_type === 'qa_warning') return 'bg-red-500'
+    return 'bg-slate-400'
+  }
+
+  function renderItemBar(item: KeyActionReviewItem) {
+    const start = item.adjusted_start_sec ?? item.start_sec
+    const end = item.adjusted_end_sec ?? item.end_sec ?? start
+    const selected = selectedIds.has(item.item_id)
+    const conflict = timelineConflict(item)
+    const ring = selected ? 'ring-2 ring-slate-950' : conflict ? 'ring-2 ring-red-300' : ''
+    return (
+      <button
+        key={item.item_id}
+        type="button"
+        title={`${typeLabel(item.item_type)} ${itemTime(item)} ${cleanDisplayText(item.title || '')}`}
+        onClick={() => onSelect(item.item_id)}
+        className={`absolute top-2 h-6 rounded ${itemTone(item)} ${ring} ${selected ? '' : 'opacity-80 hover:opacity-100'}`}
+        style={{ left: left(start), width: width(start, end) }}
+      />
+    )
+  }
+
+  function renderItemLane(label: string, laneItems: KeyActionReviewItem[]) {
+    return (
+      <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+        <div className="pt-2 text-[11px] font-black uppercase tracking-wide text-slate-400">{label}</div>
+        <div className="relative h-10 rounded-lg bg-slate-50 ring-1 ring-slate-100">
+          {laneItems.length ? laneItems.map(renderItemBar) : <span className="absolute left-3 top-3 text-[11px] font-semibold text-slate-300">empty</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <EvidenceCard className="p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-slate-500" />
-          <h3 className="font-black text-slate-950">Compact Timeline</h3>
+          <h3 className="font-black text-slate-950">Review Timeline</h3>
           <EvidenceBadge tone="slate">{formatNumber(min, 1)}-{formatNumber(max, 1)}s</EvidenceBadge>
+          <EvidenceBadge tone={conflictItems.length ? 'red' : 'emerald'}>{conflictItems.length} conflicts</EvidenceBadge>
+          <EvidenceBadge tone="blue">{selectedTimelineCount} selected</EvidenceBadge>
         </div>
-        <button type="button" onClick={onApplySplit} className={secondaryButtonClass('blue')}>
-          <SplitSquareHorizontal className="h-4 w-4" />
-          Apply split {splitCount ? `(${splitCount})` : ''}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setZoom(value => clamp(Number((value - 0.25).toFixed(2)), 1, 4))} className={secondaryButtonClass()}>
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setZoom(value => clamp(Number((value + 0.25).toFixed(2)), 1, 4))} className={secondaryButtonClass()}>
+            <ZoomIn className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => onSelectMany(timedItems.map(item => item.item_id))} className={secondaryButtonClass('blue')}>
+            <Layers3 className="h-4 w-4" />
+            Select timed
+          </button>
+          <button type="button" onClick={() => onSelectMany(conflictItems.map(item => item.item_id))} className={secondaryButtonClass('red')}>
+            <AlertTriangle className="h-4 w-4" />
+            Select conflicts
+          </button>
+          <button type="button" onClick={onClearSelection} className={secondaryButtonClass()}>
+            Clear
+          </button>
+          <button type="button" onClick={onApplySplit} className={secondaryButtonClass('blue')}>
+            <SplitSquareHorizontal className="h-4 w-4" />
+            Apply split {splitCount ? `(${splitCount})` : ''}
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="relative h-11 rounded-lg bg-slate-50 ring-1 ring-slate-100">
-          {timedItems.map(item => {
-            const start = item.adjusted_start_sec ?? item.start_sec
-            const end = item.adjusted_end_sec ?? item.end_sec ?? start
-            const tone = item.item_type === 'segment' ? 'bg-blue-500' : item.item_type === 'micro_segment' ? 'bg-emerald-500' : item.item_type === 'evidence_semantic' ? 'bg-amber-500' : 'bg-slate-400'
-            return (
-              <button
-                key={item.item_id}
-                type="button"
-                title={`${typeLabel(item.item_type)} ${itemTime(item)} ${cleanDisplayText(item.title || '')}`}
-                onClick={() => onSelect(item.item_id)}
-                className={`absolute top-2 h-7 rounded ${tone} ${selectedIds.has(item.item_id) ? 'ring-2 ring-slate-900' : 'opacity-80 hover:opacity-100'}`}
-                style={{ left: left(start), width: width(start, end) }}
-              />
-            )
-          })}
-        </div>
-
-        <div className="relative h-9 rounded-lg bg-white ring-1 ring-slate-100">
-          {adapterRows.map(row => (
-            <button
-              key={row.name}
-              type="button"
-              title={`${row.name}: ${row.rowCount} rows, ${row.issueCount} issues`}
-              className={`absolute top-2 h-5 rounded ${row.status === 'pass' ? 'bg-cyan-500' : row.status === 'fail' ? 'bg-red-500' : 'bg-amber-400'} opacity-75`}
-              style={{ left: left(row.start), width: width(row.start, row.end) }}
-            />
-          ))}
+      <div className="overflow-x-auto rounded-lg border border-slate-100 bg-white">
+        <div className="space-y-2 p-3" style={{ width: zoomWidth, minWidth: '100%' }}>
+          {renderItemLane('Warnings', warningItems)}
+          {renderItemLane('Segments', segmentItems)}
+          {renderItemLane('Micros', microItems)}
+          <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+            <div className="pt-2 text-[11px] font-black uppercase tracking-wide text-slate-400">Adapters</div>
+            <div className="relative h-10 rounded-lg bg-slate-50 ring-1 ring-slate-100">
+              {adapterRows.length ? adapterRows.map(row => {
+                const conflict = row.status !== 'pass' || row.semanticIssueCount > 0 || row.issueCount > 0
+                return (
+                  <button
+                    key={row.name}
+                    type="button"
+                    title={`${row.name}: ${row.rowCount} rows, ${row.issueCount} issues, ${row.semanticIssueCount} semantic`}
+                    className={`absolute top-2 h-6 rounded ${row.status === 'pass' ? 'bg-cyan-500' : row.status === 'fail' ? 'bg-red-500' : 'bg-amber-400'} ${conflict ? 'ring-2 ring-red-300' : 'opacity-80'}`}
+                    style={{ left: left(row.start), width: width(row.start, row.end) }}
+                  />
+                )
+              }) : <span className="absolute left-3 top-3 text-[11px] font-semibold text-slate-300">empty</span>}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -521,8 +653,11 @@ function CompactTimeline({
         <div className="grid gap-2 sm:grid-cols-2">
           {selectedItem ? (
             <>
-              <label className="text-xs font-bold text-slate-500">
-                Start {formatNumber(selectedStart, 2)}s
+              <div className="rounded-lg bg-slate-50 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2 text-xs font-bold text-slate-500">
+                  <span>Start {formatNumber(selectedStart, 2)}s</span>
+                  <Keyboard className="h-3.5 w-3.5" />
+                </div>
                 <input
                   type="range"
                   min={min}
@@ -530,11 +665,11 @@ function CompactTimeline({
                   step={0.05}
                   value={Math.min(selectedStart, selectedEnd)}
                   onChange={event => onBoundary(selectedItem.item_id, { start: event.target.value })}
-                  className="mt-2 w-full accent-blue-600"
+                  className="w-full accent-blue-600"
                 />
-              </label>
-              <label className="text-xs font-bold text-slate-500">
-                End {formatNumber(selectedEnd, 2)}s
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <div className="mb-2 text-xs font-bold text-slate-500">End {formatNumber(selectedEnd, 2)}s</div>
                 <input
                   type="range"
                   min={min}
@@ -542,9 +677,9 @@ function CompactTimeline({
                   step={0.05}
                   value={Math.max(selectedStart, selectedEnd)}
                   onChange={event => onBoundary(selectedItem.item_id, { end: event.target.value })}
-                  className="mt-2 w-full accent-blue-600"
+                  className="w-full accent-blue-600"
                 />
-              </label>
+              </div>
             </>
           ) : (
             <div className="rounded-lg bg-slate-50 p-3 text-xs font-semibold text-slate-500 sm:col-span-2">Select a segment or micro bar to adjust boundaries.</div>
@@ -565,6 +700,26 @@ function CompactTimeline({
         </div>
       </div>
     </EvidenceCard>
+  )
+}
+
+function timelineConflict(item: KeyActionReviewItem) {
+  const severity = String(item.severity || '').toLowerCase()
+  const reasons = (item.reasons || []).map(reason => String(reason).toLowerCase())
+  const status = String(item.review_status || '').toLowerCase()
+  return (
+    severity === 'error' ||
+    item.item_type === 'evidence_semantic' ||
+    status === 'needs_review' ||
+    reasons.some(reason => (
+      reason.includes('semantic') ||
+      reason.includes('conflict') ||
+      reason.includes('mismatch') ||
+      reason.includes('low') ||
+      reason.includes('coarse') ||
+      reason.includes('missing') ||
+      reason.includes('unconfirmed')
+    ))
   )
 }
 

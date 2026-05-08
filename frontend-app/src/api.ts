@@ -317,6 +317,12 @@ export const experimentApi = {
     return data
   },
 
+  promoteKeyActionReviewedRelease: async (id: string, request?: { version?: string; reviewer?: string; note?: string; query_count?: number }) => {
+    const { data } = await api.post<{ queue: KeyActionReviewQueue; promotion: Record<string, unknown>; reviewed_export: Record<string, unknown> }>(`/experiments/${id}/key-actions/review/promote`, request || {})
+    invalidateExperimentCache(id)
+    return data
+  },
+
   getKeyActionEvidenceAdapters: (id: string, options?: ApiCacheOptions) => cachedGet<KeyActionEvidenceAdapters>(`/experiments/${id}/key-actions/evidence/adapters`, undefined, { ttlMs: 30_000, ...options }),
 
   evaluateKeyActionRetrieval: async (id: string, queryCount = 50) => {
