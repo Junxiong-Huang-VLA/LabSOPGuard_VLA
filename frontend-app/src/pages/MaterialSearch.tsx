@@ -67,6 +67,11 @@ function candidateFileName(file: MaterialCandidateFile) {
   return pathText(file.stored_filename, file.file_name, file.display_name, file.source_file, file.stored_file)?.replace(/\\/g, '/').split('/').pop() || '专业报告'
 }
 
+function candidateFileIsReport(file: MaterialCandidateFile) {
+  const typeText = `${file.asset_kind || ''} ${file.material_type || ''} ${file.role || ''} ${candidateFileName(file)}`.toLowerCase()
+  return typeText.includes('report') || typeText.includes('报告') || typeText.endsWith('.pdf')
+}
+
 function formatBytes(value: unknown) {
   const size = Number(value)
   if (!Number.isFinite(size) || size <= 0) return ''
@@ -218,10 +223,14 @@ export default function MaterialSearch() {
         delete next[group.candidate_group_id]
         return next
       })
+      const selectedFiles = candidateFilesForGroup(group).filter((file, fileIndex) => selectedIds.includes(candidateFileId(file, fileIndex)))
+      const reportOnly = selectedFiles.length > 0 && selectedFiles.every(candidateFileIsReport)
       const published = response?.published_materials as { total?: number; items?: unknown[] } | undefined
       const publishedTotal = Number(published?.total ?? published?.items?.length ?? 0)
       const approvedCount = Number(response?.approval?.approved_count ?? selectedIds.length)
-      setApprovalNotice(`已批准入库 ${approvedCount} 个候选文件；正式关键素材库当前 ${publishedTotal} 个素材，已同步到 material_references、正式素材文件夹和全局素材索引。`)
+      setApprovalNotice(reportOnly
+        ? `已批准入库 ${approvedCount} 个专业 PDF；文件已同步到 material_references 的“专业报告”文件夹，不进入前端关键素材库。`
+        : `已批准入库 ${approvedCount} 个候选文件；正式关键素材库当前 ${publishedTotal} 个关键帧/关键片段，已同步到 material_references、正式素材文件夹和全局素材索引。`)
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : '候选素材审批失败')
     } finally {
@@ -234,7 +243,7 @@ export default function MaterialSearch() {
       <PageHero
         eyebrow={id ? <Link to={`/experiments/${id}/workspace`} className="hover:text-slate-900">分析概览</Link> : 'Materials'}
         title="关键素材库"
-        description="候选库与正式库分离展示。关键帧、关键片段和专业 PDF 先进入候选库，审核选中后再发布到正式素材库。"
+        description="候选库与正式库分离展示。关键帧、关键片段先进入候选库，审核选中后发布到正式素材库；专业 PDF 审批后只进入专业报告文件夹。"
         actions={id ? (
           <>
             <Link to={`/experiments/${id}/workspace`} className={secondaryButtonClass()}><ArrowLeft className="h-4 w-4" />工作台</Link>
@@ -271,7 +280,7 @@ export default function MaterialSearch() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-slate-950">正式关键素材库</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">这里只展示已经人工批准入库的关键帧、关键片段和专业报告。</p>
+              <p className="mt-1 text-sm font-semibold text-slate-500">这里只展示已经人工批准入库的关键帧和关键片段；专业 PDF 归档在正式文件夹的“专业报告”目录。</p>
             </div>
             {id && <Link to={`/experiments/${id}/materials/timeline`} className={secondaryButtonClass('blue')}><Clock3 className="h-4 w-4" />素材时间轴</Link>}
           </div>
@@ -541,7 +550,7 @@ function CandidatePreview({
   const url = candidateFileUrl(file, experimentId)
   const typeText = `${file.asset_kind || ''} ${file.material_type || ''} ${file.role || ''}`.toLowerCase()
   const isClip = typeText.includes('clip') || typeText.includes('片段') || Boolean(file.clip_url)
-  const isReport = typeText.includes('report') || typeText.includes('报告') || String(url || '').toLowerCase().endsWith('.pdf')
+  const isReport = candidateFileIsReport(file)
   if (!url) return <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400">no file</div>
   const overlay = (
     <label className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-xs font-black text-slate-700 shadow-sm">

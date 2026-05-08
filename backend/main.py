@@ -2291,6 +2291,8 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
     items: List[Dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
         asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
+        if asset_kind == "专业报告":
+            continue
         path = _material_row_path(row, ref_root)
         action = row.get("action") if isinstance(row.get("action"), dict) else {}
         start_sec = _float_value(row.get("time_start") or row.get("start_sec") or action.get("start_sec") or row.get("source_offset_sec"), 0.0)
