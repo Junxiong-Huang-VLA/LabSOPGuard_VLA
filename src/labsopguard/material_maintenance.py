@@ -210,8 +210,6 @@ def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[
     items: List[Dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
         asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
-        if asset_kind == REPORT_KIND:
-            continue
         if asset_kind not in {KEYFRAME_KIND, KEY_CLIP_KIND}:
             continue
         path = _material_reference_row_path(row, ref_root)
@@ -354,7 +352,9 @@ def rebuild_workspace_published_materials_index(
             raw_items = [item for item in (fallback.get("items") or []) if isinstance(item, dict)]
             source = "formal_material_references"
             source_mtime = float(fallback.get("source_mtime") or source_mtime)
-            if not raw_items:
+        if not raw_items:
+            if not published_path.exists():
+                source = "formal_material_references"
                 experiments.append({"experiment_id": experiment_id, "status": "skipped", "reason": "published_materials.json missing"})
                 continue
         count = 0
@@ -478,8 +478,8 @@ def _workspace_published_lifecycle_snapshot(experiments_root: Path, index_path: 
         else:
             fallback = _formal_material_reference_items(exp_dir, experiment_id)
             fallback_items = [item for item in (fallback.get("items") or []) if isinstance(item, dict)]
-            expected_items = fallback_items
-            if expected_items or formal_counts["material_count"]:
+            if fallback_items or formal_counts["material_count"] or formal_counts["report_count"]:
+                expected_items = fallback_items
                 source = "formal_material_references"
                 source_path = str(fallback.get("source") or formal_counts.get("source_path") or "")
                 source_mtime = float(fallback.get("source_mtime") or formal_counts.get("source_mtime") or exp_dir.stat().st_mtime)

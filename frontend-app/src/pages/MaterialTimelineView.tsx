@@ -103,7 +103,7 @@ function Tabs({ id }: { id: string }) {
       <Link to={`/experiments/${id}/report`} className={cls}>分析报告</Link>
       <Link to={`/experiments/${id}/materials`} className={cls}>关键素材</Link>
       <Link to={`/experiments/${id}/materials/timeline`} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-bold text-white">素材时间轴</Link>
-      <Link to={`/experiments/${id}/key-actions`} className={cls}>关键动作</Link>
+      <Link to={`/experiments/${id}/key-actions`} onMouseEnter={() => prefetchExperimentRoute(id, 'keyActions')} className={cls}>关键动作</Link>
     </nav>
   )
 }

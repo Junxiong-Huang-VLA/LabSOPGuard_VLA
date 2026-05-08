@@ -2212,6 +2212,13 @@ def _material_reference_root_candidates(exp_dir: Path) -> List[Path]:
     return roots
 
 
+def _material_reference_index_exists(exp_dir: Path) -> bool:
+    for ref_root in _material_reference_root_candidates(exp_dir):
+        if (ref_root / "素材索引.jsonl").exists() or (ref_root / "素材索引.json").exists():
+            return True
+    return False
+
+
 def _material_reference_root_and_rows(exp_dir: Path) -> tuple[Path, List[Dict[str, Any]]]:
     fallback_root = exp_dir / "material_references"
     local_root = exp_dir / "material_references"
@@ -2284,8 +2291,6 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
     items: List[Dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
         asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
-        if asset_kind == "专业报告":
-            continue
         path = _material_row_path(row, ref_root)
         action = row.get("action") if isinstance(row.get("action"), dict) else {}
         start_sec = _float_value(row.get("time_start") or row.get("start_sec") or action.get("start_sec") or row.get("source_offset_sec"), 0.0)
@@ -2312,11 +2317,14 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
                 "evidence_level": row.get("evidence_level") or "recovered_reference",
                 "preview_url": preview_url,
                 "clip_url": clip_url,
+                "report_url": url if asset_kind == "专业报告" else None,
+                "material_url": url,
                 "frame_path": str(path) if path and asset_kind == "关键帧" else row.get("frame_path"),
                 "clip_file_path": str(path) if path and asset_kind == "关键片段" else row.get("clip_file_path"),
                 "published_paths": {
                     "keyframe": str(path) if path and asset_kind == "关键帧" else "",
                     "clip": str(path) if path and asset_kind == "关键片段" else "",
+                    "report": str(path) if path and asset_kind == "专业报告" else "",
                 },
                 "payload": row,
             }
@@ -2345,10 +2353,13 @@ def _workspace_published_payload_with_media_urls(payload: Dict[str, Any]) -> Dic
             published_paths = updated.get("published_paths") if isinstance(updated.get("published_paths"), dict) else {}
             preview_source = updated.get("preview_path") or published_paths.get("preview") or published_paths.get("keyframe")
             clip_source = updated.get("clip_path") or published_paths.get("clip")
+            report_source = updated.get("report_path") or published_paths.get("report")
             if not updated.get("preview_url") and preview_source:
                 updated["preview_url"] = _experiment_file_api_path(Path(str(preview_source)), experiment_id)
             if not updated.get("clip_url") and clip_source:
                 updated["clip_url"] = _experiment_file_api_path(Path(str(clip_source)), experiment_id)
+            if not updated.get("report_url") and report_source:
+                updated["report_url"] = _experiment_file_api_path(Path(str(report_source)), experiment_id)
         updated_items.append(updated)
     return {**payload, "items": updated_items}
 
@@ -2398,13 +2409,48 @@ def _material_candidate_rows(experiment_id: str) -> List[Dict[str, Any]]:
     return _read_jsonl_rows(_material_candidate_index_path(experiment_id))
 
 
+def _material_candidate_status(row: Dict[str, Any]) -> str:
+    raw_status = row.get("candidate_status") or row.get("review_status") or "pending"
+    status = str(raw_status).strip().lower()
+    if not status or status in {"none", "null", "unknown"}:
+        return "pending"
+    if status == "accepted":
+        return "approved"
+    return status
+
+
+def _material_candidate_group_status(rows: List[Dict[str, Any]]) -> str:
+    statuses = [_material_candidate_status(row) for row in rows]
+    if any(status in {"approved", "accepted"} for status in statuses):
+        return "approved"
+    if any(status in {"pending", "review", "needs_review", "candidate"} for status in statuses):
+        return "pending"
+    if statuses and all(status == "not_selected" for status in statuses):
+        return "not_selected"
+    if any(status in {"rejected", "failed", "blocked"} for status in statuses):
+        return next(status for status in statuses if status in {"rejected", "failed", "blocked"})
+    return statuses[0] if statuses else "pending"
+
+
+def _first_material_candidate_value(rows: List[Dict[str, Any]], key: str, default: Any = None) -> Any:
+    for row in rows:
+        value = row.get(key)
+        if value not in (None, "", [], {}):
+            return value
+    return default
+
+
 def _material_candidate_file_payload(experiment_id: str, row: Dict[str, Any]) -> Dict[str, Any]:
     candidate_root = _material_candidate_root(experiment_id)
     path = _material_row_path(row, candidate_root)
     url = _experiment_file_api_path(path, experiment_id) if path else None
     asset_kind = str(row.get("asset_kind") or row.get("material_type") or "")
+    candidate_status = _material_candidate_status(row)
+    review_status = str(row.get("review_status") or candidate_status)
     return {
         **row,
+        "candidate_status": candidate_status,
+        "review_status": review_status,
         "url": url,
         "preview_url": url if asset_kind == "关键帧" else row.get("preview_url"),
         "clip_url": url if asset_kind == "关键片段" else row.get("clip_url"),
@@ -2432,24 +2478,25 @@ def _material_candidates_payload(experiment_id: str) -> Dict[str, Any]:
         clips = [row for row in group_rows if row.get("asset_kind") == "关键片段"]
         first = group_rows[0] if group_rows else {}
         recommended = [row for row in group_rows if row.get("recommended") is True]
+        group_status = _material_candidate_group_status(group_rows)
         items.append(
             {
                 "candidate_group_id": group_id,
-                "status": first.get("candidate_status") or first.get("review_status") or "pending",
-                "review_status": first.get("review_status") or "pending",
+                "status": group_status,
+                "review_status": "approved" if group_status == "approved" else str(_first_material_candidate_value(group_rows, "review_status", group_status)),
                 "recommended": bool(recommended),
                 "recommended_count": len(recommended),
                 "quality_score": max((_float_value(row.get("quality_score"), 0.0) for row in group_rows), default=0.0),
-                "pipeline_status": first.get("pipeline_status"),
-                "pipeline_stage": first.get("pipeline_stage"),
-                "pipeline_flow": first.get("pipeline_flow") or [],
-                "review_gate_policy": first.get("review_gate_policy"),
-                "yolo_recheck": first.get("yolo_recheck"),
-                "vlm_semantics": first.get("vlm_semantics"),
-                "primary_object": first.get("primary_object"),
-                "action_name": first.get("action_name"),
-                "micro_segment_id": first.get("micro_segment_id"),
-                "parent_segment_id": first.get("parent_segment_id"),
+                "pipeline_status": _first_material_candidate_value(group_rows, "pipeline_status"),
+                "pipeline_stage": _first_material_candidate_value(group_rows, "pipeline_stage"),
+                "pipeline_flow": _first_material_candidate_value(group_rows, "pipeline_flow", []),
+                "review_gate_policy": _first_material_candidate_value(group_rows, "review_gate_policy"),
+                "yolo_recheck": _first_material_candidate_value(group_rows, "yolo_recheck"),
+                "vlm_semantics": _first_material_candidate_value(group_rows, "vlm_semantics"),
+                "primary_object": _first_material_candidate_value(group_rows, "primary_object") or first.get("primary_object"),
+                "action_name": _first_material_candidate_value(group_rows, "action_name") or first.get("action_name"),
+                "micro_segment_id": _first_material_candidate_value(group_rows, "micro_segment_id") or first.get("micro_segment_id"),
+                "parent_segment_id": _first_material_candidate_value(group_rows, "parent_segment_id") or first.get("parent_segment_id"),
                 "keyframes": keyframes,
                 "clips": clips,
                 "files": group_rows,
@@ -2463,8 +2510,8 @@ def _material_candidates_payload(experiment_id: str) -> Dict[str, Any]:
         "experiment_id": experiment_id,
         "total": len(items),
         "file_total": len(rows),
-        "pending_total": sum(1 for row in rows if str(row.get("candidate_status") or row.get("review_status") or "").lower() == "pending"),
-        "approved_total": sum(1 for row in rows if str(row.get("candidate_status") or row.get("review_status") or "").lower() in {"approved", "accepted"}),
+        "pending_total": sum(1 for row in rows if _material_candidate_status(row) == "pending"),
+        "approved_total": sum(1 for row in rows if _material_candidate_status(row) in {"approved", "accepted"}),
         "items": items,
         "manifest": manifest,
         "candidate_index": str(candidate_root / _MATERIAL_CANDIDATE_INDEX_FILENAME),
@@ -2533,6 +2580,8 @@ def _auto_publish_key_action_material_candidates(
         result.update({"status": "failed", "error": str(exc)})
         return result
 
+    exp_dir = _experiment_output_dir(experiment_id)
+    published_materials = _sync_published_materials_from_references(exp_dir, experiment_id)
     approved_count = int(approval.get("approved_count") or 0) if isinstance(approval, dict) else 0
     workspace_reindex = _rebuild_workspace_published_materials_index_quietly() if approved_count else {"status": "skipped", "reason": "no_approved_candidates"}
     result.update(
@@ -2540,7 +2589,7 @@ def _auto_publish_key_action_material_candidates(
             "status": "completed",
             "approved_count": approved_count,
             "approval": approval,
-            "published_materials": _material_reference_items(_experiment_output_dir(experiment_id), experiment_id),
+            "published_materials": published_materials,
             "workspace_published_materials_reindex": workspace_reindex,
         }
     )
@@ -2551,6 +2600,7 @@ def _published_material_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
     payload = _load_json_if_exists(exp_dir / "published_materials.json")
     if isinstance(payload, dict) and payload.get("items"):
         return payload
+    fallback = _material_reference_items(exp_dir, experiment_id)
     try:
         from labsopguard.material_publishing import SemanticMaterialPublisher
 
@@ -2559,10 +2609,22 @@ def _published_material_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
             return listed
     except Exception:
         logger.debug("Published material listing unavailable; falling back to material_references", exc_info=True)
-    fallback = _material_reference_items(exp_dir, experiment_id)
     if fallback.get("items"):
         return fallback
     return payload if isinstance(payload, dict) else fallback
+
+
+def _sync_published_materials_from_references(exp_dir: Path, experiment_id: str) -> Dict[str, Any]:
+    payload = _material_reference_items(exp_dir, experiment_id)
+    payload = {
+        **payload,
+        "schema_version": "published_materials.approved_material_references.v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "total": len(payload.get("items") or []),
+        "policy": "Only frontend-approved candidates are synchronized into the key material library.",
+    }
+    _write_json(exp_dir / "published_materials.json", payload)
+    return payload
 
 
 def _professional_report_basename() -> str:
@@ -7012,13 +7074,15 @@ async def approve_experiment_material_candidate(
     except Exception as exc:
         logger.exception("Material candidate approval failed for %s", safe_experiment_id)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    exp_dir = _experiment_output_dir(safe_experiment_id)
+    published_materials = _sync_published_materials_from_references(exp_dir, safe_experiment_id)
     workspace_reindex = _rebuild_workspace_published_materials_index_quietly()
     return {
         "experiment_id": safe_experiment_id,
         "candidate_group_id": candidate_group_id,
         "approval": approval,
         "candidates": _material_candidates_payload(safe_experiment_id),
-        "published_materials": _material_reference_items(_experiment_output_dir(safe_experiment_id), safe_experiment_id),
+        "published_materials": published_materials,
         "workspace_published_materials_reindex": workspace_reindex,
     }
 

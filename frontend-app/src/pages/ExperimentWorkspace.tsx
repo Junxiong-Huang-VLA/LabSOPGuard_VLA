@@ -175,16 +175,20 @@ export default function ExperimentWorkspace() {
       <PageHero
         eyebrow={<Link to="/experiments" className="hover:text-slate-900">实验队列</Link>}
         title={experimentName}
-        description="围绕双视角视频、结构化步骤、异常告警、关键素材与关键动作索引的实验复盘工作台。"
+        description="围绕双视角视频、结构化步骤、异常告警、关键素材与证据索引的实验复盘工作台。"
         actions={(
           <>
             <button type="button" onClick={() => void load(true)} className={secondaryButtonClass()}>
               <RefreshCw className="h-4 w-4" />
               刷新
             </button>
-            <Link to={`/experiments/${overview.experiment.experiment_id}/key-actions`} className={primaryButtonClass('blue')}>
+            <Link to={`/experiments/${overview.experiment.experiment_id}/key-actions`} className={secondaryButtonClass('emerald')}>
               <Layers3 className="h-4 w-4" />
               关键动作
+            </Link>
+            <Link to={`/experiments/${overview.experiment.experiment_id}/materials`} className={primaryButtonClass('blue')}>
+              <Boxes className="h-4 w-4" />
+              关键素材
             </Link>
           </>
         )}
@@ -298,6 +302,7 @@ export default function ExperimentWorkspace() {
               <Link to={`/experiments/${overview.experiment.experiment_id}/report`} className={secondaryButtonClass()}><FileText className="h-4 w-4" />分析报告</Link>
               <Link to={`/experiments/${overview.experiment.experiment_id}/materials/timeline`} className={secondaryButtonClass('cyan')}><Clock3 className="h-4 w-4" />素材时间轴</Link>
               <Link to={`/experiments/${overview.experiment.experiment_id}/materials`} className={secondaryButtonClass('emerald')}><Boxes className="h-4 w-4" />关键素材</Link>
+              <Link to={`/experiments/${overview.experiment.experiment_id}/key-actions`} className={secondaryButtonClass('blue')}><Layers3 className="h-4 w-4" />关键动作</Link>
             </div>
           </EvidenceCard>
         </aside>
@@ -314,7 +319,7 @@ function ExperimentTabs({ experimentId }: { experimentId: string }) {
       <Link to={`/experiments/${experimentId}/report`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'report')} className={tabClass}>分析报告</Link>
       <Link to={`/experiments/${experimentId}/materials`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'materials')} className={tabClass}>关键素材</Link>
       <Link to={`/experiments/${experimentId}/materials/timeline`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'materialTimeline')} className={tabClass}>素材时间轴</Link>
-      <Link to={`/experiments/${experimentId}/key-actions`} className={tabClass}>关键动作</Link>
+      <Link to={`/experiments/${experimentId}/key-actions`} onMouseEnter={() => prefetchExperimentRoute(experimentId, 'keyActions')} className={tabClass}>关键动作</Link>
     </nav>
   )
 }

@@ -21,6 +21,17 @@ function itemClip(item: MaterialSearchItem, experimentId?: string) {
   return experimentFileUrl(item.clip_url || item.clip_file_path || paths.clip || undefined, experimentId)
 }
 
+function itemReport(item: MaterialSearchItem, experimentId?: string) {
+  const paths = item.published_paths || {}
+  return experimentFileUrl(item.report_url || paths.report || undefined, experimentId)
+}
+
+function itemKindLabel(item: MaterialSearchItem, experimentId?: string) {
+  if (itemReport(item, experimentId)) return 'report'
+  if (itemClip(item, experimentId)) return 'clip'
+  return 'frame'
+}
+
 function formatRange(item: MaterialSearchItem) {
   const start = Number(item.time_start ?? item.timestamp_sec ?? item.local_timestamp_sec ?? 0)
   const end = Number(item.time_end ?? start)
@@ -52,11 +63,31 @@ function candidateFileUrl(item: MaterialCandidateFile, experimentId?: string) {
   return experimentFileUrl(pathText(item.url, item.preview_url, item.clip_url, item.frame_path, item.clip_file_path, item.stored_file, item.source_file), experimentId)
 }
 
-function candidateCanApprove(group: MaterialCandidateGroup) {
-  const status = String(group.status || group.review_status || '').toLowerCase()
+function normalizedCandidateStatus(value: unknown) {
+  const status = String(value || '').trim().toLowerCase()
+  if (!status || status === 'unknown' || status === 'none' || status === 'null') return 'pending'
+  if (status === 'accepted') return 'approved'
+  return status
+}
+
+function candidateStatusText(group: MaterialCandidateGroup) {
+  return normalizedCandidateStatus(group.status || group.review_status)
+}
+
+function candidateGroupApproved(group: MaterialCandidateGroup) {
+  const status = candidateStatusText(group)
+  return status.includes('approved') || status.includes('accepted')
+}
+
+function candidateGroupBlocked(group: MaterialCandidateGroup) {
+  const status = candidateStatusText(group)
   const yoloStatus = String(group.yolo_recheck?.status || group.pipeline_status || '').toLowerCase()
-  const blocked = ['blocked', 'rejected', 'failed'].some(keyword => status.includes(keyword) || yoloStatus.includes(keyword))
-  if (blocked || ['approved', 'accepted'].some(keyword => status.includes(keyword))) return false
+  return ['blocked', 'rejected', 'failed'].some(keyword => status.includes(keyword) || yoloStatus.includes(keyword))
+}
+
+function candidateCanApprove(group: MaterialCandidateGroup) {
+  const status = candidateStatusText(group)
+  if (candidateGroupApproved(group) || candidateGroupBlocked(group) || status.includes('not_selected')) return false
   return !status || ['pending', 'review', 'candidate', 'needs_review'].some(keyword => status.includes(keyword))
 }
 
@@ -203,6 +234,32 @@ export default function MaterialSearch() {
         <MetricTile label="视频片段" value={clips} helper="approved clips" tone="cyan" Icon={Image} />
       </section>
 
+      {items.length > 0 && (
+        <EvidenceCard className="p-5" data-smoke="formal-material-library" data-count={items.length}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">正式关键素材库</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500">这里只展示已经人工批准入库的关键帧、关键片段和专业报告。</p>
+            </div>
+            {id && <Link to={`/experiments/${id}/materials/timeline`} className={secondaryButtonClass('blue')}><Clock3 className="h-4 w-4" />素材时间轴</Link>}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {items.slice(0, 8).map((item, itemIndex) => (
+              <Link key={keyed(item.event_id || item.item_id || item.display_name || item.event_type, itemIndex, 'formal-material')} to={`/experiments/${id}/materials`} className="block overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:border-blue-200 hover:bg-slate-50">
+                <MaterialPreview item={item} experimentId={id} />
+                <div className="p-3">
+                  <div className="line-clamp-2 text-sm font-black text-slate-950">{cleanDisplayText(item.display_name || item.event_type || item.item_id, '关键素材')}</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <EvidenceBadge tone="blue">{formatRange(item)}</EvidenceBadge>
+                    <EvidenceBadge tone={itemReport(item, id) ? 'blue' : itemClip(item, id) ? 'emerald' : 'slate'}>{itemKindLabel(item, id)}</EvidenceBadge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </EvidenceCard>
+      )}
+
       {candidateGroups.length > 0 && (
         <EvidenceCard className="p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -215,6 +272,7 @@ export default function MaterialSearch() {
           <div className="grid gap-4 xl:grid-cols-2">
             {candidateGroups.map((group, groupIndex) => {
               const canApprove = candidateCanApprove(group)
+              const approved = candidateGroupApproved(group)
               const yoloStatus = String(group.yolo_recheck?.status || group.pipeline_status || 'unknown')
               const vlmStatus = String(group.vlm_semantics?.status || group.pipeline_stage || 'not_available')
               const selectedIds = selectedIdsForGroup(group)
@@ -265,15 +323,10 @@ export default function MaterialSearch() {
                       className={`${canApprove ? primaryButtonClass('emerald') : secondaryButtonClass()} disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      {approvingGroup === group.candidate_group_id ? '审批中' : '批准入库'}
+                      {approvingGroup === group.candidate_group_id ? '审批中' : approved ? '已入库' : '批准入库'}
                     </button>
                   </div>
-                  {!canApprove && (
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-                      <ShieldAlert className="h-4 w-4" />
-                      候选已处理或复核未通过，不能直接进入正式素材库。
-                    </div>
-                  )}
+                  <CandidateStateNotice group={group} canApprove={canApprove} />
                 </div>
               )
             })}
@@ -304,7 +357,7 @@ export default function MaterialSearch() {
               <div className="p-4">
                 <div className="mb-2 flex flex-wrap gap-2">
                   <EvidenceBadge tone="blue">{formatRange(item)}</EvidenceBadge>
-                  <EvidenceBadge tone={itemClip(item, id) ? 'emerald' : 'slate'}>{itemClip(item, id) ? 'clip' : 'frame'}</EvidenceBadge>
+                  <EvidenceBadge tone={itemReport(item, id) ? 'blue' : itemClip(item, id) ? 'emerald' : 'slate'}>{itemKindLabel(item, id)}</EvidenceBadge>
                   {item.review_status && <EvidenceBadge tone="amber">{item.review_status}</EvidenceBadge>}
                 </div>
                 <h3 className="line-clamp-2 font-black text-slate-950">{cleanDisplayText(item.display_name || item.event_type || item.item_id, '关键素材')}</h3>
@@ -312,6 +365,7 @@ export default function MaterialSearch() {
                   {[...(item.object_labels || []), ...(item.actions || []), item.event_type].filter(Boolean).slice(0, 8).map((label, labelIndex) => <span key={keyed(label, labelIndex, 'material-label')} className="rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">{cleanDisplayText(label)}</span>)}
                 </div>
                 {itemClip(item, id) && <a href={itemClip(item, id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-bold text-blue-700 hover:text-blue-900">打开片段</a>}
+                {itemReport(item, id) && <a href={itemReport(item, id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-bold text-blue-700 hover:text-blue-900">打开报告</a>}
               </div>
             </EvidenceCard>
           ))}
@@ -380,8 +434,18 @@ function DiagnosticsRow({ item }: { item: MaterialDiagnosticsEvidenceItem }) {
 function MaterialPreview({ item, experimentId }: { item: MaterialSearchItem; experimentId?: string }) {
   const preview = itemPreview(item, experimentId)
   const clip = itemClip(item, experimentId)
+  const report = itemReport(item, experimentId)
   if (preview) return <img src={preview} alt={cleanDisplayText(item.display_name || item.item_id, 'material')} className="aspect-video w-full bg-slate-100 object-cover" data-smoke="experiment-formal-image" />
   if (clip) return <video src={clip} className="aspect-video w-full bg-slate-950 object-contain" controls playsInline preload="metadata" data-smoke="experiment-formal-video" />
+  if (report) {
+    return (
+      <div className="flex aspect-video w-full items-center justify-center bg-slate-50">
+        <a href={report} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-blue-700">
+          <FileText className="h-5 w-5" /> 专业报告
+        </a>
+      </div>
+    )
+  }
   return <div className="flex aspect-video items-center justify-center bg-slate-100 text-sm font-semibold text-slate-400">no preview</div>
 }
 
@@ -391,6 +455,41 @@ function Gate({ label, value }: { label: string; value: unknown }) {
       <b className="mr-1 text-slate-400">{label}</b>
       {cleanDisplayText(String(value || 'unknown'))}
     </span>
+  )
+}
+
+function CandidateStateNotice({ group, canApprove }: { group: MaterialCandidateGroup; canApprove: boolean }) {
+  if (canApprove) return null
+  const status = candidateStatusText(group)
+  if (candidateGroupApproved(group)) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+        <CheckCircle2 className="h-4 w-4" />
+        已批准入库，正式素材库会显示本组被选中的关键帧、关键片段或专业报告。
+      </div>
+    )
+  }
+  if (status.includes('not_selected')) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+        <Clock3 className="h-4 w-4" />
+        同组审批已完成，本条不是本次入库的最佳素材。
+      </div>
+    )
+  }
+  if (candidateGroupBlocked(group)) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+        <ShieldAlert className="h-4 w-4" />
+        复核未通过或证据链被阻断，不能进入正式素材库。
+      </div>
+    )
+  }
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+      <Clock3 className="h-4 w-4" />
+      当前候选状态为 {status}，请刷新后继续审核。
+    </div>
   )
 }
 
@@ -452,7 +551,7 @@ function Tabs({ id }: { id: string }) {
       <Link to={`/experiments/${id}/report`} className={cls}>分析报告</Link>
       <Link to={`/experiments/${id}/materials`} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-bold text-white">关键素材</Link>
       <Link to={`/experiments/${id}/materials/timeline`} className={cls}>素材时间轴</Link>
-      <Link to={`/experiments/${id}/key-actions`} className={cls}>关键动作</Link>
+      <Link to={`/experiments/${id}/key-actions`} onMouseEnter={() => prefetchExperimentRoute(id, 'keyActions')} className={cls}>关键动作</Link>
     </nav>
   )
 }

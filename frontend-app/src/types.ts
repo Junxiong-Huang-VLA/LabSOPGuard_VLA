@@ -237,6 +237,8 @@ export interface MaterialSearchItem {
   payload?: Record<string, unknown>
   preview_url?: string | null
   clip_url?: string | null
+  report_url?: string | null
+  material_url?: string | null
   published_paths?: Record<string, string>
   event_id?: string
   display_name?: string
@@ -334,6 +336,8 @@ export interface MaterialCandidateFile {
   payload?: Record<string, unknown>
   preview_url?: string | null
   clip_url?: string | null
+  report_url?: string | null
+  material_url?: string | null
   published_paths?: Record<string, string>
   event_id?: string
   display_name?: string

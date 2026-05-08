@@ -61,7 +61,7 @@ export default function ExperimentReport() {
       <PageHero
         eyebrow={<Link to={`/experiments/${overview.experiment.experiment_id}/workspace`} className="hover:text-slate-900">分析概览</Link>}
         title="分析报告"
-        description="将结构化步骤、风险告警、关键素材和关键动作证据汇总成可复核报告。"
+        description="将结构化步骤、风险告警、关键素材和微片段证据汇总成可复核报告。"
         actions={(
           <>
             <Link to={`/experiments/${overview.experiment.experiment_id}/workspace`} className={secondaryButtonClass()}><ArrowLeft className="h-4 w-4" />工作台</Link>
@@ -81,7 +81,8 @@ export default function ExperimentReport() {
               <Printer className="h-4 w-4" />
               打印
             </button>
-            <Link to={`/experiments/${overview.experiment.experiment_id}/key-actions`} className={primaryButtonClass('blue')}><Layers3 className="h-4 w-4" />关键动作</Link>
+            <Link to={`/experiments/${overview.experiment.experiment_id}/key-actions`} className={secondaryButtonClass('emerald')}><Layers3 className="h-4 w-4" />关键动作</Link>
+            <Link to={`/experiments/${overview.experiment.experiment_id}/materials`} className={primaryButtonClass('blue')}><Boxes className="h-4 w-4" />关键素材</Link>
           </>
         )}
         tabs={<Tabs id={overview.experiment.experiment_id} />}
@@ -129,7 +130,7 @@ export default function ExperimentReport() {
 
         <aside className="space-y-5">
           <EvidenceCard className="p-4">
-            <h3 className="mb-3 font-black text-slate-950">关键动作摘要</h3>
+            <h3 className="mb-3 font-black text-slate-950">证据索引摘要</h3>
             {keyResults ? (
               <div className="space-y-2 text-sm font-semibold text-slate-600">
                 <Detail label="segments" value={String(keyResults.segments.length)} />
@@ -137,7 +138,7 @@ export default function ExperimentReport() {
                 <Detail label="interactions" value={String(keyResults.interaction_events?.length || 0)} />
                 <Detail label="vector items" value={String((keyResults.vector_metadata?.length || 0) + (keyResults.micro_vector_metadata?.length || 0))} />
               </div>
-            ) : <EmptyEvidence title="关键动作结果未就绪" />}
+            ) : <EmptyEvidence title="证据索引结果未就绪" />}
           </EvidenceCard>
 
           <EvidenceCard className="p-4">
@@ -156,6 +157,7 @@ export default function ExperimentReport() {
             <h3 className="mb-3 font-black text-slate-950">附件入口</h3>
             <div className="grid gap-2">
               <Link to={`/experiments/${overview.experiment.experiment_id}/materials`} className={secondaryButtonClass('cyan')}><Boxes className="h-4 w-4" />素材库</Link>
+              <Link to={`/experiments/${overview.experiment.experiment_id}/key-actions`} className={secondaryButtonClass('emerald')}><Layers3 className="h-4 w-4" />关键动作</Link>
               <Link to={`/experiments/${overview.experiment.experiment_id}/workspace`} className={secondaryButtonClass('blue')}><Video className="h-4 w-4" />视频工作台</Link>
             </div>
           </EvidenceCard>
@@ -173,7 +175,7 @@ function Tabs({ id }: { id: string }) {
       <Link to={`/experiments/${id}/report`} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-bold text-white">分析报告</Link>
       <Link to={`/experiments/${id}/materials`} className={cls}>关键素材</Link>
       <Link to={`/experiments/${id}/materials/timeline`} className={cls}>素材时间轴</Link>
-      <Link to={`/experiments/${id}/key-actions`} className={cls}>关键动作</Link>
+      <Link to={`/experiments/${id}/key-actions`} onMouseEnter={() => prefetchExperimentRoute(id, 'keyActions')} className={cls}>关键动作</Link>
     </nav>
   )
 }

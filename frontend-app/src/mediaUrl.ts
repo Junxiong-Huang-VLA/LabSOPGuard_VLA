@@ -26,6 +26,22 @@ export function experimentFileUrl(value: string | null | undefined, experimentId
   if (!value) return undefined
   const normalized = String(value).trim().replace(/\\/g, '/')
   if (/^https?:\/\//i.test(normalized) || normalized.startsWith('/api/')) return addCacheBust(mediaUrl(normalized), version)
+  if (experimentId) {
+    const materialMarker = '/outputs/material_references/'
+    const materialIndex = normalized.includes(materialMarker)
+      ? normalized.indexOf(materialMarker) + materialMarker.length
+      : normalized.startsWith('outputs/material_references/')
+        ? 'outputs/material_references/'.length
+        : -1
+    if (materialIndex >= 0) {
+      const afterRoot = normalized.substring(materialIndex)
+      const slash = afterRoot.indexOf('/')
+      const rel = slash >= 0 ? afterRoot.substring(slash + 1) : afterRoot
+      if (rel) {
+        return addCacheBust(mediaUrl(`/api/v1/experiments/${encodeURIComponent(experimentId)}/material-references/files/${encodePath(rel)}`), version)
+      }
+    }
+  }
   if (normalized.includes('/outputs/experiments/')) {
     const marker = '/outputs/experiments/'
     const after = normalized.substring(normalized.indexOf(marker) + marker.length)

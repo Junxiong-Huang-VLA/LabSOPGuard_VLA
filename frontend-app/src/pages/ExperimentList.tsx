@@ -522,7 +522,7 @@ function KeyActionReadiness({ item }: { item: Experiment }) {
     <div className={`mt-4 rounded-lg border px-3 py-2 ${ready ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className={`text-xs font-black ${ready ? 'text-emerald-700' : 'text-slate-500'}`}>
-          Key Action {ready ? 'Ready' : 'Pending'}
+          证据索引 {ready ? 'Ready' : 'Pending'}
         </span>
         <span className="text-xs font-bold text-slate-500">{summary.status}</span>
       </div>
