@@ -19,7 +19,7 @@ export default function Layout() {
             <Link to="/experiments" onMouseEnter={prefetchExperimentsList} onFocus={prefetchExperimentsList} className="flex min-w-0 items-center gap-2 sm:gap-3">
               <img src="/realityloop-logo.png" alt="RealityLoop logo" className="h-8 w-8 shrink-0 object-contain sm:h-10 sm:w-10" />
               <h1 className="truncate text-base font-bold tracking-tight text-slate-950 sm:text-xl">
-                RealityLoop Key Action 索引平台
+                RealityLoop实验室SOP态势感知理解平台
               </h1>
             </Link>
 

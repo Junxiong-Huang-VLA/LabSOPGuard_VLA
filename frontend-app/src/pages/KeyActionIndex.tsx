@@ -718,7 +718,7 @@ function VideoPanel({ title, clip, experimentId }: { title: string; clip?: KeyAc
         <EvidenceBadge tone={clip?.annotated_clip_url ? 'emerald' : 'slate'}>{clipMode(clip)}</EvidenceBadge>
       </div>
       {url ? (
-        <video src={url} className="aspect-video w-full rounded-lg bg-slate-950 object-contain" controls preload="metadata" />
+        <video src={url} className="aspect-video w-full rounded-lg bg-slate-950 object-contain" controls playsInline preload="metadata" />
       ) : (
         <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm font-semibold text-slate-400">
           暂无可播放剪辑
