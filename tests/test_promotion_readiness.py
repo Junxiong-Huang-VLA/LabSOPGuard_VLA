@@ -199,6 +199,33 @@ def test_promotion_audit_cli_writes_reports(tmp_path: Path, capsys) -> None:
     assert (tmp_path / "cli_promotion.md").exists()
 
 
+def test_promotion_readiness_excludes_marked_historical_session(tmp_path: Path) -> None:
+    promoted = tmp_path / "exp_1" / "key_action_index"
+    historical = tmp_path / "historical_yolo" / "key_action_index"
+    _write_promoted_session(promoted, version="v001", query_count=2)
+    (historical / "metadata").mkdir(parents=True)
+    (historical / "manifest.json").write_text(json.dumps({"session_id": "historical_yolo"}), encoding="utf-8")
+    (historical / "metadata" / "promotion_audit_exclusion.json").write_text(
+        json.dumps(
+            {
+                "exclude_from_promotion_audit": True,
+                "reason": "historical YOLO scratch session, not a reviewed promotion target",
+                "reviewer": "tester",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_promotion_readiness_report([tmp_path], query_count=2)
+    markdown = render_promotion_readiness_markdown(report)
+
+    assert report["session_count"] == 1
+    assert report["excluded_session_count"] == 1
+    assert report["sessions"][0]["session_id"] == "promoted_session"
+    assert report["excluded_sessions"][0]["session_id"] == "historical_yolo"
+    assert "historical YOLO scratch session" in markdown
+
+
 def _write_promoted_session(session: Path, *, version: str, query_count: int) -> None:
     metadata = session / "metadata"
     evaluation = session / "evaluation"

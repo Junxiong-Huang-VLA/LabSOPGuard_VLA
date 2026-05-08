@@ -13,6 +13,7 @@ LATEST_REVIEWED_RELEASE_FILENAME = "latest_reviewed_release.json"
 PROMOTED_REVIEWED_RELEASE_FILENAME = "promoted_release.json"
 REVIEWED_RELEASE_MANIFEST_FILENAME = "reviewed_release_manifest.json"
 REVIEWED_RELEASES_DIRNAME = "reviewed_releases"
+PROMOTION_AUDIT_EXCLUSION_FILENAME = "promotion_audit_exclusion.json"
 
 
 def build_promotion_readiness_report(
@@ -23,13 +24,22 @@ def build_promotion_readiness_report(
     output_md: str | Path | None = None,
 ) -> dict[str, Any]:
     sessions = _discover_session_dirs(sources)
-    rows = [_audit_session(session, query_count=query_count) for session in sessions]
+    rows = []
+    excluded_rows = []
+    for session in sessions:
+        exclusion = _audit_exclusion(session)
+        if exclusion:
+            excluded_rows.append(exclusion)
+            continue
+        rows.append(_audit_session(session, query_count=query_count))
     report = {
         "schema_version": PROMOTION_READINESS_SCHEMA_VERSION,
         "generated_at": _now(),
         "query_count_required": query_count,
         "session_count": len(rows),
+        "excluded_session_count": len(excluded_rows),
         "summary": _summary(rows),
+        "excluded_sessions": excluded_rows,
         "sessions": rows,
     }
     if output_json:
@@ -50,6 +60,7 @@ def render_promotion_readiness_markdown(report: Mapping[str, Any]) -> str:
         "",
         f"- Generated: `{report.get('generated_at')}`",
         f"- Sessions audited: `{report.get('session_count')}`",
+        f"- Sessions excluded: `{report.get('excluded_session_count', 0)}`",
         f"- Active promoted: `{summary.get('active_promoted_count', 0)}`",
         f"- Latest already promoted: `{summary.get('promoted_count', 0)}`",
         f"- Candidate validation failed: `{summary.get('candidate_validation_failed_count', 0)}`",
@@ -114,6 +125,11 @@ def render_promotion_readiness_markdown(report: Mapping[str, Any]) -> str:
             for action in next_actions:
                 lines.append(f"- `{action}`")
         lines.append("")
+    excluded = [item for item in report.get("excluded_sessions") or [] if isinstance(item, Mapping)]
+    if excluded:
+        lines.extend(["", "## Excluded Sessions", ""])
+        for item in excluded:
+            lines.append(f"- `{item.get('session_id')}`: {item.get('reason') or 'excluded from promotion audit'}")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -159,6 +175,26 @@ def _discover_session_dirs(sources: Iterable[str | Path]) -> list[Path]:
             seen.add(key)
             discovered.append(candidate)
     return discovered
+
+
+def _audit_exclusion(session: Path) -> dict[str, Any] | None:
+    data = _read_json(session / "metadata" / PROMOTION_AUDIT_EXCLUSION_FILENAME)
+    if not data:
+        data = _read_json(session / PROMOTION_AUDIT_EXCLUSION_FILENAME)
+    if not data:
+        return None
+    if not bool(data.get("exclude_from_promotion_audit") or data.get("excluded_from_promotion_audit")):
+        return None
+    return {
+        "session_dir": str(session),
+        "session_id": _session_id(session),
+        "reason": data.get("reason") or "excluded from promotion audit",
+        "reviewer": data.get("reviewer"),
+        "excluded_at": data.get("excluded_at"),
+        "source_path": str(session / "metadata" / PROMOTION_AUDIT_EXCLUSION_FILENAME)
+        if (session / "metadata" / PROMOTION_AUDIT_EXCLUSION_FILENAME).exists()
+        else str(session / PROMOTION_AUDIT_EXCLUSION_FILENAME),
+    }
 
 
 def _session_candidates(path: Path) -> list[Path]:
