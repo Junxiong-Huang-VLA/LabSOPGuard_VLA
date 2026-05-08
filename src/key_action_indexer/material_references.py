@@ -540,7 +540,93 @@ def sync_professional_report_material_references(
     report_summary: dict[str, Any],
     archive_existing: bool = False,
 ) -> dict[str, Any]:
-    """Copy generated professional report artifacts into the same material delivery folder."""
+    """Stage generated professional report artifacts in the review queue.
+
+    Professional PDFs follow the same candidate-first policy as keyframes and
+    clips. They are copied into the formal material reference folder only after
+    an operator approves the candidate group.
+    """
+
+    session_root = Path(session_dir)
+    candidate_root = material_candidates_root(session_root)
+    report_dir = candidate_root / REPORT_DIR_NAME
+    if archive_existing and report_dir.exists():
+        archived = report_dir.with_name(f"{report_dir.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        shutil.move(str(report_dir), str(archived))
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    copied_rows: list[dict[str, Any]] = []
+    for role, key in (
+        ("professional_report_pdf", "pdf_path"),
+        ("professional_report_html", "html_path"),
+        ("professional_report_json", "sidecar_path"),
+        ("professional_report_manifest", "manifest_path"),
+    ):
+        source_value = report_summary.get(key) or (report_summary.get("json_path") if role == "professional_report_json" else None)
+        if not source_value:
+            continue
+        source = Path(str(source_value))
+        if not source.exists():
+            continue
+        candidate_target = report_dir / source.name
+        shutil.copy2(source, candidate_target)
+        record = _professional_report_record(role=role, source=source, target=candidate_target)
+        record["review_status"] = "pending"
+        record["delivery_scope"] = "professional_report_candidate"
+        copied_rows.append(_candidate_record_from_reference(record, source, candidate_target, exists=candidate_target.exists()))
+
+    index_jsonl = candidate_root / f"{MATERIAL_CANDIDATE_INDEX_BASENAME}.jsonl"
+    existing_rows = read_jsonl(index_jsonl) if index_jsonl.exists() else []
+    existing_rows = [
+        row
+        for row in existing_rows
+        if not (row.get("asset_kind") == REPORT_DIR_NAME and row.get("role") in {
+            "professional_report_pdf",
+            "professional_report_html",
+            "professional_report_json",
+            "professional_report_manifest",
+        })
+    ]
+    rows = existing_rows + copied_rows
+    _mark_recommended_candidates(rows)
+    summary = {
+        "schema_version": "material_references.report_candidate_sync.v1",
+        "created_at": datetime.now().isoformat(),
+        "session_dir": str(session_root),
+        "candidate_folder": str(candidate_root),
+        "keyframe_folder": str(candidate_root / KEYFRAME_DIR_NAME),
+        "key_clip_folder": str(candidate_root / KEY_CLIP_DIR_NAME),
+        "report_folder": str(report_dir),
+        "report_count": len(copied_rows),
+        "candidate_count": len(rows),
+        "pending_total": sum(1 for row in rows if row.get("candidate_status") == "pending"),
+        "recommended_total": sum(1 for row in rows if row.get("recommended") is True),
+        "available": bool(copied_rows),
+        "records": copied_rows,
+        "pipeline_summary": None,
+        "policy": "Professional reports require frontend approval before entering material_references.",
+    }
+    _write_jsonl(index_jsonl, rows)
+    _write_json(candidate_root / f"{MATERIAL_CANDIDATE_INDEX_BASENAME}.json", {**summary, "records": rows})
+    _write_json(candidate_root / "manifest.json", _candidate_manifest({**summary, "records": rows, "candidate_count": len(rows)}))
+    _write_candidate_readme(candidate_root / "README.md", {**summary, "records": rows})
+    return {
+        "available": bool(copied_rows),
+        "status": "candidate_staged",
+        "path": str(report_dir),
+        "candidate_index": str(index_jsonl),
+        "report_count": len(copied_rows),
+        "policy": summary["policy"],
+    }
+
+
+def _sync_professional_report_material_references_legacy(
+    session_dir: str | Path,
+    *,
+    report_summary: dict[str, Any],
+    archive_existing: bool = False,
+) -> dict[str, Any]:
+    """Legacy direct report publish path retained for migrations only."""
 
     session_root = Path(session_dir)
     ref_root = material_references_root(session_root)
@@ -786,12 +872,14 @@ def reset_material_references_to_approved_candidates(
     candidate_root = existing_material_candidates_root(session_root)
     keyframe_dir = ref_root / KEYFRAME_DIR_NAME
     clip_dir = ref_root / KEY_CLIP_DIR_NAME
+    report_dir = ref_root / REPORT_DIR_NAME
     ref_root.mkdir(parents=True, exist_ok=True)
     keyframe_dir.mkdir(parents=True, exist_ok=True)
     clip_dir.mkdir(parents=True, exist_ok=True)
+    report_dir.mkdir(parents=True, exist_ok=True)
     experiment = _experiment_metadata(session_root)
     formal_root = formal_material_references_root(session_root)
-    for folder in (keyframe_dir, clip_dir):
+    for folder in (keyframe_dir, clip_dir, report_dir):
         for stale_file in folder.iterdir():
             if stale_file.is_file():
                 stale_file.unlink()
@@ -804,7 +892,12 @@ def reset_material_references_to_approved_candidates(
         source = _stored_path_from_row(row, candidate_root)
         if source is None or not source.is_file():
             continue
-        target_dir = keyframe_dir if row.get("asset_kind") == KEYFRAME_DIR_NAME else clip_dir
+        if row.get("asset_kind") == KEYFRAME_DIR_NAME:
+            target_dir = keyframe_dir
+        elif row.get("asset_kind") == REPORT_DIR_NAME:
+            target_dir = report_dir
+        else:
+            target_dir = clip_dir
         target = target_dir / source.name
         shutil.copy2(source, target)
         promoted.append(_approved_reference_record_from_candidate(row, source, target))
@@ -825,10 +918,13 @@ def reset_material_references_to_approved_candidates(
         "local_material_references_mirror": str(ref_root),
         "keyframe_folder": str(keyframe_dir),
         "key_clip_folder": str(clip_dir),
+        "report_folder": str(report_dir),
         "formal_keyframe_folder": str(formal_root / KEYFRAME_DIR_NAME),
         "formal_key_clip_folder": str(formal_root / KEY_CLIP_DIR_NAME),
+        "formal_report_folder": str(formal_root / REPORT_DIR_NAME),
         "simplified_keyframe_folder": str(formal_root / KEYFRAME_DIR_NAME),
         "simplified_key_clip_folder": str(formal_root / KEY_CLIP_DIR_NAME),
+        "simplified_report_folder": str(formal_root / REPORT_DIR_NAME),
         "index_json": str(local_index_json),
         "index_jsonl": str(existing_index),
         "local_index_json": str(local_index_json),
@@ -962,6 +1058,8 @@ def _candidate_quality_score(row: dict[str, Any]) -> float:
         score += {"peak": 0.12, "contact": 0.08, "release": 0.06}.get(str(row.get("frame_type") or row.get("frame_role") or ""), 0.03)
     elif row.get("asset_kind") == KEY_CLIP_DIR_NAME:
         score += 0.1
+    elif row.get("asset_kind") == REPORT_DIR_NAME:
+        score += 0.18 if str(row.get("role") or "").endswith("_pdf") else 0.08
     return round(min(1.0, score), 3)
 
 
@@ -977,7 +1075,7 @@ def _mark_recommended_candidates(rows: list[dict[str, Any]]) -> None:
 
 def _best_candidate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
-    for asset_kind in (KEYFRAME_DIR_NAME, KEY_CLIP_DIR_NAME):
+    for asset_kind in (KEYFRAME_DIR_NAME, KEY_CLIP_DIR_NAME, REPORT_DIR_NAME):
         subset = [row for row in rows if row.get("asset_kind") == asset_kind]
         if subset:
             selected.append(max(subset, key=lambda item: (_safe_float(item.get("quality_score")), str(item.get("frame_type") or ""))))
