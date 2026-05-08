@@ -1,0 +1,3 @@
+{"segment_id":"gt_001","start_sec":596.0,"end_sec":613.0,"label":"weighing"}
+{"segment_id":"gt_002","start_sec":616.0,"end_sec":635.0,"label":"pipetting"}
+{"segment_id":"gt_003","start_sec":896.0,"end_sec":915.0,"label":"reading_or_recording"}

@@ -1,0 +1,61 @@
+{
+  "session_id": "exp_20260429_172500",
+  "session_start_time": "2026-04-29T17:25:00+08:00",
+  "videos": {
+    "third_person": {
+      "path": "data/sessions/exp_20260429_172500/raw/third_person.mp4",
+      "start_time": "2026-04-29T17:25:00+08:00",
+      "fps": 30,
+      "offset_sec": 0
+    },
+    "first_person": {
+      "path": "data/sessions/exp_20260429_172500/raw/first_person.mp4",
+      "start_time": "2026-04-29T17:25:02+08:00",
+      "fps": 30,
+      "offset_sec": 0
+    },
+    "bench_closeup": {
+      "path": "data/sessions/exp_20260429_172500/raw/bench_closeup.mp4",
+      "start_time": "2026-04-29T17:25:01+08:00",
+      "fps": 30,
+      "offset_sec": 0,
+      "role": "optional_closeup"
+    }
+  },
+  "transcript": {
+    "path": "examples/dialogue.example.jsonl",
+    "start_time": "2026-04-29T17:25:00+08:00",
+    "offset_sec": 0
+  },
+  "workbench_roi": {
+    "x": 100,
+    "y": 300,
+    "w": 800,
+    "h": 400
+  },
+  "detection_config": {
+    "sample_fps": 2,
+    "parent_sample_fps": 2,
+    "micro_refine_sample_fps": 8,
+    "enable_micro_refine_rescan": true,
+    "start_threshold": 0.6,
+    "end_threshold": 0.3,
+    "start_min_duration_sec": 2.0,
+    "end_min_duration_sec": 5.0,
+    "merge_gap_sec": 5.0,
+    "min_segment_duration_sec": 5.0,
+    "buffer_sec": 2.0,
+    "motion_normalization": "adaptive",
+    "roi_mode": "manifest_or_default",
+    "detector_backend": "motion",
+    "yolo_preferred_view": "first_person",
+    "yolo_scan_both_views": false,
+    "yolo_conf": 0.25,
+    "yolo_iou": 0.45,
+    "yolo_device": "cpu",
+    "yolo_continuity_frames": 3,
+    "yolo_fallback_to_motion": true,
+    "yolo_class_thresholds": {}
+  },
+  "output_dir": "data/sessions/exp_20260429_172500"
+}

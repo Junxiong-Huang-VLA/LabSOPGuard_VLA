@@ -1,0 +1,61 @@
+{
+  "schema_version": "key_action_config.v1",
+  "dry_run": {
+    "enabled": false,
+    "synthesize_missing_inputs": true,
+    "synthetic_duration_sec": 960.0,
+    "write_placeholder_media": true
+  },
+  "detection": {
+    "sample_fps": 2.0,
+    "parent_sample_fps": null,
+    "micro_refine_sample_fps": 8.0,
+    "enable_micro_refine_rescan": true,
+    "start_threshold": 0.6,
+    "end_threshold": 0.3,
+    "start_min_duration_sec": 2.0,
+    "end_min_duration_sec": 5.0,
+    "merge_gap_sec": 5.0,
+    "min_segment_duration_sec": 5.0,
+    "buffer_sec": 2.0,
+    "motion_normalization": "adaptive",
+    "roi_mode": "manifest_or_default",
+    "detector_backend": "yolo_interaction",
+    "yolo_preferred_view": "first_person",
+    "yolo_scan_both_views": false,
+    "yolo_model_path": null,
+    "yolo_first_person_model_path": null,
+    "yolo_third_person_model_path": null,
+    "yolo_conf": 0.25,
+    "yolo_iou": 0.45,
+    "yolo_device": "0",
+    "yolo_continuity_frames": 3,
+    "yolo_fallback_to_motion": true,
+    "yolo_class_thresholds": {}
+  },
+  "micro_segments": {
+    "extract_micro_clips": true,
+    "extract_micro_keyframes": true,
+    "default_interaction_threshold": 0.45,
+    "default_min_duration_sec": 1.0,
+    "default_merge_gap_sec": 1.5
+  },
+  "time_alignment": {
+    "default_latency_sec": 0.0,
+    "default_fixed_offset_sec": 0.0,
+    "source_calibration_path": null,
+    "anchor_confidence_floor": 0.5
+  },
+  "inputs": {
+    "user_text_events_path": null,
+    "ai_reply_events_path": null,
+    "upload_events_path": null,
+    "calibration_path": null,
+    "normalize_to_metadata": true
+  },
+  "retrieval": {
+    "index_levels": ["segment", "micro_segment"],
+    "top_k_default": 5,
+    "include_evidence_refs": true
+  }
+}

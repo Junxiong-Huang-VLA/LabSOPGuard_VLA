@@ -1,0 +1,13 @@
+{
+  "session_id": "a2a4fc4a-9a04-415c-a88d-4017b5d24135",
+  "labeled_windows": [
+    {
+      "window_id": "win_001",
+      "start_sec": 0.0,
+      "end_sec": 68.7,
+      "description": "full parent segment labeled"
+    }
+  ],
+  "gt_completeness": "complete",
+  "notes": "All visible micro interactions in this parent segment are labeled."
+}
