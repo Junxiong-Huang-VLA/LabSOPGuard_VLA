@@ -76,6 +76,7 @@ if load_dotenv is not None:
 
 CONFIG_PATH = PROJECT_ROOT / "configs"
 
+from labsopguard.material_best_score import enrich_material_best_scores
 from labsopguard.material_taxonomy import enrich_material_taxonomy
 
 # 
@@ -2338,6 +2339,7 @@ def _material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[str, An
                 "payload": row,
             }
         )
+    items = enrich_material_best_scores(items)
     return {
         "schema_version": "published_materials.material_references_fallback.v1",
         "experiment_id": experiment_id,
@@ -2513,6 +2515,11 @@ def _material_candidates_payload(experiment_id: str) -> Dict[str, Any]:
                 "canonical_object": _first_material_candidate_value(group_rows, "canonical_object") or first.get("canonical_object"),
                 "sop_phase": _first_material_candidate_value(group_rows, "sop_phase") or first.get("sop_phase"),
                 "interaction_family": _first_material_candidate_value(group_rows, "interaction_family") or first.get("interaction_family"),
+                "approval_reason_code": _first_material_candidate_value(group_rows, "approval_reason_code"),
+                "approval_reason": _first_material_candidate_value(group_rows, "approval_reason"),
+                "rejection_reason_code": _first_material_candidate_value(group_rows, "rejection_reason_code"),
+                "rejection_reason": _first_material_candidate_value(group_rows, "rejection_reason"),
+                "review_notes": _first_material_candidate_value(group_rows, "review_notes"),
                 "micro_segment_id": _first_material_candidate_value(group_rows, "micro_segment_id") or first.get("micro_segment_id"),
                 "parent_segment_id": _first_material_candidate_value(group_rows, "parent_segment_id") or first.get("parent_segment_id"),
                 "keyframes": keyframes,
@@ -2622,6 +2629,9 @@ def _canonicalize_published_material_payload(payload: Dict[str, Any]) -> Dict[st
     if not isinstance(items, list):
         return payload
     canonical_items = [enrich_material_taxonomy(item) if isinstance(item, dict) else item for item in items]
+    scored_items = enrich_material_best_scores([item for item in canonical_items if isinstance(item, dict)])
+    scored_iter = iter(scored_items)
+    canonical_items = [next(scored_iter) if isinstance(item, dict) else item for item in canonical_items]
     return {**payload, "items": canonical_items, "taxonomy": list(STANDARD_MATERIAL_ACTION_TYPES)}
 
 
@@ -2663,6 +2673,7 @@ def _sync_published_materials_from_references(exp_dir: Path, experiment_id: str)
         "policy": "Only frontend-approved keyframes and key clips are synchronized into the key material library. Professional PDF reports are approved into the professional report folder only.",
     }
     _write_json(exp_dir / "published_materials.json", payload)
+    _write_material_taxonomy_calibration_report(experiment_id, payload)
     return payload
 
 
@@ -4012,6 +4023,112 @@ def _material_published_paths(item: Dict[str, Any]) -> Dict[str, Any]:
     return paths if isinstance(paths, dict) else {}
 
 
+def _material_item_file_exists(item: Dict[str, Any]) -> bool:
+    paths = _material_published_paths(item)
+    for value in (
+        paths.get("clip"),
+        paths.get("preview"),
+        paths.get("keyframe"),
+        item.get("clip_file_path"),
+        item.get("frame_path"),
+        item.get("material_path"),
+        item.get("stored_file"),
+    ):
+        if _material_path_exists(value):
+            return True
+    return False
+
+
+def _material_taxonomy_calibration_report(
+    experiment_id: str,
+    payload: Dict[str, Any],
+    *,
+    candidate_rows: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    raw_items = payload.get("items") if isinstance(payload, dict) else []
+    items = [item for item in raw_items if isinstance(item, dict)]
+    candidates = candidate_rows if candidate_rows is not None else [enrich_material_taxonomy(row) for row in _material_candidate_rows(experiment_id)]
+    rows_by_action: Dict[str, List[Dict[str, Any]]] = {action: [] for action in STANDARD_MATERIAL_ACTION_TYPES}
+    items_by_action: Dict[str, List[Dict[str, Any]]] = {action: [] for action in STANDARD_MATERIAL_ACTION_TYPES}
+    unmapped_candidates = []
+    for row in candidates:
+        action = str(row.get("canonical_action_type") or "")
+        if action in rows_by_action:
+            rows_by_action[action].append(row)
+        else:
+            unmapped_candidates.append(row)
+    for item in items:
+        action = str(item.get("canonical_action_type") or "")
+        if action in items_by_action:
+            items_by_action[action].append(item)
+
+    per_action: Dict[str, Dict[str, Any]] = {}
+    for action in STANDARD_MATERIAL_ACTION_TYPES:
+        action_candidates = rows_by_action[action]
+        action_items = items_by_action[action]
+        status_counts: Dict[str, int] = {}
+        for row in action_candidates:
+            status = _material_candidate_status(row)
+            status_counts[status] = status_counts.get(status, 0) + 1
+        missing_files = sum(1 for item in action_items if not _material_item_file_exists(item))
+        if not action_candidates:
+            missing_reason = "detection_missing"
+            recommendation = "No candidates reached the YOLO physical-evidence gate; inspect detector labels and consider a lower object/interaction threshold for this class."
+        elif not action_items and status_counts.get("approved", 0) == 0:
+            missing_reason = "approval_gate"
+            recommendation = "Review pending candidates and approve at least one representative keyframe/clip for the class."
+        elif not action_items:
+            missing_reason = "file_unavailable_or_sync_missing"
+            recommendation = "Approved candidates exist but are not visible in published materials; re-sync formal references and check copied files."
+        elif missing_files:
+            missing_reason = "file_unavailable"
+            recommendation = "Formal rows exist but one or more files cannot be opened; rebuild the material reference mirror."
+        else:
+            missing_reason = "covered"
+            recommendation = "Class is covered; keep the current >=2 YOLO evidence-frame gate unless new false positives appear."
+        per_action[action] = {
+            "candidate_total": len(action_candidates),
+            "approved_total": status_counts.get("approved", 0),
+            "pending_total": status_counts.get("pending", 0),
+            "rejected_total": status_counts.get("rejected", 0),
+            "deferred_total": status_counts.get("deferred", 0),
+            "not_selected_total": status_counts.get("not_selected", 0),
+            "formal_material_total": len(action_items),
+            "best_material_total": 1 if action_items else 0,
+            "missing_file_count": missing_files,
+            "missing_reason": missing_reason,
+            "threshold_recommendation": recommendation,
+        }
+
+    return {
+        "schema_version": "material_taxonomy_calibration.v1",
+        "experiment_id": experiment_id,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "taxonomy": list(STANDARD_MATERIAL_ACTION_TYPES),
+        "candidate_total": len(candidates),
+        "formal_material_total": len(items),
+        "unmapped_candidate_total": len(unmapped_candidates),
+        "per_action": per_action,
+        "acceptance_queries": ["天平称量", "取试剂瓶", "药匙加样", "称量纸", "容器承接"],
+        "suggested_thresholds": {
+            "min_yolo_evidence_frames": 2,
+            "prefer_yolo_evidence_frames": 3,
+            "min_quality_score_for_best": 0.70,
+            "require_hand_object_interaction": True,
+            "allow_single_view_when_yolo_vlm_aligned": True,
+        },
+    }
+
+
+def _write_material_taxonomy_calibration_report(experiment_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    report = _material_taxonomy_calibration_report(experiment_id, payload)
+    exp_dir = _experiment_output_dir(experiment_id)
+    _write_json(exp_dir / "material_taxonomy_calibration.json", report)
+    today = datetime.now().strftime("%Y-%m-%d")
+    _write_json(exp_dir / f"material_taxonomy_calibration_{today}.json", report)
+    return report
+
+
 def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     raw_items = payload.get("items") if isinstance(payload, dict) else []
     items = [item for item in raw_items if isinstance(item, dict)]
@@ -4143,6 +4260,7 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
         status = _material_candidate_status(row)
         candidate_status_counts[status] = candidate_status_counts.get(status, 0) + 1
     missing_file_count = sum(1 for item in evidence_items if not item.get("material_exists"))
+    taxonomy_calibration = _write_material_taxonomy_calibration_report(experiment_id, payload)
     return {
         "experiment_id": experiment_id,
         "published_total": int(payload.get("total", len(items))) if isinstance(payload, dict) else len(items),
@@ -4174,6 +4292,7 @@ def _build_material_diagnostics(experiment_id: str, payload: Dict[str, Any]) -> 
         "formal_material_reference_count": sum(1 for item in evidence_items if item.get("formal_material_reference")),
         "url_accessible_count": sum(1 for item in evidence_items if item.get("url_accessible")),
         "evidence_items": evidence_items,
+        "taxonomy_calibration": taxonomy_calibration,
     }
 
 
@@ -6258,6 +6377,8 @@ class MaterialUploadRequest(BaseModel):
 class MaterialCandidateApprovalRequest(BaseModel):
     reviewer: Optional[str] = None
     notes: Optional[str] = None
+    reason_code: Optional[str] = None
+    reason: Optional[str] = None
     candidate_ids: Optional[List[str]] = None
     selected_keyframe_ids: Optional[List[str]] = None
     selected_clip_ids: Optional[List[str]] = None
@@ -7084,6 +7205,10 @@ async def publish_experiment_materials(
         result = SemanticMaterialPublisher(exp_dir, experiment_id=safe_experiment_id).publish()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    taxonomy_calibration = _write_material_taxonomy_calibration_report(
+        safe_experiment_id,
+        _canonicalize_published_material_payload(result["published_materials"]),
+    )
 
     # Re-run step bridge with freshly generated events
     physical_events_payload = _load_json_if_exists(exp_dir / "physical_events.json") or {}
@@ -7098,6 +7223,7 @@ async def publish_experiment_materials(
         "published_total": result["published_materials"]["total"],
         "event_preprocessing_rebuilt": bool(force_rebuild_events),
         "published_materials": result["published_materials"],
+        "taxonomy_calibration": taxonomy_calibration,
         "upload_manifest": result["upload_manifest"],
     }
 
@@ -7175,6 +7301,8 @@ async def approve_experiment_material_candidate(
             candidate_ids=candidate_ids or None,
             reviewer=request.reviewer,
             notes=request.notes,
+            reason_code=request.reason_code,
+            reason=request.reason,
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -7248,6 +7376,18 @@ async def get_experiment_material_diagnostics(
     exp_dir = _experiment_output_dir(safe_experiment_id)
     payload = _published_material_items(exp_dir, safe_experiment_id)
     return _build_material_diagnostics(safe_experiment_id, payload)
+
+
+@app.get("/api/v1/experiments/{experiment_id}/materials/taxonomy-calibration", tags=["experiments"])
+async def get_experiment_material_taxonomy_calibration(
+    experiment_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_operator_context),
+):
+    safe_experiment_id = _enforce_experiment_scope(auth_ctx, experiment_id)
+    await get_experiment_dict(safe_experiment_id)
+    exp_dir = _experiment_output_dir(safe_experiment_id)
+    payload = _published_material_items(exp_dir, safe_experiment_id)
+    return _write_material_taxonomy_calibration_report(safe_experiment_id, payload)
 
 
 @app.get("/api/v1/experiments/{experiment_id}/materials/upload-manifest", tags=["experiments"])
@@ -7364,6 +7504,9 @@ async def get_workspace_published_materials_health(
 async def get_workspace_published_materials(
     text: Optional[str] = None,
     event_type: Optional[str] = None,
+    canonical_action_type: Optional[str] = None,
+    canonical_object: Optional[str] = None,
+    sop_phase: Optional[str] = None,
     actor_name: Optional[str] = None,
     limit: int = 100,
     cursor: Optional[str] = None,
@@ -7384,10 +7527,13 @@ async def get_workspace_published_materials(
         index_path,
         text=text,
         event_type=event_type,
+        canonical_action_type=canonical_action_type,
+        canonical_object=canonical_object,
+        sop_phase=sop_phase,
         actor_name=actor_filter,
         limit=min(max(int(limit), 1), 500),
         cursor=cursor,
-        sort_by=("relevance" if text and sort_by == "relevance" else sort_by),
+        sort_by=("relevance" if text and sort_by in {"relevance", "time_start"} else sort_by),
         sort_order=sort_order,
         operator_role=auth_ctx["operator_role"],
         allowed_experiment_ids=auth_ctx["allowed_experiment_ids"],
@@ -9784,4 +9930,3 @@ if _FRONTEND_DIST.exists():
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
         return FileResponse(str(_FRONTEND_DIST / "index.html"))
-

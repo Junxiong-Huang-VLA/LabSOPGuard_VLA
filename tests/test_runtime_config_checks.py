@@ -24,5 +24,6 @@ def test_ci_runs_docker_compose_and_promtool_runtime_checks():
     ci_text = (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "docker compose -f docker-compose.yml --profile wireless-video --profile monitoring config --quiet" in ci_text
-    assert "promtool check config /etc/prometheus/prometheus.yml" in ci_text
+    assert "--entrypoint promtool" in ci_text
+    assert "check config /etc/prometheus/prometheus.yml" in ci_text
     assert "prom/prometheus:latest" in ci_text

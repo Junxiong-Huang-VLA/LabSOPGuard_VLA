@@ -309,6 +309,13 @@ def test_material_reference_api_adds_canonical_taxonomy():
         assert item["canonical_action_type"] == "hand-bottle"
         assert item["canonical_object"] == "bottle"
         assert item["sop_phase"] == "reagent-bottle-handling"
+        assert item["best_score"] > 0
+        assert "YOLO" in item["best_reason"]
+        diagnostics = client.get(f"/api/v1/experiments/{exp_id}/materials/diagnostics")
+        assert diagnostics.status_code == 200
+        calibration = diagnostics.json()["taxonomy_calibration"]
+        assert calibration["per_action"]["hand-bottle"]["formal_material_total"] == 1
+        assert (exp_dir / "material_taxonomy_calibration.json").exists()
     finally:
         main._EXPERIMENTS.pop(exp_id, None)
         if exp_dir.exists():
@@ -1152,6 +1159,50 @@ def test_business_score_uses_configurable_usage_profile(tmp_path: Path):
     assert ranked["items"][0]["experiment_id"] == "exp_a"
     assert ranked["items"][0]["click_count"] >= 13
     assert ranked["scoring_profile"]["profile_hash"]
+
+
+def test_workspace_published_query_uses_canonical_text_intent(tmp_path: Path):
+    root = tmp_path / "experiments"
+    exp_dir = root / "exp_taxonomy_search"
+    exp_dir.mkdir(parents=True)
+    (exp_dir / "experiment.json").write_text(json.dumps({"experiment_id": "exp_taxonomy_search"}), encoding="utf-8")
+    items = [
+        {
+            "material_id": "mat_balance",
+            "event_id": "evt_balance",
+            "experiment_id": "exp_taxonomy_search",
+            "event_type": "generic hand action",
+            "display_name": "generic action A",
+            "canonical_action_type": "hand-balance",
+            "canonical_object": "balance",
+            "sop_phase": "balance-weighing",
+            "time_start": 10.0,
+            "published_paths": {"preview": str(exp_dir / "balance.jpg")},
+        },
+        {
+            "material_id": "mat_container",
+            "event_id": "evt_container",
+            "experiment_id": "exp_taxonomy_search",
+            "event_type": "generic hand action",
+            "display_name": "generic action B",
+            "canonical_action_type": "hand-container",
+            "canonical_object": "container",
+            "sop_phase": "container-handling",
+            "time_start": 20.0,
+            "published_paths": {"preview": str(exp_dir / "container.jpg")},
+        },
+    ]
+    (exp_dir / "published_materials.json").write_text(json.dumps({"items": items, "total": len(items)}, ensure_ascii=False), encoding="utf-8")
+    index_path = tmp_path / "published.sqlite"
+    rebuild_workspace_published_materials_index(root, index_path)
+
+    balance = query_workspace_published_materials(index_path, text="天平称量", sort_by="relevance", limit=10)
+    assert balance["items"][0]["canonical_action_type"] == "hand-balance"
+    container = query_workspace_published_materials(index_path, text="容器承接", sort_by="relevance", limit=10)
+    assert container["items"][0]["canonical_action_type"] == "hand-container"
+    filtered = query_workspace_published_materials(index_path, canonical_action_type="hand-container", limit=10)
+    assert filtered["total"] == 1
+    assert filtered["items"][0]["canonical_object"] == "container"
 
 
 def test_display_name_uses_existing_qwen_summary(tmp_path: Path):

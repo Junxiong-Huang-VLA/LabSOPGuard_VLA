@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from labsopguard.material_best_score import enrich_material_best_score, enrich_material_best_scores
 from labsopguard.material_taxonomy import enrich_material_taxonomy
 from labsopguard.retrieval import MaterialRetrievalIndex
 
@@ -254,7 +255,7 @@ def _formal_material_reference_items(exp_dir: Path, experiment_id: str) -> Dict[
         items.append(item)
     index_path = ref_root / MATERIAL_INDEX_FILENAME
     source_mtime = float(index_path.stat().st_mtime) if index_path.exists() else float(ref_root.stat().st_mtime)
-    return {"items": items, "source": str(ref_root), "source_mtime": source_mtime}
+    return {"items": enrich_material_best_scores(items), "source": str(ref_root), "source_mtime": source_mtime}
 
 
 def rebuild_experiment_material_index(experiment_dir: str | Path, *, force: bool = True) -> Dict[str, Any]:
@@ -670,6 +671,7 @@ def _ensure_columns(conn: sqlite3.Connection, table: str, columns: Dict[str, str
 
 
 def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) -> None:
+    item = enrich_material_best_score(enrich_material_taxonomy(item))
     paths = item.get("published_paths") or {}
     source = item.get("source_container") or {}
     target = item.get("target_container") or {}
@@ -685,6 +687,8 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
             item.get("canonical_object"),
             item.get("sop_phase"),
             item.get("interaction_family"),
+            item.get("best_reason"),
+            item.get("best_score"),
             item.get("actor_name"),
             source,
             target,
@@ -870,6 +874,9 @@ def _filter_hash(
     *,
     text: Optional[str],
     event_type: Optional[str],
+    canonical_action_type: Optional[str],
+    canonical_object: Optional[str],
+    sop_phase: Optional[str],
     actor_name: Optional[str],
     operator_role: str,
     allowed_experiment_ids: Optional[List[str]],
@@ -878,6 +885,9 @@ def _filter_hash(
     payload = {
         "text": text or "",
         "event_type": event_type or "",
+        "canonical_action_type": canonical_action_type or "",
+        "canonical_object": canonical_object or "",
+        "sop_phase": sop_phase or "",
         "actor_name": actor_name or "",
         "operator_role": operator_role or "",
         "allowed_experiment_ids": sorted(allowed_experiment_ids or []),
@@ -949,6 +959,129 @@ def _case_mapping_expr(column: str, mapping: Dict[str, Any], default: float = 0.
     return " ".join(parts)
 
 
+_CANONICAL_QUERY_RULES = [
+    {
+        "needles": ("天平", "称量", "balance", "weigh"),
+        "canonical_action_type": "hand-balance",
+        "canonical_object": "balance",
+        "sop_phase": "balance-weighing",
+        "terms": ("天平", "称量", "balance", "weighing"),
+    },
+    {
+        "needles": ("试剂瓶", "取试剂", "瓶", "bottle", "reagent"),
+        "canonical_action_type": "hand-bottle",
+        "canonical_object": "bottle",
+        "sop_phase": "reagent-bottle-handling",
+        "terms": ("试剂瓶", "瓶", "bottle", "reagent bottle"),
+    },
+    {
+        "needles": ("药匙", "加样", "spatula", "scoop"),
+        "canonical_action_type": "hand-spatula",
+        "canonical_object": "spatula",
+        "sop_phase": "solid-transfer",
+        "terms": ("药匙", "加样", "spatula", "solid transfer"),
+    },
+    {
+        "needles": ("称量纸", "纸", "paper", "weighing paper"),
+        "canonical_action_type": "hand-paper",
+        "canonical_object": "paper",
+        "sop_phase": "weighing-paper-prep",
+        "terms": ("称量纸", "纸", "paper", "weighing paper"),
+    },
+    {
+        "needles": ("承接", "hand-container", "container-handling"),
+        "canonical_action_type": "hand-container",
+        "canonical_object": "container",
+        "sop_phase": "container-handling",
+        "terms": ("容器", "承接", "烧杯", "beaker", "container"),
+    },
+]
+
+
+def _split_query_filter(value: Optional[str]) -> List[str]:
+    if not value:
+        return []
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _canonical_query_intent(text: Optional[str]) -> Dict[str, List[str]]:
+    normalized = str(text or "").strip().lower()
+    intent: Dict[str, List[str]] = {
+        "canonical_action_type": [],
+        "canonical_object": [],
+        "sop_phase": [],
+        "terms": [],
+    }
+    if not normalized:
+        return intent
+    for rule in _CANONICAL_QUERY_RULES:
+        if rule["canonical_action_type"] == "hand-balance" and any(token in normalized for token in ("称量纸", "weighing paper", "paper")):
+            continue
+        if any(needle.lower() in normalized for needle in rule["needles"]):
+            for key in ("canonical_action_type", "canonical_object", "sop_phase"):
+                value = str(rule[key])
+                if value not in intent[key]:
+                    intent[key].append(value)
+            for term in rule["terms"]:
+                if term not in intent["terms"]:
+                    intent["terms"].append(term)
+    return intent
+
+
+def _sql_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _sql_in_expr(column: str, values: List[str]) -> str:
+    if not values:
+        return "0"
+    return f"{column} IN ({','.join(_sql_literal(value) for value in values)})"
+
+
+def _canonical_boost_expression(intent: Dict[str, List[str]], filters: Dict[str, List[str]]) -> str:
+    action_values = sorted(set(intent.get("canonical_action_type") or []) | set(filters.get("canonical_action_type") or []))
+    object_values = sorted(set(intent.get("canonical_object") or []) | set(filters.get("canonical_object") or []))
+    phase_values = sorted(set(intent.get("sop_phase") or []) | set(filters.get("sop_phase") or []))
+    return (
+        "("
+        f"CASE WHEN {_sql_in_expr('p.canonical_action_type', action_values)} THEN 3.0 ELSE 0 END + "
+        f"CASE WHEN {_sql_in_expr('p.canonical_object', object_values)} THEN 1.2 ELSE 0 END + "
+        f"CASE WHEN {_sql_in_expr('p.sop_phase', phase_values)} THEN 0.8 ELSE 0 END"
+        ")"
+    )
+
+
+def _append_in_filter(clauses: List[str], params: List[Any], column: str, values: List[str]) -> None:
+    if not values:
+        return
+    placeholders = ",".join("?" for _ in values)
+    clauses.append(f"{column} IN ({placeholders})")
+    params.extend(values)
+
+
+def _canonical_text_clause(intent: Dict[str, List[str]], params: List[Any]) -> Optional[str]:
+    parts: List[str] = []
+    for column, key in (
+        ("p.canonical_action_type", "canonical_action_type"),
+        ("p.canonical_object", "canonical_object"),
+        ("p.sop_phase", "sop_phase"),
+    ):
+        values = intent.get(key) or []
+        if values:
+            placeholders = ",".join("?" for _ in values)
+            parts.append(f"{column} IN ({placeholders})")
+            params.extend(values)
+    for term in intent.get("terms") or []:
+        parts.append("p.searchable_text LIKE ?")
+        params.append(f"%{term}%")
+    return "(" + " OR ".join(parts) + ")" if parts else None
+
+
+def _fts_query_text(text: str) -> str:
+    cleaned = str(text or "").strip().replace('"', '""')
+    return f'"{cleaned}"' if cleaned else ""
+
+
 def _experiment_priority_expr(priorities: Dict[str, Any]) -> str:
     if not priorities:
         return "0"
@@ -990,6 +1123,9 @@ def query_workspace_published_materials(
     *,
     text: Optional[str] = None,
     event_type: Optional[str] = None,
+    canonical_action_type: Optional[str] = None,
+    canonical_object: Optional[str] = None,
+    sop_phase: Optional[str] = None,
     limit: int = 100,
     cursor: Optional[str] = None,
     sort_by: str = "time_start",
@@ -1010,29 +1146,55 @@ def query_workspace_published_materials(
         clauses: List[str] = []
         permission_applied = operator_role != "admin"
         scoring_profile = load_material_scoring_profile(scoring_profile_path)
+        canonical_intent = _canonical_query_intent(text)
+        canonical_filters = {
+            "canonical_action_type": _split_query_filter(canonical_action_type),
+            "canonical_object": _split_query_filter(canonical_object),
+            "sop_phase": _split_query_filter(sop_phase),
+        }
         filters_hash = _filter_hash(
             text=text,
             event_type=event_type,
+            canonical_action_type=canonical_action_type,
+            canonical_object=canonical_object,
+            sop_phase=sop_phase,
             actor_name=actor_name,
             operator_role=operator_role,
             allowed_experiment_ids=allowed_experiment_ids,
             scoring_profile_hash=str(scoring_profile.get("profile_hash") or ""),
         )
-        relevance_expr = "bm25(published_materials_fts)" if text else None
+        canonical_boost_expr = _canonical_boost_expression(canonical_intent, canonical_filters)
+        use_fts_text = bool(text and not any(canonical_intent.values()))
+        relevance_expr = "bm25(published_materials_fts)" if use_fts_text else None
         business_expr = _business_score_expression(relevance_expr, scoring_profile)
-        score_expr = f"{relevance_expr if relevance_expr else 'NULL'} AS relevance_score, {business_expr} AS business_score"
-        if text:
+        score_expr = (
+            f"{relevance_expr if relevance_expr else canonical_boost_expr} AS relevance_score, "
+            f"{canonical_boost_expr} AS canonical_match_score, "
+            f"({business_expr} + {canonical_boost_expr}) AS business_score"
+        )
+        if use_fts_text:
             sql = (
                 f"SELECT p.*, {score_expr} FROM published_materials p "
                 "JOIN published_materials_fts f ON p.material_id = f.material_id "
             )
             clauses.append("published_materials_fts MATCH ?")
-            params.append(text)
+            params.append(_fts_query_text(text))
         else:
             sql = f"SELECT p.*, {score_expr} FROM published_materials p"
+            if text:
+                text_clauses: List[str] = []
+                canonical_clause = _canonical_text_clause(canonical_intent, params)
+                if canonical_clause:
+                    text_clauses.append(canonical_clause)
+                text_clauses.append("p.searchable_text LIKE ?")
+                params.append(f"%{text}%")
+                clauses.append("(" + " OR ".join(text_clauses) + ")")
         if event_type:
             clauses.append("p.event_type = ?")
             params.append(event_type)
+        _append_in_filter(clauses, params, "p.canonical_action_type", canonical_filters["canonical_action_type"])
+        _append_in_filter(clauses, params, "p.canonical_object", canonical_filters["canonical_object"])
+        _append_in_filter(clauses, params, "p.sop_phase", canonical_filters["sop_phase"])
         if actor_name:
             clauses.append("p.actor_name = ?")
             params.append(actor_name)
@@ -1049,11 +1211,15 @@ def query_workspace_published_materials(
         normalized_sort_by = sort_by if sort_by in SORT_FIELDS else "time_start"
         if normalized_sort_by == "relevance" and relevance_expr:
             sort_column = relevance_expr
+        elif normalized_sort_by == "relevance":
+            sort_column = canonical_boost_expr
         elif normalized_sort_by == "business_score":
-            sort_column = business_expr
+            sort_column = f"({business_expr} + {canonical_boost_expr})"
         else:
             sort_column = SORT_FIELDS.get(normalized_sort_by, SORT_FIELDS["time_start"])
         direction = "DESC" if str(sort_order).lower() == "desc" else "ASC"
+        if normalized_sort_by == "relevance" and text and not relevance_expr:
+            direction = "DESC"
         page_size = min(max(1, int(limit)), 500)
         cursor_payload = _decode_cursor(cursor)
         cursor_matches = (
@@ -1069,6 +1235,8 @@ def query_workspace_published_materials(
                 params.extend(values)
         if normalized_sort_by == "relevance" and relevance_expr:
             sql += f" ORDER BY {relevance_expr} ASC, p.material_id ASC LIMIT ?"
+        elif normalized_sort_by == "relevance":
+            sql += f" ORDER BY {canonical_boost_expr} DESC, COALESCE(p.time_start, 0) ASC, p.material_id ASC LIMIT ?"
         else:
             sql += f" ORDER BY {sort_column} {direction}, p.material_id ASC LIMIT ?"
         params.append(page_size + 1)
@@ -1086,7 +1254,7 @@ def query_workspace_published_materials(
         if has_more and results:
             last = results[-1]
             cursor_sort_by = "relevance" if normalized_sort_by == "relevance" and relevance_expr else normalized_sort_by
-            cursor_sort_order = "asc" if cursor_sort_by == "relevance" else direction.lower()
+            cursor_sort_order = "asc" if cursor_sort_by == "relevance" and relevance_expr else direction.lower()
             cursor_value = last.get("relevance_score") if cursor_sort_by == "relevance" else last.get(cursor_sort_by)
             next_cursor = _encode_cursor(
                 cursor_sort_by,
@@ -1108,7 +1276,7 @@ def query_workspace_published_materials(
         "next_cursor": next_cursor,
         "sort": {
             "sort_by": normalized_sort_by,
-            "sort_order": ("asc" if normalized_sort_by == "relevance" and text else direction.lower()),
+            "sort_order": ("asc" if normalized_sort_by == "relevance" and relevance_expr else direction.lower()),
         },
         "cursor": {"version": 2, "filters_hash": filters_hash, "scoring_profile_hash": scoring_profile.get("profile_hash")},
         "scoring_profile": {

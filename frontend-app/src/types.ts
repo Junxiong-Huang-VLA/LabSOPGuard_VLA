@@ -247,6 +247,10 @@ export interface MaterialSearchItem {
   canonical_object?: string
   sop_phase?: string
   interaction_family?: string
+  best_score?: number
+  best_score_breakdown?: Record<string, unknown>
+  best_score_formula?: string
+  best_reason?: string
   time_start?: number
   time_end?: number
   evidence_level?: string
@@ -337,6 +341,7 @@ export interface MaterialDiagnosticsResponse {
   missing_preview_count?: number
   warnings_count?: number
   evidence_items?: MaterialDiagnosticsEvidenceItem[]
+  taxonomy_calibration?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -376,6 +381,8 @@ export interface MaterialCandidateFile {
   material_type?: string
   candidate_status?: string
   disposition?: string
+  approval_reason_code?: string
+  approval_reason?: string
   rejection_reason_code?: string
   rejection_reason?: string
   recommended?: boolean
@@ -405,6 +412,11 @@ export interface MaterialCandidateGroup {
   canonical_object?: string | null
   sop_phase?: string | null
   interaction_family?: string | null
+  approval_reason_code?: string | null
+  approval_reason?: string | null
+  rejection_reason_code?: string | null
+  rejection_reason?: string | null
+  review_notes?: string | null
   micro_segment_id?: string | null
   parent_segment_id?: string | null
   keyframes: MaterialCandidateFile[]

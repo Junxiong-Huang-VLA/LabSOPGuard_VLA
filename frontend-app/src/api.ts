@@ -264,7 +264,7 @@ export const experimentApi = {
   peekPublishedMaterials: (id: string, params?: { limit?: number }) => readCachedGet<PublishedMaterialsResponse>(`/experiments/${id}/materials/published`, params),
   getMaterialCandidates: (id: string, options?: ApiCacheOptions) => cachedGet<MaterialCandidatesResponse>(`/experiments/${id}/materials/candidates`, undefined, { ttlMs: 30_000, ...options }),
 
-  approveMaterialCandidate: async (id: string, candidateGroupId: string, request?: { reviewer?: string; notes?: string; candidate_ids?: string[]; selected_keyframe_ids?: string[]; selected_clip_ids?: string[] }) => {
+  approveMaterialCandidate: async (id: string, candidateGroupId: string, request?: { reviewer?: string; notes?: string; reason_code?: string; reason?: string; candidate_ids?: string[]; selected_keyframe_ids?: string[]; selected_clip_ids?: string[] }) => {
     const { data } = await api.post(`/experiments/${id}/materials/candidates/${candidateGroupId}/approve`, request || {})
     invalidateExperimentCache(id)
     return data
@@ -350,7 +350,7 @@ export const experimentApi = {
 }
 
 export const workspaceMaterialApi = {
-  getPublishedMaterials: async (params?: { text?: string; event_type?: string; actor_name?: string; limit?: number; cursor?: string; sort_by?: string; sort_order?: string }) => {
+  getPublishedMaterials: async (params?: { text?: string; event_type?: string; canonical_action_type?: string; canonical_object?: string; sop_phase?: string; actor_name?: string; limit?: number; cursor?: string; sort_by?: string; sort_order?: string }) => {
     const { data } = await api.get<WorkspacePublishedMaterialsResponse>('/materials/published', {
       params,
       headers: workspaceOperatorHeaders(),

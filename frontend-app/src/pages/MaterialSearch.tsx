@@ -232,6 +232,8 @@ function itemView(item: MaterialSearchItem | MaterialCandidateFile) {
 }
 
 function materialRank(item: MaterialSearchItem, experimentId?: string) {
+  const bestScore = Number(item.best_score ?? item.payload?.best_score)
+  if (Number.isFinite(bestScore) && bestScore > 0) return bestScore * 1000 + (itemClip(item, experimentId) ? 0.5 : 0)
   return itemQualityScore(item) * 100 + itemYoloEvidenceCount(item) + (item.recommended ? 2 : 0) + (itemClip(item, experimentId) ? 0.5 : 0)
 }
 
@@ -256,6 +258,17 @@ function itemSearchText(item: MaterialSearchItem) {
   ].join(' ').toLowerCase()
 }
 
+function bestReasonText(item: MaterialSearchItem) {
+  const reason = pathText(item.best_reason, item.payload?.best_reason)
+  if (reason) return cleanDisplayText(reason)
+  const score = Number(item.best_score ?? item.payload?.best_score)
+  const scoreText = Number.isFinite(score) && score > 0 ? `best_score ${score.toFixed(3)}` : `quality ${itemQualityScore(item).toFixed(2)}`
+  const view = cleanDisplayText(itemView(item))
+  const object = cleanDisplayText(canonicalObject(item) || '-')
+  const action = cleanDisplayText(canonicalActionType(item) || materialActionLabel(item))
+  return `${action}: ${scoreText}; YOLO ${itemYoloEvidenceCount(item)}; view ${view}; ${formatRange(item)}; object ${object}`
+}
+
 export default function MaterialSearch() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
@@ -270,6 +283,10 @@ export default function MaterialSearch() {
   const [materialScope, setMaterialScope] = useState<'best' | 'all'>('best')
   const [assetMode, setAssetMode] = useState<'all' | 'frame' | 'clip'>('all')
   const [candidateFilter, setCandidateFilter] = useState<'pending' | 'approved' | 'all'>('pending')
+  const [candidateActionFilter, setCandidateActionFilter] = useState<'all' | 'hand-balance' | 'hand-container' | 'missing_best'>('all')
+  const [batchRejectionReason, setBatchRejectionReason] = useState('')
+  const [batchNote, setBatchNote] = useState('')
+  const [batchBusy, setBatchBusy] = useState(false)
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null)
   const [decidingGroup, setDecidingGroup] = useState<string | null>(null)
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({})
@@ -358,6 +375,7 @@ export default function MaterialSearch() {
 
   const clips = items.filter(item => Boolean(itemClip(item, id))).length
   const frames = items.filter(item => Boolean(itemPreview(item, id))).length
+  const formalActionSet = useMemo(() => new Set(items.map(item => canonicalActionType(item)).filter(Boolean) as string[]), [items])
   const pendingCandidates = candidateGroups.filter(candidateCanApprove).length
   const approvedCandidates = candidateGroups.filter(candidateGroupApproved).length
   const rejectedCandidates = candidateGroups.filter(group => candidateStatusText(group).includes('rejected')).length
@@ -391,6 +409,8 @@ export default function MaterialSearch() {
       const response = await experimentApi.approveMaterialCandidate(id, group.candidate_group_id, {
         reviewer: 'frontend-review',
         notes: `Approved from material review queue (${selectedIds.length} selected assets)`,
+        reason_code: 'representative_yolo_hand_object_evidence',
+        reason: `Approved ${canonicalActionType(group) || group.action_name || 'candidate'} because selected files provide representative YOLO-backed hand-object evidence.`,
         candidate_ids: selectedIds,
         selected_keyframe_ids: selectedIds,
         selected_clip_ids: selectedIds,
@@ -442,6 +462,67 @@ export default function MaterialSearch() {
     }
   }
 
+  async function approveCandidateBatch(groups: MaterialCandidateGroup[]) {
+    if (!id) return
+    const targets = groups.filter(candidateCanApprove)
+    if (!targets.length) return
+    setBatchBusy(true)
+    setError(null)
+    setApprovalNotice(null)
+    try {
+      let approvedFiles = 0
+      for (const group of targets) {
+        const selectedIds = selectedIdsForGroup(group)
+        if (!selectedIds.length) continue
+        await experimentApi.approveMaterialCandidate(id, group.candidate_group_id, {
+          reviewer: 'frontend-review',
+          notes: batchNote || `Batch approved from canonical review view (${selectedIds.length} selected assets)`,
+          reason_code: 'taxonomy_gap_representative',
+          reason: `Batch approved ${canonicalActionType(group) || group.action_name || 'candidate'} to close the canonical material-library coverage gap.`,
+          candidate_ids: selectedIds,
+          selected_keyframe_ids: selectedIds,
+          selected_clip_ids: selectedIds,
+        })
+        approvedFiles += selectedIds.length
+      }
+      setApprovalNotice(`Batch approved ${approvedFiles} selected candidate files; health panel refreshed.`)
+      await load()
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Batch approval failed')
+    } finally {
+      setBatchBusy(false)
+    }
+  }
+
+  async function rejectCandidateBatch(groups: MaterialCandidateGroup[]) {
+    if (!id) return
+    const targets = groups.filter(candidateCanApprove)
+    if (!targets.length) return
+    if (!batchRejectionReason) {
+      setError('Batch false-positive review requires a reason.')
+      return
+    }
+    setBatchBusy(true)
+    setError(null)
+    setApprovalNotice(null)
+    try {
+      for (const group of targets) {
+        await experimentApi.decideMaterialCandidate(id, group.candidate_group_id, {
+          decision: 'false_positive',
+          reviewer: 'frontend-review',
+          reason_code: batchRejectionReason,
+          notes: batchNote || `Batch rejected from canonical review view: ${batchRejectionReason}`,
+        })
+      }
+      setApprovalNotice(`Batch rejected ${targets.length} candidate groups; audit log retained and health panel refreshed.`)
+      await load()
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Batch false-positive review failed')
+    } finally {
+      setBatchBusy(false)
+    }
+  }
+
   function toggleGroup(groupKey: string) {
     setCollapsedGroups(previous => ({ ...previous, [groupKey]: !previous[groupKey] }))
   }
@@ -451,7 +532,14 @@ export default function MaterialSearch() {
       if (candidateFilter === 'pending') return candidateCanApprove(group)
       if (candidateFilter === 'approved') return candidateGroupApproved(group)
       return true
+    }).filter(group => {
+      const canonical = canonicalActionType(group)
+      if (candidateActionFilter === 'hand-balance') return canonical === 'hand-balance'
+      if (candidateActionFilter === 'hand-container') return canonical === 'hand-container'
+      if (candidateActionFilter === 'missing_best') return Boolean(canonical && !formalActionSet.has(canonical))
+      return true
     })
+    const batchTargets = visibleCandidates.filter(candidateCanApprove)
     return (
       <div className="space-y-5">
         <PageHero
@@ -496,6 +584,36 @@ export default function MaterialSearch() {
             <span className="inline-flex items-center rounded-md bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500">
               rejected {rejectedCandidates} / deferred {deferredCandidates}
             </span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {([
+              ['all', '全部 canonical'],
+              ['hand-balance', '只看 hand-balance'],
+              ['hand-container', '只看 hand-container'],
+              ['missing_best', '只看缺最佳素材'],
+            ] as const).map(([filter, label]) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setCandidateActionFilter(filter)}
+                className={filter === candidateActionFilter ? primaryButtonClass(filter === 'missing_best' ? 'amber' : 'blue') : secondaryButtonClass()}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+            <select value={batchRejectionReason} onChange={event => setBatchRejectionReason(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">
+              <option value="">批量误筛原因</option>
+              {REJECTION_REASONS.map(reason => <option key={reason.code} value={reason.code}>{reason.label}</option>)}
+            </select>
+            <input value={batchNote} onChange={event => setBatchNote(event.target.value)} placeholder="批量审核备注" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400" />
+            <button type="button" onClick={() => void approveCandidateBatch(batchTargets)} disabled={!batchTargets.length || batchBusy} className={`${primaryButtonClass('emerald')} disabled:cursor-not-allowed disabled:opacity-50`}>
+              <CheckCircle2 className="h-4 w-4" />批量批准 {batchTargets.length}
+            </button>
+            <button type="button" onClick={() => void rejectCandidateBatch(batchTargets)} disabled={!batchTargets.length || !batchRejectionReason || batchBusy} className={`${secondaryButtonClass('red')} disabled:cursor-not-allowed disabled:opacity-50`}>
+              <ShieldAlert className="h-4 w-4" />批量误筛
+            </button>
           </div>
         </EvidenceCard>
 
@@ -684,11 +802,12 @@ function MaterialCard({ item, experimentId, isBest, onZoom }: { item: MaterialSe
         </div>
         <div className="mt-3 rounded-md bg-slate-50 p-2 text-xs font-semibold text-slate-600">
           <div className="font-black text-slate-700">{isBest ? '为什么它是最佳' : '入库依据'}</div>
-          <div className="mt-1 grid grid-cols-2 gap-1">
-            <span>质量 {itemQualityScore(item).toFixed(2)}</span>
+          <p className="mt-1 leading-relaxed">{bestReasonText(item)}</p>
+          <div className="mt-2 grid grid-cols-2 gap-1">
+            <span>best {Number(item.best_score ?? item.payload?.best_score ?? 0).toFixed(3)}</span>
             <span>YOLO {itemYoloEvidenceCount(item)}</span>
-            <span>视角 {cleanDisplayText(itemView(item))}</span>
-            <span>对象 {cleanDisplayText(canonicalObject(item) || '-')}</span>
+            <span>view {cleanDisplayText(itemView(item))}</span>
+            <span>object {cleanDisplayText(canonicalObject(item) || '-')}</span>
           </div>
         </div>
       </div>
@@ -767,6 +886,7 @@ function CandidateGroupCard({
   const approved = candidateGroupApproved(group)
   const yoloStatus = String(group.yolo_recheck?.status || group.pipeline_status || 'unknown')
   const vlmStatus = String(group.vlm_semantics?.status || group.pipeline_stage || 'not_available')
+  const decisionReason = pathText(group.approval_reason, group.rejection_reason, group.review_notes)
   return (
     <EvidenceCard className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -790,6 +910,11 @@ function CandidateGroupCard({
         <Gate label="VLM" value={vlmStatus} />
         <Gate label="Pipeline" value={group.pipeline_status || group.pipeline_stage || group.status || 'pending'} />
       </div>
+      {decisionReason && (
+        <div className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+          审核原因：{cleanDisplayText(decisionReason)}
+        </div>
+      )}
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         {files.map((file, fileIndex) => (
           <CandidatePreview
