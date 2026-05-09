@@ -366,7 +366,7 @@ def rebuild_workspace_published_materials_index(
         usage_metrics = _material_usage_metrics(exp_dir)
         for item in raw_items:
             event_id = str(item.get("event_id") or "")
-            material_id = str(item.get("material_id") or event_id)
+            material_id = str(item.get("material_id") or item.get("item_id") or item.get("candidate_id") or event_id)
             usage = usage_metrics.get(material_id) or usage_metrics.get(event_id) or {}
             enriched = {
                 **item,
@@ -378,7 +378,7 @@ def rebuild_workspace_published_materials_index(
                 "click_count": int(usage.get("click_count") or usage.get("clicks") or 0),
             }
             effective_experiment_id = str(enriched.get("experiment_id") or experiment_id)
-            effective_material_id = str(enriched.get("material_id") or material_id)
+            effective_material_id = str(enriched.get("material_id") or enriched.get("item_id") or enriched.get("candidate_id") or material_id)
             workspace_key = f"{effective_experiment_id}:{effective_material_id}" if effective_experiment_id else effective_material_id
             previous = items_by_key.get(workspace_key)
             if previous is None or source_mtime >= previous[0]:
@@ -711,7 +711,7 @@ def _insert_workspace_published(conn: sqlite3.Connection, item: Dict[str, Any]) 
         ]
         if part
     )
-    material_id = str(item.get("material_id") or item.get("event_id"))
+    material_id = str(item.get("material_id") or item.get("item_id") or item.get("candidate_id") or item.get("event_id"))
     experiment_id = str(item.get("experiment_id") or "")
     workspace_material_id = f"{experiment_id}:{material_id}" if experiment_id else material_id
     existing_usage = conn.execute("SELECT click_count FROM material_usage_counts WHERE material_id = ?", (workspace_material_id,)).fetchone()
