@@ -1,6 +1,13 @@
 backend: ultralytics
-model: yolo26s-pose.pt
-device: cuda:0
+# Primary weights: production candidate. Strict mode prevents silent fallback
+# to generic COCO weights; missing lab weights should fail fast.
+model: outputs/training/yolo26s_pose_lab_v4_focus_auto/weights/best.pt
+model_fallbacks:
+  - outputs/training/yolo26s_allphotos_e40/weights/best.pt
+  - outputs/training/detect/outputs/training/yolo26s_allphotos_aug_ms_ft/weights/best.pt
+  - outputs/training/yolo26s_autodl_8_1_1/weights/best.pt
+  - outputs/training/yolo26s_lab_sync_v2/weights/best.pt
+device: auto
 layer2_window: 30
 layer2_backend: skateformer
 enable_vlm: true
@@ -22,6 +29,8 @@ class_registry:
     - glove
     - gloves
     - hand
+    - gloved_hand
+    - gloved-hand
   goggles:
     - goggle
     - goggles
@@ -37,7 +46,51 @@ class_registry:
 
 ppe:
   hold_frames: 20
+  consensus_ratio: 0.45
   class_conf_thresholds:
     glove: 0.20
     goggles: 0.20
     lab_coat: 0.25
+
+sampling:
+  base_interval_sec: 2.0
+  min_frames: 8
+  max_frames: 36
+  max_vlm_frames: 18
+
+detection:
+  confidence_threshold: 0.25
+  iou_threshold: 0.45
+  max_detections: 50
+  # 960 is the default offline setting for small lab objects. Use 640 in
+  # realtime-only deployments if latency is more important than recall.
+  imgsz: 960
+  allowed_labels:
+    - balance
+    - beaker
+    - bottle
+    - gloved_hand
+    - glove
+    - gloves
+    - goggles
+    - hand
+    - lab_coat
+    - labcoat
+    - paper
+    - pipette
+    - pipette_tip
+    - reagent_bottle
+    - sample_bottle
+    - sample_bottle_blue
+    - safety_glasses
+    - spatula
+    - spearhead
+    - tube
+    - tube_cap
+    - vial
+
+smoothing:
+  enabled: true
+  min_hits: 3
+  hold_frames: 5
+  iou_threshold: 0.35

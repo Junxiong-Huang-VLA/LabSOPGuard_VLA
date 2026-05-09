@@ -1,0 +1,68 @@
+# Multi-camera 24h soak test configuration.
+# Enable real cameras before running without --dry-run.
+
+run:
+  experiment_id: multicam_soak_24h
+  duration_sec: 86400
+  output_root: .runtime/soak_tests
+
+daemon:
+  restart_on_failure: true
+  restart_backoff_sec: 30
+  max_restarts: 100
+  status_path: .runtime/capture_daemon/status.json
+
+defaults:
+  expected_fps: 30
+  segment_duration_sec: 300
+  retention_sec: 90000
+  heartbeat_interval_sec: 10
+  read_timeout_sec: 5
+  reconnect_backoff_sec: 2
+  sync_group: main_lab
+
+acceptance:
+  min_actual_fps_ratio: 0.85
+  max_drop_rate: 0.02
+  max_decode_error_rate: 0.01
+  max_reconnect_count: 10
+  require_segment_files: true
+
+disk_protection:
+  min_free_disk_gb: 50
+  max_output_dir_gb: 2000
+
+cameras:
+  - camera_id: cam_front
+    enabled: false
+    video_index: 0
+    source_type: rtsp
+    source: rtsp://USER:PASSWORD@192.168.1.101:554/stream1
+    expected_fps: 30
+    sync_group: main_lab
+
+  - camera_id: cam_side
+    enabled: false
+    video_index: 1
+    source_type: rtsp
+    source: rtsp://USER:PASSWORD@192.168.1.102:554/stream1
+    expected_fps: 30
+    sync_group: main_lab
+
+  - camera_id: cam_overhead
+    enabled: false
+    video_index: 2
+    source_type: usb
+    source: "0"
+    expected_fps: 30
+    width: 1920
+    height: 1080
+    sync_group: main_lab
+
+  - camera_id: cam_wireless
+    enabled: false
+    video_index: 3
+    source_type: http
+    source: http://192.168.1.103:8080/video
+    expected_fps: 25
+    sync_group: main_lab

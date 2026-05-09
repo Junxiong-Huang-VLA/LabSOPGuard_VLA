@@ -20,5 +20,10 @@ jobs:
           pip install -e .
       - name: Env check
         run: python scripts/check_env.py --project-name LabEmbodiedVLA
+      - name: Runtime config check
+        run: |
+          python scripts/check_runtime_configs.py
+          docker compose -f docker-compose.yml --profile wireless-video --profile monitoring config --quiet
+          docker run --rm -v "${{ github.workspace }}/monitoring:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:latest check config /etc/prometheus/prometheus.yml
       - name: Data check
         run: python scripts/data_check.py --config configs/data/dataset.yaml || true

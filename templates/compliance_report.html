@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report_title }}</title>
+    <style>
+        /* 基础样式 */
+        body {
+            font-family: 'SimHei', 'Microsoft YaHei', 'DejaVu Sans', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20mm;
+            background-color: white;
+        }
+
+        /* 页面设置 */
+        @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-center {
+                content: "第 " counter(page) " 页，共 " counter(pages) " 页";
+                font-size: 10px;
+                color: #666;
+            }
+        }
+
+        /* 头部样式 */
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 执行摘要 */
+        .summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #3498db;
+        }
+
+        .summary h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .score-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .score {
+            font-size: 64px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .score.good { color: #27ae60; }
+        .score.warning { color: #f39c12; }
+        .score.bad { color: #e74c3c; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .status-pass { background-color: #d4edda; color: #155724; }
+        .status-fail { background-color: #f8d7da; color: #721c24; }
+
+        /* 统计表格 */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stats-table th {
+            background-color: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .stats-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stats-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* 图表区域 */
+        .charts-section {
+            page-break-inside: avoid;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 违规记录 */
+        .violation-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 15px 0;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            page-break-inside: avoid;
+        }
+
+        .violation-card.critical {
+            border-left: 5px solid #e74c3c;
+            background: linear-gradient(90deg, #ffeaea 0%, white 10%);
+        }
+
+        .violation-card.major {
+            border-left: 5px solid #f39c12;
+            background: linear-gradient(90deg, #fff3cd 0%, white 10%);
+        }
+
+        .violation-card.minor {
+            border-left: 5px solid #f1c40f;
+            background: linear-gradient(90deg, #fff9cd 0%, white 10%);
+        }
+
+        .violation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .violation-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .severity-badge {
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .severity-critical { background-color: #e74c3c; }
+        .severity-major { background-color: #f39c12; }
+        .severity-minor { background-color: #f1c40f; color: #333; }
+
+        .violation-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .violation-detail {
+            font-size: 14px;
+        }
+
+        .violation-detail strong {
+            color: #2c3e50;
+        }
+
+        /* 截图区域 */
+        .frames-section {
+            page-break-before: always;
+        }
+
+        .frame-container {
+            text-align: center;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+
+        .frame-container img {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .frame-caption {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* 改进建议 */
+        .recommendations {
+            background-color: #e8f5e8;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .recommendations h3 {
+            color: #2e7d32;
+            margin-top: 0;
+        }
+
+        .recommendation-item {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .recommendation-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        /* 页脚 */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* 打印优化 */
+        @media print {
+            body { padding: 0; }
+            .header { page-break-after: avoid; }
+            .violation-card { page-break-inside: avoid; }
+            .chart-container { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 报告头部 -->
+    <div class="header">
+        <h1>{{ report_title }}</h1>
+        <div class="header-info">
+            <span>任务ID: {{ task_id }}</span>
+            <span>生成时间: {{ generated_at }}</span>
+        </div>
+        <div class="header-info">
+            <span>视频文件: {{ video_path }}</span>
+            <span>标准: {{ company_info.standard }}</span>
+        </div>
+    </div>
+
+    <!-- 执行摘要 -->
+    <div class="summary">
+        <h2>执行摘要</h2>
+        <div class="score-container">
+            <div class="score {% if summary.compliance_score >= 80 %}good{% elif summary.compliance_score >= 60 %}warning{% else %}bad{% endif %}">
+                {{ "%.1f"|format(summary.compliance_score) }}%
+            </div>
+            <div>
+                <span class="status-badge {% if summary.status == '通过' %}status-pass{% else %}status-fail{% endif %}">
+                    {{ summary.status }}
+                </span>
+            </div>
+        </div>
+
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>指标</th>
+                    <th>数值</th>
+                    <th>说明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>总违规次数</td>
+                    <td><strong>{{ summary.total_violations }}</strong></td>
+                    <td>检测到的SOP违规总数</td>
+                </tr>
+                <tr>
+                    <td>严重违规</td>
+                    <td style="color: #e74c3c;"><strong>{{ summary.critical_count }}</strong></td>
+                    <td>可能造成安全事故的违规</td>
+                </tr>
+                <tr>
+                    <td>重要违规</td>
+                    <td style="color: #f39c12;"><strong>{{ summary.major_count }}</strong></td>
+                    <td>影响实验质量的违规</td>
+                </tr>
+                <tr>
+                    <td>轻微违规</td>
+                    <td style="color: #f1c40f;"><strong>{{ summary.minor_count }}</strong></td>
+                    <td>程序性偏差</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 统计图表 -->
+    {% if charts %}
+    <div class="charts-section">
+        <h2>统计分析</h2>
+
+        {% if charts.violation_types %}
+        <div class="chart-container">
+            <img src="file://{{ charts.violation_types }}" alt="违规类型分布">
+            <p><em>图1: 违规类型分布</em></p>
+        </div>
+        {% endif %}
+
+        {% if charts.severity_distribution %}
+        <div class="chart-container">
+            <img src="file://{{ charts.severity_distribution }}" alt="严重等级分布">
+            <p><em>图2: 违规严重等级分布</em></p>
+        </div>
+        {% endif %}
+
+        {% if charts.time_distribution %}
+        <div class="chart-container">
+            <img src="file://{{ charts.time_distribution }}" alt="时间分布">
+            <p><em>图3: 违规时间分布</em></p>
+        </div>
+        {% endif %}
+
+        {% if charts.compliance_trend %}
+        <div class="chart-container">
+            <img src="file://{{ charts.compliance_trend }}" alt="合规率趋势">
+            <p><em>图4: 合规率趋势</em></p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 违规详细记录 -->
+    {% if violations %}
+    <h2>违规详细记录</h2>
+    {% for violation in violations %}
+    <div class="violation-card {{ violation.severity|lower }}">
+        <div class="violation-header">
+            <h3 class="violation-title">违规 #{{ loop.index }}</h3>
+            <span class="severity-badge severity-{{ violation.severity|lower }}">
+                {{ violation.severity }}
+            </span>
+        </div>
+
+        <div class="violation-details">
+            <div class="violation-detail">
+                <strong>时间戳:</strong> {{ "%.1f"|format(violation.timestamp_sec) }}s
+            </div>
+            <div class="violation-detail">
+                <strong>规则ID:</strong> {{ violation.rule_id }}
+            </div>
+            <div class="violation-detail">
+                <strong>帧ID:</strong> {{ violation.frame_id }}
+            </div>
+            <div class="violation-detail">
+                <strong>严重等级:</strong> {{ violation.severity }}
+            </div>
+        </div>
+
+        <div class="violation-detail">
+            <strong>违规描述:</strong>
+            <p>{{ violation.message }}</p>
+        </div>
+
+        {% if violation.recommendation %}
+        <div class="violation-detail">
+            <strong>纠正建议:</strong>
+            <p>{{ violation.recommendation }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- 违规截图 -->
+    {% if frames %}
+    <div class="frames-section">
+        <h2>违规截图</h2>
+        {% for frame in frames %}
+        <div class="frame-container">
+            {% if frame.annotated_path %}
+            <img src="file://{{ frame.annotated_path }}" alt="违规截图 {{ frame.index }}">
+            {% endif %}
+            <div class="frame-caption">
+                截图 {{ frame.index }} - {{ frame.rule_id }} ({{ frame.severity }}) - {{ "%.1f"|format(frame.timestamp) }}s
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 改进建议 -->
+    <div class="recommendations">
+        <h3>改进建议</h3>
+        <div class="recommendation-item">
+            加强PPE佩戴检查，确保操作人员在进入实验区域前完成个人防护装备检查
+        </div>
+        <div class="recommendation-item">
+            定期进行SOP培训，特别是针对高频违规步骤的专项培训
+        </div>
+        <div class="recommendation-item">
+            考虑在关键操作区域增加提醒标识和检查清单
+        </div>
+        <div class="recommendation-item">
+            建立违规记录追踪机制，对重复违规人员进行重点关注
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="footer">
+        <p>本报告由 {{ company_info.name }} v{{ company_info.version }} 自动生成</p>
+        <p>符合 {{ company_info.standard }} 标准要求</p>
+        <p>报告生成时间: {{ generated_at }}</p>
+    </div>
+</body>
+</html>

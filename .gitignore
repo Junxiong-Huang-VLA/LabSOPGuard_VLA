@@ -7,6 +7,7 @@ __pycache__/
 .build/
 dist/
 .venv/
+.venv-e2e/
 .env
 
 # Caches
@@ -22,16 +23,38 @@ dist/
 # Runtime outputs
 logs/
 outputs/
+uploads/
+archive/runtime_artifacts/
+archive/manual_checks/
+integrated_system/outputs/
 runs/
 cache/
 tmp/
 temp/
 artifacts/
+reports/
+models/
 weights/
 checkpoints/
 .ultralytics/
 .matplotlib/
+.runtime_cache/
+.runtime/
+memory/
+Ultralytics/
+vendor_py/
+tools/redis/
 *.pt
+*.source_patch.txt
+frontend-app/node_modules/
+frontend-app/dist/
+frontend-app/.vite/
+
+# Local agent/tooling state
+.claude/
+.codex/
+.codex_runtime/
+.playwright-cli/
 
 # Data (keep placeholders only)
 data/raw/*
@@ -44,6 +67,10 @@ data/processed/*
 
 # Misc
 *.log
+*.err
+*.out
+*.err.log
+*.out.log
 *.tmp
 Thumbs.db
 .DS_Store

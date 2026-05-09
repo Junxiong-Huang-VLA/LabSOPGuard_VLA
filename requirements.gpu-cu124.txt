@@ -1,0 +1,7 @@
+﻿# CUDA-enabled PyTorch stack validated on this Windows demo machine.
+# Environment: Python 3.13, NVIDIA RTX 4050 Laptop GPU, driver 556.12, CUDA runtime 12.5.
+# Install with:
+#   pip install --upgrade --force-reinstall -r requirements.gpu-cu124.txt --index-url https://download.pytorch.org/whl/cu124
+
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124

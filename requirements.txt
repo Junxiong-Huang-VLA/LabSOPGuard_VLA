@@ -1,14 +1,75 @@
-﻿numpy>=1.26.0
-pandas>=2.2.0
-pyyaml>=6.0.1
-matplotlib>=3.8.0
-pillow>=10.2.0
-opencv-python>=4.9.0
+﻿# 实验室SOP合规智能监控系统 - 依赖清单
+# 基于技术文档要求的完整技术栈
+
+# 核心框架
+fastapi==0.109.2
+uvicorn[standard]==0.24.0
+flask==3.0.0
+nicegui==1.4.25
+
+# 计算机视觉
+opencv-python==4.8.1.78
+ultralytics==8.0.200
+numpy==1.24.3
+pillow==10.1.0
+
+# 深度学习
+torch==2.1.1
+torchvision==0.16.1
+torchaudio==2.1.1
+
+# 数据处理
+pandas==2.1.4
+pyyaml==6.0.1
+pydantic==2.5.2
+
+# 数据库和缓存
+redis==5.0.1
+celery==5.3.6
+sqlalchemy==2.0.23
+
+# 报告生成
+weasyprint==60.1
+jinja2==3.1.4
+plotly==5.18.0
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# 网络通信
+websockets==12.0
+httpx==0.25.2
+requests==2.31.0
+cryptography>=42.0.0
+dashscope>=1.20.0
+
+# 配置管理
+python-dotenv==1.0.0
+click==8.1.7
+
+# 监控和日志
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# 开发工具
+pytest==7.4.3
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# 原有依赖（保持兼容）
 transformers>=4.39.0
 accelerate>=0.28.0
-torch>=2.2.0
-reportlab>=4.0.0
-ultralytics>=8.4.12
-flask>=3.0.0
-openai>=1.40.0
 mediapipe>=0.10.14,<0.10.20
+openai>=1.40.0
+reportlab>=4.0.0
+
+# 可选：GPU加速（如果有NVIDIA GPU）
+# torch-audio with CUDA support
+# tensorrt==8.6.1  # 需要手动安装
+
+# 可选：实时深度相机支持
+# pyrealsense2==2.54.1.5614
+
+# 可选：机器人控制（如果有机械臂）
+# moveit-python==0.5.0
+# rospy==1.15.14

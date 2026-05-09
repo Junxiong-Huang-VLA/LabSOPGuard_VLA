@@ -1,0 +1,107 @@
+    .realtime-monitor-panel { grid-column: 1 / -1; }
+    .realtime-monitor-grid {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 320px;
+      gap: 16px;
+      align-items: start;
+    }
+    .realtime-monitor-side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+    .realtime-monitor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .realtime-monitor-toolbar label.secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .realtime-monitor-status {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(59, 130, 246, 0.06);
+    }
+    .realtime-monitor-summary,
+    .realtime-monitor-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .realtime-monitor-meta {
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 12px;
+    }
+    .rtm-mini-stat {
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      min-width: 0;
+    }
+    .rtm-mini-stat .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .rtm-mini-stat .value {
+      margin-top: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+    .realtime-monitor-stage {
+      position: relative;
+      min-height: 360px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .realtime-monitor-stage canvas,
+    .realtime-monitor-stage video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+    .realtime-monitor-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .realtime-monitor-placeholder .icon {
+      font-size: 42px;
+    }
+    .rtm-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .rtm-list {
+      max-height: 260px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }

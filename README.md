@@ -1,199 +1,137 @@
-# LabSOPGuard_VLA
+# LabSOPGuard
 
-Engineering template for laboratory SOP compliance monitoring with video understanding, event structuring, alerting, and report export.
+LabSOPGuard 是一个面向实验室操作视频的正式版基础系统。当前版本保留并正式化了两条已经跑通的主链路：
 
-Repository: https://github.com/Junxiong-Huang-VLA/LabSOPGuard_VLA.git
+- `POST /api/v1/experiments/*` 驱动的实验流程理解主链路
+- `POST /api/v1/video-analysis/*` 驱动的 YOLO + Qwen VL 视频分析与标注视频主链路
 
-## What This Project Does
+本次收敛的目标不是推倒重来，而是把已有能力从实验性堆叠收拢为可维护工程：
 
-- Real-time or offline video monitoring
-- Multi-level AI detection pipeline
-- SOP violation detection and structured event output
-- Batch inference and batch monitoring
-- Per-session report export (PDF or TXT fallback)
+- 核心代码与历史材料分离
+- 视频分析、步骤推理、结构化输出进入正式包 `src/labsopguard/`
+- 现有 FastAPI / React 流程继续可用
+- 输出结果统一沉淀到 `outputs/experiments/<experiment_id>/` 与 `outputs/video_analysis/`
+- 任务状态改为文件持久化 + 内存友好的降级方案
 
-## Project Layout
+## 当前能力
+
+- YOLO 目标检测与可视化标注视频生成
+- DashScope / Qwen VL 场景理解与 PPE 判断
+- 实验创建、视频上传、处理、时间线和结构化结果查询
+- 步骤、时间、证据、参数、置信度的结构化输出
+- 物理事件、素材流、时间对齐的基线实现
+
+## 正式版目录
 
 ```text
 LabSOPGuard/
-  configs/                 # data, SOP rules, alerting, report settings
-  data/
-    raw/                   # raw input data (never overwrite)
-    interim/               # manifests, extracted frames, temp artifacts
-    processed/             # processed datasets
-    splits/                # train/val/test splits
-  docs/                    # technical docs
-  scripts/                 # setup, scan, extraction, inference, monitoring
-  src/project_name/        # core modules
-  outputs/                 # predictions and reports
-  web/                     # static project page
+├── backend/                  FastAPI API
+├── frontend-app/             React + TypeScript 前端
+├── src/
+│   ├── experiment/           兼容现有实验主链路的核心模型与服务
+│   ├── labsopguard/          正式版收敛包
+│   │   ├── input_layer.py
+│   │   ├── preprocessing.py
+│   │   ├── reasoning.py
+│   │   ├── output_layer.py
+│   │   ├── video_analysis.py
+│   │   ├── workflow.py
+│   │   ├── tasking.py
+│   │   └── config.py
+│   ├── lab_vla/              现有 VLA 相关模块，保留
+│   └── project_name/         历史兼容模块，非正式主链路
+├── configs/                  统一运行配置
+├── docs/                     正式文档
+├── docs/archive/             历史分析和交付材料归档
+├── archive/                  手工调试与运行产物归档
+├── scripts/run_demo.py       正式版演示运行脚本
+├── tests/                    基础回归测试
+└── video_analysis_pipeline.py 兼容旧入口的正式封装
 ```
 
-## Environment Rules
+## 快速启动
 
-- Single environment for this project: `LabSOPGuard`
-- Conda is the primary environment manager
-- Reuse existing `LabSOPGuard` if it already exists
+### 1. 后端依赖
 
-```powershell
-conda create -n LabSOPGuard python=3.10 -y
-conda activate LabSOPGuard
+```bash
 pip install -r requirements.txt
 ```
 
-## Stable Workflow
+### 2. 前端依赖
 
-### 1) Scan RGB/Depth video pairs and extract frames
-
-```powershell
-python .\scripts\scan_and_extract_frames.py `
-  --dataset-root D:\labdata `
-  --recursive `
-  --max-frames-per-video 5 `
-  --interval-sec 1.0 `
-  --manifest-csv data\interim\video_manifest.csv `
-  --report-json outputs\reports\video_scan_report.json `
-  --frames-root data\interim\frames `
-  --verbose
+```bash
+cd frontend-app
+npm install
 ```
 
-### 2) Batch inference (config-driven)
+### 3. 环境变量
 
-If `configs/data/dataset.yaml` contains:
-
-```yaml
-dataset:
-  manifest_csv: data/interim/video_manifest.csv
+```bash
+set DASHSCOPE_API_KEY=your_key
+set DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ```
 
-Run:
+### 4. 启动后端
 
-```powershell
-python .\scripts\infer.py --valid-only --max-frames 120 --target-fps 10
+```bash
+python backend/main.py
 ```
 
-Or explicitly pass a manifest:
+默认地址：`http://127.0.0.1:8000`
 
-```powershell
-python .\scripts\infer.py `
-  --manifest-csv data\interim\video_manifest.csv `
-  --valid-only `
-  --max-frames 120 `
-  --target-fps 10 `
-  --batch-output-dir outputs\predictions\batch_infer
+### 5. 启动前端
+
+```bash
+cd frontend-app
+npm run dev
 ```
 
-### 3) Batch monitor and report export (config-driven)
+默认地址：`http://127.0.0.1:3000`
 
-```powershell
-python .\scripts\run_monitor.py --valid-only --max-frames 120 --target-fps 10
+## 主链路
+
+### 实验理解主链路
+
+1. `POST /api/v1/experiments`
+2. `POST /api/v1/experiments/{id}/upload/video`
+3. `POST /api/v1/experiments/{id}/upload/context`
+4. `POST /api/v1/experiments/{id}/upload/protocol`
+5. `POST /api/v1/experiments/{id}/process`
+6. `GET /api/v1/experiments/{id}/timeline`
+7. `GET /api/v1/experiments/{id}/structured`
+
+### 视频分析主链路
+
+1. `POST /api/v1/video-analysis/analyze`
+2. `GET /api/v1/video-analysis/status/{task_id}`
+3. `GET /api/v1/video-analysis/download/{task_id}/video`
+4. `GET /api/v1/video-analysis/download/{task_id}/json`
+
+## 输出产物
+
+实验主链路：
+
+- `outputs/experiments/<experiment_id>/experiment.json`
+- `outputs/experiments/<experiment_id>/timeline.json`
+- `outputs/experiments/<experiment_id>/steps.json`
+- `outputs/experiments/<experiment_id>/physical_events.json`
+- `outputs/experiments/<experiment_id>/material_stream.json`
+- `outputs/experiments/<experiment_id>/structured.json`
+
+视频分析主链路：
+
+- `outputs/video_analysis/analysis_<task_id>.json`
+- `outputs/video_analysis/annotated_<task_id>.mp4`
+- `outputs/video_analysis/tasks/<task_id>.json`
+
+## 测试
+
+```bash
+python -m pytest tests/test_formal_pipeline.py tests/test_experiment_e2e.py tests/test_api_integration.py -q
 ```
 
-Or explicitly:
+## 清理说明
 
-```powershell
-python .\scripts\run_monitor.py `
-  --manifest-csv data\interim\video_manifest.csv `
-  --valid-only `
-  --max-frames 120 `
-  --target-fps 10 `
-  --batch-output-dir outputs\predictions\batch_monitor
-```
-
-### 4) Batch export summary/events (config-driven)
-
-```powershell
-python .\scripts\export_results.py --valid-only --max-frames 120 --target-fps 10
-```
-
-## Main Outputs
-
-- `outputs/predictions/batch_infer*/`
-- `outputs/predictions/batch_monitor*/`
-- `outputs/predictions/export_summary*.json`
-- `outputs/reports/export_summary*.csv`
-- `all_events.jsonl` and `all_events.csv`
-- `*.report.pdf` (or TXT fallback)
-
-## Vision MVP Inference Flow
-
-The existing `scripts/infer.py` entry now supports a visual MVP path:
-
-- YOLO26s-pose 2D detections/keypoints
-- RGB-D fusion and robust depth sampling
-- 3D keypoints in camera frame
-- Optional transform to robot base frame (eye-on-base extrinsics)
-- Structured exports for downstream control modules
-
-Run single-source vision MVP:
-
-```powershell
-python .\scripts\infer.py `
-  --video "D:\labdata\discription_pdf\first_person_移液与稀释_normal_correct_001_rgb.mp4" `
-  --depth-path "D:\labdata\discription_pdf\first_person_移液与稀释_normal_correct_001_depth.mp4" `
-  --sample-id vla_vision_mvp `
-  --enable-pose `
-  --export-3d `
-  --export-base-frame `
-  --debug-overlay
-```
-
-New outputs:
-
-- `outputs/predictions/infer_events_pose.jsonl`
-- `outputs/reports/infer_events_pose.csv`
-- `outputs/predictions/debug_overlay/*` (if enabled)
-
-Config file:
-
-- `configs/vision_pose.yaml`
-- Detailed guide: `docs/vision_mvp.md`
-
-For a single-model pipeline (`yolo26s-pose` only), build pose dataset scaffold then train:
-
-```powershell
-python .\scripts\build_pose_dataset.py --clean
-python .\scripts\train_yolo_lab.py `
-  --dataset-yaml data\processed\yolo_pose_dataset\dataset.yaml `
-  --model yolo26s-pose.pt `
-  --name yolo26s_pose_lab_v1
-```
-
-Standardized one-command pipeline (build dataset + formal train + boxed compare video):
-
-```powershell
-python .\scripts\run_pose_training_pipeline.py `
-  --epochs 30 `
-  --run-name yolo26s_pose_lab_v1
-```
-
-## Git Quick Commands
-
-```powershell
-git add .
-git commit -m "feat: update batch workflows and docs"
-git push origin main
-```
-
-## Integrated System Mainline
-
-Mainline entry is now `integrated_system`.
-
-- Start: `python integrated_system/app_integrated.py`
-- Web: `http://localhost:5001`
-- Docs: `docs/integrated_system.md`
-
-Core APIs:
-
-- `POST /api/analyze`
-- `GET /api/status/<task_id>`
-- `GET /api/progress`
-- `GET /api/download/<task_id>/<file_type>`
-- `GET /api/health`
-
-## 0-to-1 Documentation
-
-- Project implementation doc: `docs/project_0to1_implementation.md`
-- Developer execution playbook: `docs/developer_0to1_playbook.md`
-- Unified pipeline entry: `python scripts/run_0to1_pipeline.py`
-- Profile compare report: `python scripts/run_0to1_pipeline.py --from-stage analyze --to-stage analyze --compare-profiles`
+- 历史交付报告、手工调试脚本、临时分析 JSON 已迁入 `archive/` 或 `docs/archive/`
+- `outputs/`、`uploads/`、`integrated_system/outputs/` 已纳入忽略规则，不再污染主干
+- 旧模块保留但不再作为正式主链路继续扩散

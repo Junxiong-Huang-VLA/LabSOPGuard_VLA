@@ -1,0 +1,42 @@
+{
+  "network": {
+    "listen_ip": "0.0.0.0",
+    "listen_port": 5600,
+    "port_step": 2,
+    "jitter_ms": 40,
+    "reorder_window_frames": 3,
+    "depacketizer_timeout_ms": 500,
+    "depacketizer_max_frames": 128,
+    "depacketizer_max_fus": 128,
+    "socket_buffer_bytes": 16777216
+  },
+  "runtime": {
+    "queue_size": 2,
+    "recv_timeout_ms": 100,
+    "watchdog_interval_ms": 1000,
+    "degraded_threshold": 10,
+    "reconnect_backoff_ms": [1000, 2000, 5000, 10000],
+    "log_interval_ms": 2000
+  },
+  "display": {
+    "window_name": "LabSOPGuard Receiver",
+    "show_stats": true
+  },
+  "channels": [
+    {
+      "channel_id": "cam0",
+      "listen_port": 5600,
+      "window_name": "cam0"
+    },
+    {
+      "channel_id": "cam1",
+      "listen_port": 5602,
+      "window_name": "cam1"
+    },
+    {
+      "channel_id": "cam2",
+      "listen_port": 5604,
+      "window_name": "cam2"
+    }
+  ]
+}

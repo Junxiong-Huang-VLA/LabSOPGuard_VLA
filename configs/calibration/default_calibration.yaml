@@ -1,0 +1,9 @@
+﻿camera_intrinsics:
+  fx: 600.0
+  fy: 600.0
+  cx: 320.0
+  cy: 240.0
+
+hand_eye_extrinsics:
+  rotation_rpy_deg: [0.0, 0.0, 0.0]
+  translation_xyz_m: [0.0, 0.0, 0.0]

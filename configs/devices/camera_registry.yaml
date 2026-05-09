@@ -1,0 +1,31 @@
+cameras:
+  - camera_id: cam_front
+    enabled: false
+    video_index: 0
+    source_type: rtsp
+    source: rtsp://USER:PASSWORD@192.168.1.101:554/stream1
+    expected_fps: 30
+    sync_group: main_lab
+    vendor: generic
+    model: rtsp_camera
+    serial_number: CHANGE_ME
+    sdk_adapter: rtsp
+    hardware_timecode_start_sec: null
+    sync_board_offset_sec: null
+    ptp_epoch_start_sec: null
+    ntp_epoch_start_sec: null
+    clock_drift_ppm: null
+    sync_anchors: []
+
+  - camera_id: cam_side
+    enabled: false
+    video_index: 1
+    source_type: rtsp
+    source: rtsp://USER:PASSWORD@192.168.1.102:554/stream1
+    expected_fps: 30
+    sync_group: main_lab
+    vendor: generic
+    model: rtsp_camera
+    serial_number: CHANGE_ME
+    sdk_adapter: rtsp
+    sync_anchors: []

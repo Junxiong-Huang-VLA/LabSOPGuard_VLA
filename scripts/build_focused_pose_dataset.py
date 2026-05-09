@@ -75,10 +75,14 @@ def main() -> int:
     cfg = yaml.safe_load(src_yaml.read_text(encoding="utf-8"))
 
     src_root = Path(cfg["path"])
-    train_images = src_root / "images" / "train"
-    train_labels = src_root / "labels" / "train"
-    val_images = src_root / "images" / "val"
-    val_labels = src_root / "labels" / "val"
+    train_rel = Path(str(cfg.get("train", "images/train")).replace("\\", "/"))
+    val_rel = Path(str(cfg.get("val", "images/val")).replace("\\", "/"))
+    train_images = train_rel if train_rel.is_absolute() else (src_root / train_rel)
+    val_images = val_rel if val_rel.is_absolute() else (src_root / val_rel)
+    train_split = train_rel.parts[-1] if train_rel.parts else "train"
+    val_split = val_rel.parts[-1] if val_rel.parts else "val"
+    train_labels = src_root / "labels" / train_split
+    val_labels = src_root / "labels" / val_split
 
     out_root = Path(args.out_root)
     if args.clean and out_root.exists():
@@ -143,6 +147,10 @@ def main() -> int:
 
     out_cfg = dict(cfg)
     out_cfg["path"] = str(out_root.resolve()).replace("\\", "/")
+    out_cfg["train"] = "images/train"
+    out_cfg["val"] = "images/val"
+    if "test" in out_cfg:
+        out_cfg["test"] = "images/val"
     (out_root / "dataset.yaml").write_text(yaml.safe_dump(out_cfg, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
     report = {
