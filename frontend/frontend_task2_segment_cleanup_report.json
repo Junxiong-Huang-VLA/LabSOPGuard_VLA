@@ -1,0 +1,102 @@
+﻿{
+    "backend_field_gaps":  [
+                               "experiment_window_duration_s may be missing in some payloads; fallback to duration_sec",
+                               "preview_duration_s, preview_mode, playback_speed_ratio can be missing in older payloads",
+                               "formal publish reason strings are often model-facing tokens (e.g., no_confirmed_dual_view_action_events) and are now shown in collapsed debug"
+                           ],
+    "files_inspected":  [
+                            "LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
+                            "LabSOPGuard/frontend-app/src/components/AnalysisTimingSummary.tsx",
+                            "LabSOPGuard/frontend-app/src/pages/ExperimentWorkspace.tsx",
+                            "LabSOPGuard/frontend-app/src/api.ts",
+                            "LabSOPGuard/frontend-app/src/types.ts",
+                            "LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+                        ],
+    "tests_run":  [
+                      "npm run test -- src/pages/__tests__/ExperimentWorkspace.test.tsx",
+                      "npm run build"
+                  ],
+    "fast_preview_label_supported":  true,
+    "duration_fields_used":  [
+                                 {
+                                     "field":  "experiment_window_duration_s",
+                                     "used":  true,
+                                     "fallback":  "duration_sec when missing"
+                                 },
+                                 {
+                                     "field":  "preview_duration_s",
+                                     "used":  true,
+                                     "fallback":  "待回填 if missing"
+                                 },
+                                 {
+                                     "field":  "preview_mode",
+                                     "used":  true,
+                                     "fallback":  "待回填 if missing"
+                                 },
+                                 {
+                                     "field":  "playback_speed_ratio",
+                                     "used":  true,
+                                     "fallback":  "待回填 if missing"
+                                 }
+                             ],
+    "runtime_summary_fields":  [
+                                   "总耗时",
+                                   "视频时间戳对齐",
+                                   "长视频并行粗扫",
+                                   "实验片段并行精扫",
+                                   "关键素材发布",
+                                   "态势记忆写入",
+                                   "粗扫采样帧 (nested under 长视频并行粗扫)",
+                                   "粗扫 wall (nested under 长视频并行粗扫)",
+                                   "精扫采样帧 (nested under 实验片段并行精扫)",
+                                   "精扫 wall (nested under 实验片段并行精扫)",
+                                   "GPU (nested under 实验片段并行精扫)",
+                                   "Batch (nested under 实验片段并行精扫)"
+                               ],
+    "remaining_task2_risks":  [
+                                  "No further frontend UX-only changes needed for Task 2 scope",
+                                  "No synthetic fallback validation against full production API variants was performed in this task",
+                                  "Runtime summary and segment UI cleanup are implemented but no visual snapshot automation exists here"
+                              ],
+    "files_changed":  [
+                          "D:/LabCapability/LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
+                          "D:/LabCapability/LabSOPGuard/frontend-app/src/components/AnalysisTimingSummary.tsx",
+                          "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/ExperimentWorkspace.tsx",
+                          "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+                      ],
+    "hidden_debug_fields":  [
+                                "动作对齐未通过 (segment card internal note)",
+                                "正式展示已阻断 (segment/workspace gate label)",
+                                "no_confirmed_dual_view_action_events",
+                                "confirmed dual-view action events",
+                                "unmatched view evidence counters",
+                                "内部阻断原因码/内部原因文案",
+                                "内部调试标签",
+                                "formal_publish_health.reason",
+                                "candidate/third/first raw labels",
+                                "raw source_window_sync_index"
+                            ],
+    "video_display_changes":  [
+                                  "Added consistent aspect ratio container (\relative aspect-video) for preview players",
+                                  "Used object-contain on video to avoid distortion in container",
+                                  "Added collapsed debug text around playback availability with no mandatory black-bar cropping logic"
+                              ],
+    "frontend_build_result":  {
+                                  "status":  "tsc + vite build passed",
+                                  "artifact":  "dist/",
+                                  "passed":  true
+                              },
+    "segment_card_fields":  [
+                                "segment title (实验片段一/二/三)",
+                                "start time",
+                                "end time",
+                                "real duration",
+                                "preview duration",
+                                "preview mode",
+                                "review status",
+                                "dual-view preview title + player selection",
+                                "fast preview badge: 快速预览，不代表完整实验时长",
+                                "realtime preview badge: 实时预览"
+                            ],
+    "realtime_preview_supported":  true
+}

@@ -1,0 +1,3 @@
+{"micro_segment_id":"gt_micro_001","start_sec":10.0,"end_sec":15.0,"primary_object":"reagent_bottle","interaction_type":"hand_object_contact","action_type":"bottle_interaction"}
+{"micro_segment_id":"gt_micro_002","start_sec":20.0,"end_sec":23.5,"primary_object":"balance","interaction_type":"hand_balance_contact","action_type":"weighing"}
+{"micro_segment_id":"gt_micro_003","start_sec":30.0,"end_sec":32.0,"primary_object":"spatula","interaction_type":"hand_spatula_contact","action_type":"spatula_interaction"}

@@ -1,0 +1,90 @@
+version: "3.9"
+
+# ----------------------------------------------------------------
+# Credentials are loaded from a .env file (NOT committed to git).
+# Copy .env.example → .env and fill in strong passwords before
+# running: docker compose --env-file .env -f docker-compose.runtime.yml up
+# ----------------------------------------------------------------
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: labsopguard-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: labsopguard-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: labsopguard-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  api:
+    # Use a pre-built image with deps installed to avoid reinstalling on every restart.
+    # Build locally: docker build -t labsopguard-app:latest .
+    image: labsopguard-app:latest
+    container_name: labsopguard-api
+    working_dir: /app
+    command: >
+      uvicorn lab_titration_vla.deploy.runtime_pipeline.api_server:app
+      --host 0.0.0.0 --port 8080
+    volumes:
+      - ./:/app
+    ports:
+      - "${API_PORT:-8080}:8080"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    restart: unless-stopped
+
+  worker:
+    image: labsopguard-app:latest
+    container_name: labsopguard-worker
+    working_dir: /app
+    command: python -m lab_titration_vla.deploy.runtime_pipeline.celery_worker
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  sglang:
+    image: lmsysorg/sglang:latest
+    container_name: labsopguard-sglang
+    ports:
+      - "${SGLANG_PORT:-30000}:30000"
+    command: ["python3", "-m", "sglang.launch_server", "--host", "0.0.0.0", "--port", "30000"]
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  minio_data:
+

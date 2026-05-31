@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lab-embodied-vla"
+version = "0.1.0"
+description = "RealityLoop lab dual-view video understanding: key-action indexing, material library, retrieval, VLM understanding, and daily reports."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26.0",
+  "pandas>=2.2.0",
+  "pyyaml>=6.0.1",
+  "matplotlib>=3.8.0",
+  "seaborn>=0.13.0",
+  "plotly>=5.20.0",
+  "pillow>=10.2.0",
+  "opencv-python>=4.9.0",
+  "scikit-learn>=1.3",
+  "transformers>=4.39.0",
+  "accelerate>=0.28.0",
+  "torch>=2.2.0",
+  "ultralytics>=8.4.12",
+  "fastapi>=0.110.0",
+  "uvicorn>=0.29.0",
+  "python-multipart>=0.0.9",
+  "flask>=3.0.0",
+  "requests>=2.31.0",
+  "cryptography>=42.0.0",
+  "dashscope>=1.20.0",
+  "openai>=1.40.0",
+  "mediapipe>=0.10.14,<0.10.20",
+  "jinja2>=3.1.0",
+  "weasyprint>=60.0",
+  "reportlab>=4.0.0",
+  "python-dateutil>=2.8",
+  "tqdm>=4.66",
+]
+
+[project.scripts]
+realityloop-sync = "realityloop_sync.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+norecursedirs = [
+  "outputs",
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+  "_recovery",
+  "frontend",
+]
+markers = [
+  "unit: mark a lightweight unit test",
+]

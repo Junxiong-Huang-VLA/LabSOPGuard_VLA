@@ -1,0 +1,59 @@
+﻿{
+    "schema_version":  "labcapability_taskbook_acceptance_run.v1",
+    "repo_root":  "D:\\LabCapability",
+    "dry_run":  false,
+    "generated_at":  "2026-05-20T11:07:32.5817208+08:00",
+    "pythonpath_prefix":  "D:\\LabCapability\\src",
+    "steps":  [
+                  {
+                      "name":  "python compileall",
+                      "command":  "python -m compileall -q src",
+                      "working_directory":  "D:\\LabCapability",
+                      "status":  "passed",
+                      "exit_code":  0,
+                      "started_at":  "2026-05-20T11:02:10.7958018+08:00",
+                      "finished_at":  "2026-05-20T11:02:11.2302625+08:00",
+                      "reason":  ""
+                  },
+                  {
+                      "name":  "pytest",
+                      "command":  "python -m pytest -q",
+                      "working_directory":  "D:\\LabCapability",
+                      "status":  "passed",
+                      "exit_code":  0,
+                      "started_at":  "2026-05-20T11:02:11.2504115+08:00",
+                      "finished_at":  "2026-05-20T11:07:18.4441725+08:00",
+                      "reason":  ""
+                  },
+                  {
+                      "name":  "frontend npm build",
+                      "command":  "npm run build",
+                      "working_directory":  "D:\\LabCapability\\LabSOPGuard\\frontend-app",
+                      "status":  "passed",
+                      "exit_code":  0,
+                      "started_at":  "2026-05-20T11:07:18.4771029+08:00",
+                      "finished_at":  "2026-05-20T11:07:32.5649686+08:00",
+                      "reason":  ""
+                  },
+                  {
+                      "name":  "evidence-package-validate",
+                      "command":  "",
+                      "working_directory":  "D:\\LabCapability",
+                      "status":  "skipped",
+                      "exit_code":  null,
+                      "started_at":  "2026-05-20T11:07:32.5697559+08:00",
+                      "finished_at":  "2026-05-20T11:07:32.5697559+08:00",
+                      "reason":  "PackageRoot was not provided"
+                  },
+                  {
+                      "name":  "evidence-package-eval",
+                      "command":  "",
+                      "working_directory":  "D:\\LabCapability",
+                      "status":  "skipped",
+                      "exit_code":  null,
+                      "started_at":  "2026-05-20T11:07:32.5724336+08:00",
+                      "finished_at":  "2026-05-20T11:07:32.5724336+08:00",
+                      "reason":  "PackageRoot was not provided"
+                  }
+              ]
+}

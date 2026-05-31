@@ -1,0 +1,28 @@
+{
+  "schema_version": "key_action_expected_output.v1",
+  "source_session_id": "replace_with_session_id",
+  "expected_counts": {
+    "parent_segments_min": 1,
+    "micro_segments_min": 1
+  },
+  "expected_process_steps": [
+    {
+      "step_id": "step_001",
+      "expected_action": "pipetting",
+      "allowed_statuses": ["completed", "observed", "needs_review"]
+    }
+  ],
+  "retrieval_expectations": [
+    {
+      "query": "find pipette sample adding",
+      "expected_primary_object": "pipette",
+      "expected_index_levels": ["micro_segment", "segment"]
+    }
+  ],
+  "time_alignment_thresholds": {
+    "mae_sec_max": 0.75,
+    "max_residual_sec_max": 1.5,
+    "anchor_coverage_rate_min": 0.9,
+    "drift_error_sec_max": 1.0
+  }
+}

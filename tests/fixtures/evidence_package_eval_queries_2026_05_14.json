@@ -1,0 +1,73 @@
+{
+  "schema_version": "evidence_package_eval_queries.v1",
+  "created_at": "2026-05-14",
+  "baseline_experiment_id": "db64d9d2-16ce-4de0-8fb3-597066531c31",
+  "package_root": "D:\\LabCapability\\LabSOPGuard\\outputs\\experiments\\db64d9d2-16ce-4de0-8fb3-597066531c31\\material_references",
+  "notes": "Schema-compatible starter query set for key_action_indexer.cli evidence-package-eval. Rows without expected_* fields are exploratory and do not affect pass/fail rates.",
+  "queries": [
+    {
+      "query_id": "epkg_20260514_001",
+      "category": "hand_balance_positive",
+      "query": "evidence of balance weighing interaction",
+      "expected_intent": "step_evidence_check",
+      "expected_status": "correct",
+      "expected_label": "related_evidence_found",
+      "expected_event_type": "hand_object_interaction",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_002",
+      "category": "hand_paper_positive",
+      "query": "evidence of hand interacting with weighing paper",
+      "expected_intent": "hand_object_check",
+      "expected_status": "correct",
+      "expected_label": "hand_object_interaction_observed",
+      "expected_event_type": "hand_object_interaction",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_003",
+      "category": "hand_bottle_positive",
+      "query": "evidence of hand using reagent bottle",
+      "expected_intent": "hand_object_check",
+      "expected_status": "correct",
+      "expected_label": "hand_object_interaction_observed",
+      "expected_event_type": "hand_object_interaction",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_004",
+      "category": "hand_spatula_positive",
+      "query": "evidence of hand using spatula",
+      "expected_intent": "hand_object_check",
+      "expected_status": "correct",
+      "expected_label": "hand_object_interaction_observed",
+      "expected_event_type": "hand_object_interaction",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_005",
+      "category": "hand_container_gap_exploratory",
+      "query": "evidence of container receiving sample",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_006",
+      "category": "negative_gap_exploratory",
+      "query": "evidence of cleanup after weighing",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_007",
+      "category": "ambiguity_gap_exploratory",
+      "query": "spatula near weighing paper",
+      "limit": 5
+    },
+    {
+      "query_id": "epkg_20260514_008",
+      "category": "container_gap_exploratory",
+      "query": "beaker receiving sample during weighing",
+      "limit": 5
+    }
+  ]
+}

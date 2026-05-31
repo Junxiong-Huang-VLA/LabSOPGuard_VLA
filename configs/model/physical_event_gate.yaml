@@ -1,0 +1,44 @@
+physical_event_gate:
+  object_move:
+    min_track_points: 4
+    min_identity_confidence: 0.75
+    max_id_switch_risk: 0.30
+    base_motion_threshold_px: 10.0
+    fallback_motion_threshold_px: 12.0
+    bbox_size_motion_ratio: 0.04
+    fallback_bbox_size_motion_ratio: 0.05
+    jitter_sigma_multiplier: 3.0
+    no_scene_stabilization_requires_hand_contact: true
+    no_scene_stabilization_large_motion_multiplier: 2.5
+  hand_object_contact:
+    min_contact_frames: 2
+    min_overlap_ratio: 0.03
+    min_object_coverage_by_hand: 0.08
+    near_only_is_candidate: true
+  liquid_transfer:
+    require_liquid_state_change_for_confirmed: true
+  panel_operation:
+    require_control_contact_or_state_change: true
+  container_state_change:
+    require_pre_post_state_diff: true
+  qwen_audit:
+    enable: true
+    allow_qwen_upgrade: false
+    allow_qwen_downgrade: true
+    require_vlm_audit: false
+
+jitter_profile:
+  default_sigma_px: 3.0
+  labels:
+    reagent_bottle: 4.0
+    sample_bottle: 4.0
+    sample_bottle_blue: 4.0
+    bottle: 4.0
+    vial: 4.0
+    tube: 4.0
+    tube_cap: 4.0
+    pipette: 4.0
+    pipette_tip: 5.0
+    beaker: 3.0
+    balance: 3.0
+    container: 4.0

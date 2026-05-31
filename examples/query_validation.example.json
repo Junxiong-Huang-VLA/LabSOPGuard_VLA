@@ -1,0 +1,39 @@
+{
+  "schema_version": "key_action_query_validation.v3",
+  "acceptance_name": "current_scope_retrieval_acceptance",
+  "thresholds": {
+    "min_acceptance_hit_rate": 1.0,
+    "min_traceability_hit_rate": 1.0
+  },
+  "quality_policy": {
+    "allow_very_low_signal": false,
+    "min_evidence_level": "weak_visual_evidence"
+  },
+  "queries": [
+    {
+      "query": "手碰瓶子",
+      "expected_objects": ["bottle", "sample_bottle", "reagent_bottle", "sample_bottle_blue"],
+      "expected_index_level": "micro_segment",
+      "top_k": 3
+    },
+    {
+      "query": "称量",
+      "expected_objects": ["balance"],
+      "expected_index_level": "micro_segment",
+      "top_k": 3
+    },
+    {
+      "query": "使用刮勺",
+      "expected_objects": ["spatula"],
+      "expected_index_level": "micro_segment",
+      "top_k": 5
+    },
+    {
+      "query": "加样",
+      "expected_objects": ["pipette", "pipette_tip", "tube"],
+      "expected_index_level": "micro_segment",
+      "top_k": 5,
+      "allow_parent_fallback_when_insufficient_evidence": true
+    }
+  ]
+}

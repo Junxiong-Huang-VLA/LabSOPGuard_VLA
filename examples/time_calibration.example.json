@@ -1,0 +1,20 @@
+{
+  "user_text": {
+    "latency_sec": -0.2
+  },
+  "ai_reply": {
+    "latency_sec": -0.6
+  },
+  "upload": {
+    "anchors": [
+      {
+        "source_time_sec": 623.5,
+        "global_time": "2026-04-29T17:35:23+08:00"
+      },
+      {
+        "source_time_sec": 903.5,
+        "global_time": "2026-04-29T17:40:03.2+08:00"
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "published": {
+    "schema_version": "published_materials.approved_material_references.v1",
+    "total": 5,
+    "items": [
+      {"item_id": "paper-frame", "experiment_id": "solid-weighing-dual-view-20260508-153648", "asset_kind": "关键帧", "display_name": "Hand-paper frame", "canonical_action_type": "hand-paper", "canonical_object": "paper", "material_url": "/api/v1/experiments/e/material-references/files/关键帧/paper.jpg"},
+      {"item_id": "bottle-frame", "experiment_id": "solid-weighing-dual-view-20260508-153648", "asset_kind": "关键帧", "display_name": "Hand-bottle frame", "canonical_action_type": "hand-bottle", "canonical_object": "bottle", "material_url": "/api/v1/experiments/e/material-references/files/关键帧/bottle.jpg"},
+      {"item_id": "spatula-frame", "experiment_id": "solid-weighing-dual-view-20260508-153648", "asset_kind": "关键帧", "display_name": "Hand-spatula frame", "canonical_action_type": "hand-spatula", "canonical_object": "spatula", "material_url": "/api/v1/experiments/e/material-references/files/关键帧/spatula.jpg"},
+      {"item_id": "balance-frame", "experiment_id": "solid-weighing-dual-view-20260508-153648", "asset_kind": "关键帧", "display_name": "Hand-balance frame", "canonical_action_type": "hand-balance", "canonical_object": "balance", "material_url": "/api/v1/experiments/e/material-references/files/关键帧/balance.jpg"},
+      {"item_id": "container-clip", "experiment_id": "solid-weighing-dual-view-20260508-153648", "asset_kind": "关键片段", "display_name": "Hand-container clip", "canonical_action_type": "hand-container", "canonical_object": "container", "material_url": "/api/v1/experiments/e/material-references/files/关键片段/container.mp4"}
+    ]
+  },
+  "candidates": {
+    "schema_version": "material_candidates.api.v1",
+    "experiment_id": "solid-weighing-dual-view-20260508-153648",
+    "total": 4,
+    "file_total": 4,
+    "pending_total": 0,
+    "approved_total": 1,
+    "rejected_total": 1,
+    "deferred_total": 1,
+    "not_selected_total": 1,
+    "items": [
+      {"candidate_group_id": "approved", "status": "approved", "review_status": "approved", "files": [{"candidate_id": "a", "candidate_status": "approved"}]},
+      {"candidate_group_id": "rejected", "status": "rejected", "review_status": "rejected", "files": [{"candidate_id": "r", "candidate_status": "rejected"}]},
+      {"candidate_group_id": "deferred", "status": "deferred", "review_status": "deferred", "files": [{"candidate_id": "d", "candidate_status": "deferred"}]},
+      {"candidate_group_id": "not-selected", "status": "not_selected", "review_status": "not_selected", "files": [{"candidate_id": "n", "candidate_status": "not_selected"}]}
+    ]
+  },
+  "diagnostics": {
+    "experiment_id": "solid-weighing-dual-view-20260508-153648",
+    "file_access_status": "ok",
+    "formal_material_total": 5,
+    "candidate_pending_total": 0
+  }
+}

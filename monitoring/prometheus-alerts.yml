@@ -1,0 +1,74 @@
+groups:
+  - name: labsopguard.ops
+    rules:
+      - alert: LabSOPGuardOpsJobFailures
+        expr: labsopguard_ops_jobs{status="failed"} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: LabSOPGuard background ops jobs are failing
+          description: One or more background maintenance jobs are in failed state.
+
+      - alert: LabSOPGuardCaptureDropRateHigh
+        expr: labsopguard_capture_drop_rate > 0.05
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: Capture drop rate is high
+          description: Camera {{ $labels.camera_id }} in experiment {{ $labels.experiment_id }} is dropping more than 5 percent of expected frames.
+
+      - alert: LabSOPGuardCaptureDecodeErrors
+        expr: increase(labsopguard_capture_decode_errors[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Capture decode errors are increasing
+          description: Camera {{ $labels.camera_id }} has repeated decode/read failures.
+
+      - alert: LabSOPGuardMaterialBrokenClips
+        expr: labsopguard_material_broken_clip_refs > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Material index has broken clip references
+          description: Material health scan found clip references that do not resolve on disk.
+
+      - alert: LabSOPGuardVideoAnalysisSlow
+        expr: labsopguard_video_analysis_total_ms > 120000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Video analysis is slow
+          description: The {{ $labels.pipeline }} video analysis pipeline exceeded 120 seconds.
+
+      - alert: LabSOPGuardVLMCircuitOpen
+        expr: labsopguard_video_analysis_vlm_circuit_open > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: VLM circuit breaker is open
+          description: The {{ $labels.pipeline }} video analysis pipeline is temporarily bypassing VLM calls after repeated failures.
+
+      - alert: LabSOPGuardExternalCircuitOpen
+        expr: labsopguard_external_circuit_open > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: External service circuit breaker is open
+          description: The {{ $labels.service }} integration is temporarily bypassed after repeated failures.
+
+      - alert: LabSOPGuardCaptureDiskLow
+        expr: labsopguard_capture_disk_free_bytes < 5368709120
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Capture output disk is low
+          description: Capture output free space for experiment {{ $labels.experiment_id }} is below 5 GiB.

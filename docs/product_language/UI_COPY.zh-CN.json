@@ -1,0 +1,58 @@
+{
+  "locale": "zh-CN",
+  "version": "2026-05-26",
+  "navigation": {
+    "home": "30 天态势快照",
+    "experiments": "实验列表",
+    "evidencePackages": "证据包库",
+    "dailyLedger": "每日动作账本"
+  },
+  "videoMemory": {
+    "title": "30 天态势快照",
+    "experimentTitle": "实验 30 天态势快照",
+    "description": "以动作事件、证据包、每日动作账本和动作序列模式生成的长期视频记忆入口。日报作为下钻视图，不替代 30 天态势快照。",
+    "partialWindow": "基于 {availableDays}/30 天数据",
+    "completeWindow": "基于完整 30/30 天数据",
+    "metrics": {
+      "actionEvents": "动作事件",
+      "actionMemoryClusters": "30 天动作记忆聚类",
+      "dailyActionLedger": "每日动作账本",
+      "memoryStatus": "记忆状态"
+    },
+    "sections": {
+      "snapshotBuildStatus": "态势快照构建状态",
+      "situationWindow": "态势窗口",
+      "evidenceChainAnswer": "证据链回答",
+      "experimentCoverage": "实验覆盖",
+      "recentActionEvents": "最近动作事件",
+      "clusters": "30 天动作记忆聚类"
+    },
+    "empty": {
+      "snapshot": "暂无 30 天态势快照",
+      "actionEvents": "当前 30 天态势快照暂无动作事件",
+      "clusters": "暂无动作记忆聚类",
+      "query": "等待证据链问题"
+    }
+  },
+  "queryAnswer": {
+    "inputPlaceholder": "查询动作事件、证据包或动作序列模式",
+    "submit": "查询",
+    "loading": "查询中",
+    "supported": "有证据支持",
+    "unsupported": "无可引用证据",
+    "noEvidenceStrongClaim": "未找到可引用动作事件或证据包，不能形成强结论。",
+    "traceableFallback": "找到可追溯证据，已按证据链回答。",
+    "confidence": "置信度 {confidence}",
+    "humanFeedbackRecord": "人工反馈记录"
+  },
+  "terms": {
+    "actionEvent": "动作事件",
+    "evidencePackage": "证据包",
+    "dailyActionLedger": "每日动作账本",
+    "actionSequencePattern": "动作序列模式",
+    "thirtyDayActionMemoryCluster": "30 天动作记忆聚类",
+    "thirtyDaySituationSnapshot": "30 天态势快照",
+    "evidenceChainAnswer": "证据链回答",
+    "humanFeedbackRecord": "人工反馈记录"
+  }
+}

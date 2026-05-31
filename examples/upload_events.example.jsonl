@@ -1,0 +1,2 @@
+{"event_id":"upload_001","timestamp_ms":1777455323500,"upload_type":"image","image_path":"examples/uploads/sample_bottle_frame.jpg","caption":"User-uploaded close-up of the sample bottle."}
+{"event_id":"upload_002","session_sec":628.0,"upload_type":"text","text":"Supplemental note: sample volume is 200 uL."}

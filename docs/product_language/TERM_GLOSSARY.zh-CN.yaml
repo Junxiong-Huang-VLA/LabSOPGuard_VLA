@@ -1,0 +1,86 @@
+locale: zh-CN
+domain: LabCapability 30 天动作记忆
+version: 2026-05-26
+preferred_terms:
+  action_event:
+    zh: 动作事件
+    use_for:
+      - key action event
+      - physical event
+      - evidence item
+    avoid:
+      - 关键动作
+      - evidence item
+    note: 用户可见场景中指带时间、对象、视角和证据引用的可检索动作记录。
+  evidence_package:
+    zh: 证据包
+    use_for:
+      - evidence bundle
+      - material package
+      - published material
+    avoid:
+      - 关键素材
+      - 素材
+    note: 包含关键帧、关键片段、时间窗、对象、动作、VLM/YOLO 追踪和检索元数据。
+  daily_action_ledger:
+    zh: 每日动作账本
+    use_for:
+      - daily event ledger
+      - daily action ledger
+    avoid:
+      - 日报
+      - daily report
+    note: 日级下钻视图，不作为主入口或完整 30 天结论。
+  action_sequence_pattern:
+    zh: 动作序列模式
+    use_for:
+      - recurring action sequence
+      - workflow pattern
+    avoid:
+      - 自动 SOP 结论
+    note: 表示可复核的重复动作结构，不能替代人工确认的 SOP。
+  thirty_day_action_memory_cluster:
+    zh: 30 天动作记忆聚类
+    use_for:
+      - memory cluster
+      - action memory cluster
+    avoid:
+      - 记忆簇
+      - cluster
+    note: 以最近 30 天动作事件和证据包聚合形成的长期记忆单元。
+  thirty_day_situation_snapshot:
+    zh: 30 天态势快照
+    use_for:
+      - 30-Day Video Memory
+      - 30-Day Memory
+      - overview
+    avoid:
+      - Video Memory
+      - 30-Day Memory
+    note: 前端主入口概念；覆盖窗口不足时必须展示“基于 X/30 天数据”。
+  evidence_chain_answer:
+    zh: 证据链回答
+    use_for:
+      - query answer
+      - evidence-linked answer
+    avoid:
+      - 智能结论
+      - 自动判断
+    note: 只有绑定动作事件、证据包、时间窗或人工反馈记录时才能给出支持性回答。
+  human_feedback_record:
+    zh: 人工反馈记录
+    use_for:
+      - feedback event
+      - audit record
+      - correction record
+    avoid:
+      - 人工标注泛称
+    note: 记录接受、拒绝、修正和复核理由，必须可追溯。
+status_terms:
+  supported: 有证据支持
+  unsupported: 无可引用证据
+  partial_window: 部分窗口
+  complete_window: 完整窗口
+  needs_source_data: 需要来源数据
+  waiting_for_core: 等待核心模块
+required_partial_window_notice: "基于 {available_days}/30 天数据"

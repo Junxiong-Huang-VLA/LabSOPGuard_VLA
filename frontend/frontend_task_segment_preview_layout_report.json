@@ -1,0 +1,55 @@
+{
+    "task":  "frontend-only segment preview layout fix",
+    "date":  "2026-05-30",
+    "files":  [
+                  "LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
+                  "LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+              ],
+    "checks":  {
+                   "preview_mapping":  {
+                                           "first_person_panel":  "uses first_view_realtime_preview only",
+                                           "third_person_panel":  "uses third_view_realtime_preview only",
+                                           "dual_view_panel":  "uses side_by_side_realtime_preview fallback to window_preview_url/preview_video_url, fast_preview when preview_mode indicates fast",
+                                           "fallback_behavior":  "if only side-by-side preview exists, first/third panels show placeholders"
+                                       },
+                   "duration_display":  [
+                                            "真实实验时长",
+                                            "预览时长",
+                                            "预览模式",
+                                            "播放倍率",
+                                            "实际开始状态"
+                                        ],
+                   "placeholders":  [
+                                        "第一人称预览待生成",
+                                        "第三人称预览待生成"
+                                    ],
+                   "tests_run":  [
+                                     "npm test -- src/pages/__tests__/ExperimentWorkspace.test.tsx"
+                                 ],
+                   "build":  [
+                                 "npm run build"
+                             ]
+               },
+    "test_results":  {
+                         "passed":  6,
+                         "failed":  0,
+                         "details":  [
+                                         "side-by-side preview is not rendered in first-person panel",
+                                         "side-by-side preview is not rendered in third-person panel",
+                                         "first-person panel shows placeholder when first preview is missing",
+                                         "third-person panel shows placeholder when third preview is missing",
+                                         "dual-view section renders side-by-side preview",
+                                         "fast preview warning appears when preview_mode=fast_preview"
+                                     ]
+                     },
+    "build_result":  {
+                         "passed":  false,
+                         "command":  "npm run build",
+                         "reason":  "TypeScript compile errors in MaterialSearch.tsx (pre-existing unrelated issues)",
+                         "first_error":  "src/pages/MaterialSearch.tsx(19,3): error TS6133: Pause is declared but its value is never read."
+                     },
+    "backend_modified":  false,
+    "preprocessing_modified":  false,
+    "preview_generation_modified":  false,
+    "video_regeneration":  false
+}

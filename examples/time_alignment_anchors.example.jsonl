@@ -1,0 +1,2 @@
+{"anchor_id":"anchor_001","source":"first_person","expected_global_time":"2026-05-03T09:00:10+08:00","predicted_global_time":"2026-05-03T09:00:10.200000+08:00","required":true,"evidence":"pipette tip first contacts tube in first-person view"}
+{"anchor_id":"anchor_002","source":"third_person","expected_global_time":"2026-05-03T09:02:00+08:00","predicted_global_time":"2026-05-03T09:02:00.600000+08:00","required":true,"evidence":"operator places sample bottle on balance in third-person view"}

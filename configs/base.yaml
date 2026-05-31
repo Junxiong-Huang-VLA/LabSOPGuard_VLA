@@ -1,0 +1,23 @@
+﻿project:
+  name: LabEmbodiedVLA
+  scenario: lab_sop_compliance_monitoring
+  seed: 42
+
+runtime:
+  device: auto
+  realtime_fps_target: 10
+  timezone: Asia/Shanghai
+
+paths:
+  raw_data_dir: data/raw
+  interim_data_dir: data/interim
+  processed_data_dir: data/processed
+  split_dir: data/splits
+  log_dir: logs
+  output_dir: outputs
+
+io:
+  structured_output_format: json
+  write_event_jsonl: true
+  write_alert_jsonl: true
+  write_summary_csv: true

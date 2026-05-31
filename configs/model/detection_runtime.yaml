@@ -1,0 +1,123 @@
+backend: ultralytics
+# Primary weights: production candidate. Strict mode prevents silent fallback
+# to generic COCO weights; missing lab weights should fail fast.
+model: outputs/training/yolo26s_autodl_8_1_1/weights/best.pt
+model_fallbacks:
+  - outputs/training/yolo26s_pose_lab_v4_focus_auto/weights/best.pt
+  - outputs/training/yolo26s_allphotos_e40/weights/best.pt
+  - outputs/training/detect/outputs/training/yolo26s_allphotos_aug_ms_ft/weights/best.pt
+  - outputs/training/yolo26s_lab_sync_v2/weights/best.pt
+device: auto
+layer2_window: 30
+layer2_backend: skateformer
+enable_vlm: true
+strict_model: true
+
+# Canonical class registry for lab scenario.
+# Detection labels from model will be normalized via aliases below.
+class_registry:
+  sample_container:
+    - bottle
+    - jar
+    - vial
+    - cup
+  pipette:
+    - pipette
+    - dropper
+    - pen
+  glove:
+    - glove
+    - gloves
+    - hand
+    - gloved_hand
+    - gloved-hand
+  goggles:
+    - goggle
+    - goggles
+    - glasses
+    - safety_glasses
+    - protective_goggles
+    - eyewear
+  lab_coat:
+    - lab_coat
+    - labcoat
+    - white_coat
+    - coat
+
+ppe:
+  hold_frames: 20
+  consensus_ratio: 0.45
+  class_conf_thresholds:
+    glove: 0.20
+    goggles: 0.20
+    lab_coat: 0.25
+
+sampling:
+  base_interval_sec: 2.0
+  min_frames: 8
+  max_frames: 36
+  max_vlm_frames: 18
+
+detection:
+  confidence_threshold: 0.25
+  iou_threshold: 0.45
+  max_detections: 50
+  # 960 is the default offline setting for small lab objects. Use 640 in
+  # realtime-only deployments if latency is more important than recall.
+  imgsz: 960
+  allowed_labels:
+    - balance
+    - beaker
+    - bottle
+    - gloved_hand
+    - glove
+    - gloves
+    - goggles
+    - hand
+    - lab_coat
+    - labcoat
+    - paper
+    - pipette
+    - pipette_tip
+    - reagent_bottle
+    - sample_bottle
+    - sample_bottle_blue
+    - safety_glasses
+    - spatula
+    - spearhead
+    - tube
+    - tube_cap
+    - vial
+
+smoothing:
+  enabled: true
+  min_hits: 3
+  hold_frames: 5
+  iou_threshold: 0.35
+
+presegment:
+  enabled: true
+  scan_fps: 2.0
+  scan_resolution: [160, 120]
+  motion_threshold_mode: adaptive
+  motion_fixed_threshold: 0.02
+  min_segment_sec: 3.0
+  merge_gap_sec: 5.0
+  padding_sec: 2.0
+  skip_if_video_shorter_than: 30
+  forced_sample_interval_sec: 60.0
+
+cache:
+  detection_cache_enabled: true
+  batch_size: 8
+
+experiment_segmentation:
+  enabled: true
+  min_gap_sec: 180
+  min_experiment_duration_sec: 60
+  max_experiments: 10
+  object_change_threshold: 0.4
+  use_vlm_confirmation: false
+  vlm_confirmation_threshold: 0.5
+  merge_short_gaps: true
+  skip_if_video_shorter_than: 600

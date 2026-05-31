@@ -1,0 +1,29 @@
+schema_version: material_scoring_profile.v1
+weights:
+  evidence_grade:
+    strong: 0.40
+    medium: 0.25
+    weak: 0.05
+    default: 0.10
+  review_status:
+    auto_confirmed: 0.25
+    approved: 0.25
+    candidate_review: 0.10
+    low_confidence: -0.10
+    default: 0.0
+  official_linked: 0.25
+  warning_penalty: 0.03
+  relevance: 0.05
+  click_count: 0.02
+  review_count: 0.03
+  official_usage_count: 0.08
+  experiment_type_priority: 0.10
+caps:
+  click_count: 20
+  review_count: 10
+  official_usage_count: 10
+  warning_count: 5
+experiment_type_priorities:
+  solid_weighing: 1.0
+  titration: 0.8
+  pipetting: 0.7

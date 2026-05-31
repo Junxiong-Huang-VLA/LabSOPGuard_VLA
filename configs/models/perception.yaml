@@ -1,0 +1,3 @@
+﻿confidence_threshold: 0.45
+# Forward compatible: this points to the existing detector runtime config.
+detection_runtime_config: configs/model/detection_runtime.yaml

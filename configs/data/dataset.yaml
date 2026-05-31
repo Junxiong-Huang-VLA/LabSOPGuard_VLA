@@ -1,0 +1,8 @@
+dataset:
+  name: discription_pdf
+  raw_root: data/raw/external/discription_pdf
+  manifest_csv: data/interim/video_manifest.csv
+  modalities: [rgb, depth]
+  pairing:
+    rgb_suffix: "_rgb"
+    depth_suffix: "_depth"

@@ -1,0 +1,86 @@
+# ===== LabEmbodied — consolidated repo (core indexer + backend + frontend) =====
+
+# Python / cache
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+.venv-e2e/
+venv/
+
+# Secrets — NEVER commit real env files; .env.example is kept
+.env
+**/.env
+!**/.env.example
+!**/.env.sample
+
+# Node / frontend
+node_modules/
+**/node_modules/
+dist/
+build/
+.vite/
+frontend/dist/
+frontend/.vite/
+
+# Experiment outputs / runtime artifacts (external assets)
+output/
+outputs/
+**/outputs/
+uploads/
+**/uploads/
+logs/
+reports/
+runs/
+cache/
+tmp/
+.tmp/
+.temp/
+temp/
+artifacts/
+**/artifacts/
+memory/
+_recovery/
+.runtime/
+.runtime_cache/
+
+# Training datasets live OUTSIDE the repo (externalized like models/videos)
+data/dataset/
+**/data/dataset/
+
+# Local agent / tooling state
+.codex_runtime/
+.codex/
+.claude/
+.playwright-cli/
+.vscode/
+.idea/
+
+# Heavy model weights / caches (live in D:\LabModels, download/produce locally)
+.ultralytics/
+Ultralytics/
+.matplotlib/
+*.pt
+*.onnx
+*.engine
+
+# Scratch / logs / pids
+*.log
+*.err.log
+*.out.log
+*.pid
+exp_*.json
+overview_*.json
+tempmonitor_page.html
+*.source_patch.txt
+boot/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

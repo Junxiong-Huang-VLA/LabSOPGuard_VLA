@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #0f172a;
+  background: #f4f7fb;
+  font-family: "Inter", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+  --ui-bg: #edf1f8;
+  --ui-bg-surface: #f8fbff;
+  --ui-bg-muted: #eef2f7;
+  --ui-border: #d7dff0;
+  --ui-border-dark: #334155;
+  --ui-text: #0f172a;
+  --ui-text-muted: #475569;
+  --ui-accent: #2563eb;
+  --ui-accent-weak: #93c5fd;
+  --ui-accent-soft: #eff6ff;
+  --ui-success: #0ea5e9;
+  --ui-success-soft: #ecfeff;
+  --ui-success-weak: #67e8f9;
+  --ui-warning: #0ea5e9;
+  --ui-warning-soft: #eef2ff;
+  --ui-warning-weak: #bfdbfe;
+  --ui-danger: #dc2626;
+  --ui-danger-soft: #fef2f2;
+  --ui-danger-weak: #fca5a5;
+  --ui-radius-sm: 0.5rem;
+  --ui-radius-md: 0.625rem;
+  --ui-radius-lg: 1rem;
+  --ui-radius-xl: 1.125rem;
+  --ui-shadow-card: 0 14px 30px -24px rgb(15 23 42 / 0.45);
+  --ui-shadow-subtle: 0 2px 10px -6px rgb(15 23 42 / 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 420px at 0% -10%, #e6edff 0%, transparent 60%),
+    radial-gradient(1000px 360px at 100% 0%, #ebf2ff 0%, transparent 60%),
+    var(--ui-bg);
+  color: var(--ui-text);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.16);
+}
