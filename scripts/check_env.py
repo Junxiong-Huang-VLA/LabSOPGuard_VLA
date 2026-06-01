@@ -22,8 +22,8 @@ REQUIRED_MODULES = [
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Quick environment check for LabEmbodiedVLA")
-    parser.add_argument("--project-name", default="LabEmbodiedVLA")
+    parser = argparse.ArgumentParser(description="Quick environment check for LabEmbodied")
+    parser.add_argument("--project-name", default="LabEmbodied")
     args = parser.parse_args()
 
     print(f"[INFO] Project: {args.project_name}")

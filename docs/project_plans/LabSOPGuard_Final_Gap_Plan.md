@@ -96,8 +96,8 @@ def _transcribe_audio(self, experiment):
 ```
 
 **涉及文件**：
-- `frontend-app/src/components/ExperimentSegments.tsx`（新建）
-- `frontend-app/src/pages/ExperimentWorkspace.tsx`（集成）
+- `frontend/src/components/ExperimentSegments.tsx`（新建）
+- `frontend/src/pages/ExperimentWorkspace.tsx`（集成）
 
 **工时**：4h
 
@@ -130,8 +130,8 @@ def _transcribe_audio(self, experiment):
 ```
 
 **涉及文件**：
-- `frontend-app/src/components/ProcessingProgress.tsx`（新建）
-- `frontend-app/src/pages/ExperimentWorkspace.tsx`（集成）
+- `frontend/src/components/ProcessingProgress.tsx`（新建）
+- `frontend/src/pages/ExperimentWorkspace.tsx`（集成）
 
 **工时**：3h
 

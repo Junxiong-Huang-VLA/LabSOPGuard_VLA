@@ -1,17 +1,17 @@
 {
     "synchronized_playback_supported":  true,
     "files_inspected":  [
-                            "D:/LabCapability/LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
-                            "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/ExperimentWorkspace.tsx",
-                            "D:/LabCapability/LabSOPGuard/frontend-app/src/components/DualVideoPlayer.tsx",
-                            "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx",
-                            "D:/LabCapability/LabSOPGuard/frontend-app/src/api.ts",
-                            "D:/LabCapability/LabSOPGuard/frontend-app/src/types.ts"
+                            "D:/LabEmbodied/frontend/src/components/ExperimentSegments.tsx",
+                            "D:/LabEmbodied/frontend/src/pages/ExperimentWorkspace.tsx",
+                            "D:/LabEmbodied/frontend/src/components/DualVideoPlayer.tsx",
+                            "D:/LabEmbodied/frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx",
+                            "D:/LabEmbodied/frontend/src/api.ts",
+                            "D:/LabEmbodied/frontend/src/types.ts"
                         ],
     "files_changed":  [
-                          "D:/LabCapability/LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
-                          "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx",
-                          "D:/LabCapability/LabSOPGuard/frontend-app/frontend_dual_view_comparison_layout_fix_report.json"
+                          "D:/LabEmbodied/frontend/src/components/ExperimentSegments.tsx",
+                          "D:/LabEmbodied/frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx",
+                          "D:/LabEmbodied/frontend/frontend_dual_view_comparison_layout_fix_report.json"
                       ],
     "remaining_risks":  [
                             "Build blocked by pre-existing MaterialSearch.tsx TypeScript syntax error unrelated to this task",
@@ -25,13 +25,13 @@
                                  "side_by_side_output":  "not used for main preview"
                              },
     "fallback_behavior":  {
-                              "first_missing_placeholder":  "µÚÒ»ÈË³ÆÔ¤ÀÀ´ýÉú³É",
+                              "first_missing_placeholder":  "ï¿½ï¿½Ò»ï¿½Ë³ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                               "no_side_by_side_fallback":  true,
-                              "third_missing_placeholder":  "µÚÈýÈË³ÆÔ¤ÀÀ´ýÉú³É",
+                              "third_missing_placeholder":  "ï¿½ï¿½ï¿½ï¿½ï¿½Ë³ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                               "single_existing_view":  "displays available view in its correct panel only"
                           },
     "frontend_build_result":  {
-                                  "error":  "TS1003/TS1381/TS1128 in frontend-app/src/pages/MaterialSearch.tsx",
+                                  "error":  "TS1003/TS1381/TS1128 in frontend/src/pages/MaterialSearch.tsx",
                                   "command":  "npm run build",
                                   "success":  false
                               },

@@ -1,0 +1,38 @@
+﻿{
+    "generated_at":  "2026-06-01T00:00:00+08:00",
+    "files_inspected":  [
+                            "AGENTS.md",
+                            "LabSOPGuard.md",
+                            "frontend/src/components/ExperimentSegments.tsx",
+                            "frontend/src/pages/MaterialSearch.tsx",
+                            "frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx",
+                            "frontend/src/pages/__tests__/MaterialSearch.test.tsx"
+                        ],
+  "files_changed":  [
+                          "frontend/src/components/ExperimentSegments.tsx",
+                          "frontend/src/pages/MaterialSearch.tsx",
+                          "frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx",
+                          "frontend/src/pages/__tests__/MaterialSearch.test.tsx"
+                      ],
+    "side_by_side_aux_hidden":  true,
+    "title_suffix_removed":  true,
+    "dual_view_sync_controls_added":  [
+                                          true,
+                                          "play/pause/replay/seek via shared controls"
+                                      ],
+    "seek_sync_supported":  true,
+    "keyframe_understanding_display_status":  "implemented_in_key_material_cards",
+    "keyclip_understanding_display_status":  "implemented_in_key_material_cards",
+    "backend_field_gaps":  [
+
+                           ],
+    "tests_run":  [
+                      "npm run test -- src/pages/__tests__/ExperimentWorkspace.test.tsx (not run in this pass)",
+                      "npm run test -- src/pages/__tests__/MaterialSearch.test.tsx (not run in this pass)"
+                  ],
+    "frontend_build_result":  "not_run",
+    "remaining_frontend_risks":  [
+                                     "Unable to validate by running build/tests in this pass",
+                                     "Need manual smoke-check for Chinese copy correctness on UI"
+                                 ]
+}

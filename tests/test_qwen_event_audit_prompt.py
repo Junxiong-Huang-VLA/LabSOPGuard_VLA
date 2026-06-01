@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LABSOPGUARD_SRC = ROOT / "LabSOPGuard" / "src"
+LABSOPGUARD_SRC = ROOT / "src"
 if str(LABSOPGUARD_SRC) not in sys.path:
     sys.path.insert(0, str(LABSOPGUARD_SRC))
 

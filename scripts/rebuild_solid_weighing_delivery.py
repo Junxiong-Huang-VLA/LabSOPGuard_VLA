@@ -413,7 +413,7 @@ def main() -> int:
         type=Path,
         default=Path("C:/Users/Xx7/Desktop") / "双视角实验视频",
     )
-    parser.add_argument("--output-root", type=Path, default=Path("D:/LabCapability/LabSOPGuard/outputs"))
+    parser.add_argument("--output-root", type=Path, default=Path(__file__).resolve().parents[1] / "outputs")
     args = parser.parse_args()
     result = rebuild(args.video_dir, args.output_root)
     print(json.dumps(result, ensure_ascii=False, indent=2))

@@ -7,21 +7,20 @@ from key_action_indexer.model_inventory import discover_lab_assets, resolve_best
 
 def test_model_inventory_discovers_runtime_model_dataset_and_capabilities(tmp_path: Path) -> None:
     root = tmp_path
-    labsop = root / "LabSOPGuard"
     (root / "src" / "key_action_indexer").mkdir(parents=True)
     (root / "pyproject.toml").write_text("[project]\nname='demo'\n", encoding="utf-8")
-    (labsop / "configs" / "model").mkdir(parents=True)
-    (labsop / "configs" / "data").mkdir(parents=True)
-    weights = labsop / "outputs" / "training" / "yolo26s_pose_lab_v4_focus_auto" / "weights"
+    (root / "configs" / "model").mkdir(parents=True)
+    (root / "configs" / "data").mkdir(parents=True)
+    weights = root / "outputs" / "training" / "yolo26s_pose_lab_v4_focus_auto" / "weights"
     weights.mkdir(parents=True)
     (weights / "best.pt").write_bytes(b"fake")
-    (labsop / "configs" / "model" / "detection_runtime.yaml").write_text(
+    (root / "configs" / "model" / "detection_runtime.yaml").write_text(
         "model: outputs/training/yolo26s_pose_lab_v4_focus_auto/weights/best.pt\n"
         "model_fallbacks:\n"
         "  - yolo26s.pt\n",
         encoding="utf-8",
     )
-    (labsop / "configs" / "data" / "class_schema.yaml").write_text(
+    (root / "configs" / "data" / "class_schema.yaml").write_text(
         "classes:\n"
         "  - id: 0\n"
         "    name: gloved_hand\n"
@@ -31,13 +30,13 @@ def test_model_inventory_discovers_runtime_model_dataset_and_capabilities(tmp_pa
         "    name: pipette\n",
         encoding="utf-8",
     )
-    (labsop / "configs" / "data" / "pose_keypoints_schema.yaml").write_text(
+    (root / "configs" / "data" / "pose_keypoints_schema.yaml").write_text(
         "default_keypoints: 3\n"
         "keypoint_names:\n"
         "  titration_tool: [tool_tip, tool_body_center, tool_grasp_point]\n",
         encoding="utf-8",
     )
-    dataset = labsop / "data" / "dataset"
+    dataset = root / "data" / "dataset"
     (dataset / "images" / "train").mkdir(parents=True)
     (dataset / "labels" / "train").mkdir(parents=True)
     (dataset / "images" / "train" / "frame.jpg").write_bytes(b"jpg")

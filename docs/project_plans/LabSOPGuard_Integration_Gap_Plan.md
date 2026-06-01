@@ -175,8 +175,8 @@ def _merge_dual_stream_segments(self, segments_top, segments_bottom):
 4. "确认分割"按钮触发子实验处理
 
 **涉及文件**：
-- `frontend-app/src/components/ExperimentSegmentTimeline.tsx`（新建）
-- `frontend-app/src/pages/ExperimentWorkspace.tsx`（集成）
+- `frontend/src/components/ExperimentSegmentTimeline.tsx`（新建）
+- `frontend/src/pages/ExperimentWorkspace.tsx`（集成）
 
 **预估工时**：6h
 

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { experimentApi } from '../api'
+import ExperimentPageShell from '../components/ExperimentSideNav'
 import type { StructuredExperimentResult } from '../types'
 
 const EMPTY_STATE_HINT = {
@@ -47,10 +48,16 @@ export default function JsonViewer() {
     URL.revokeObjectURL(url)
   }
 
-  if (loading) return <div className="text-center py-12">加载中...</div>
-  if (!data) return <div className="text-center py-12 text-red-600">JSON 数据加载失败</div>
+  if (loading) {
+    const content = <div className="py-12 text-center">加载中...</div>
+    return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
+  }
+  if (!data) {
+    const content = <div className="py-12 text-center text-red-600">JSON 数据加载失败</div>
+    return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
+  }
 
-  return (
+  const content = (
     <div>
       <div className="mb-6">
         <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
@@ -83,6 +90,8 @@ export default function JsonViewer() {
       </div>
     </div>
   )
+
+  return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
 }
 
 function JsonTree({ data, level = 0 }: { data: any; level?: number }) {

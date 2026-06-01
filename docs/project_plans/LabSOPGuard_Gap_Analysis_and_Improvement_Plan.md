@@ -184,7 +184,7 @@
 涉及文件:
 - backend/main.py (任务调度)
 - src/experiment/service.py (添加信号量)
-- frontend-app/src/ (队列状态展示)
+- frontend/src/ (队列状态展示)
 ```
 
 ---
@@ -342,9 +342,9 @@
    - 断网时显示全局 banner
 
 涉及文件:
-- frontend-app/src/api.ts (interceptor)
-- frontend-app/src/components/Toast.tsx (新建)
-- frontend-app/src/components/ProcessingProgress.tsx (新建)
+- frontend/src/api.ts (interceptor)
+- frontend/src/components/Toast.tsx (新建)
+- frontend/src/components/ProcessingProgress.tsx (新建)
 ```
 
 ---

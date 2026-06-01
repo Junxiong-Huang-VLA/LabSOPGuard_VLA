@@ -26,7 +26,7 @@ import json
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 SCHEMA_VERSION = "database_consistency_validation_report.v2"
 
@@ -40,6 +40,21 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
         if line:
             rows.append(json.loads(line))
     return rows
+
+
+def _material_id(row: Mapping[str, Any]) -> str:
+    for key in (
+        "material_id",
+        "evidence_bundle_id",
+        "physical_action_material_id",
+        "candidate_group_id",
+        "reference_id",
+        "candidate_id",
+    ):
+        value = row.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return ""
 
 
 def _sqlite_materials(db_path: Path) -> dict[str, dict[str, Any]]:
@@ -118,7 +133,7 @@ def validate_material_database(material_root: Path) -> ConsistencyResult:
     # and uses a different id namespace (candidate_id / candidate_group_id), so
     # it is NOT a partition of the published stream and must not be compared by
     # material_id. We only count it for visibility.
-    official_ids = {str(r.get("material_id")) for r in official if r.get("material_id")}
+    official_ids = {_material_id(r) for r in official if _material_id(r)}
     stream_official = {mid for mid, r in stream_by_id.items()
                        if r.get("official_status") == "official"}
     official_partition_drift = sorted(official_ids ^ stream_official)

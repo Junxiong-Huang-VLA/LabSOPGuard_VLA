@@ -117,7 +117,7 @@ def validate_runtime_configs(project_root: Path = PROJECT_ROOT) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate LabSOPGuard runtime compose and monitoring config.")
+    parser = argparse.ArgumentParser(description="Validate LabEmbodied runtime compose and monitoring config.")
     parser.add_argument("--project-root", type=Path, default=PROJECT_ROOT)
     args = parser.parse_args()
 

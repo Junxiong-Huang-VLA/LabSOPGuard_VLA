@@ -9,12 +9,11 @@ from key_action_indexer.model_inventory import discover_lab_assets
 
 def test_capability_gap_report_counts_required_label_foundations(tmp_path: Path) -> None:
     root = tmp_path
-    labsop = root / "LabSOPGuard"
-    dataset = labsop / "data" / "dataset"
+    dataset = root / "data" / "dataset"
     (root / "src" / "key_action_indexer").mkdir(parents=True)
     (root / "pyproject.toml").write_text("[project]\nname='demo'\n", encoding="utf-8")
-    (labsop / "configs" / "data").mkdir(parents=True)
-    (labsop / "outputs").mkdir(parents=True)
+    (root / "configs" / "data").mkdir(parents=True)
+    (root / "outputs").mkdir(parents=True)
     (dataset / "images" / "train").mkdir(parents=True)
     (dataset / "labels" / "train").mkdir(parents=True)
     (dataset / "images" / "train" / "frame_001.jpg").write_bytes(b"jpg")
@@ -24,7 +23,7 @@ def test_capability_gap_report_counts_required_label_foundations(tmp_path: Path)
         "1 0.3 0.3 0.1 0.1\n",
         encoding="utf-8",
     )
-    (labsop / "configs" / "data" / "class_schema.yaml").write_text(
+    (root / "configs" / "data" / "class_schema.yaml").write_text(
         "classes:\n"
         "  - id: 0\n"
         "    name: gloved_hand\n"
@@ -53,7 +52,7 @@ def test_capability_gap_report_counts_required_label_foundations(tmp_path: Path)
         project_root=root,
         model_inventory=inventory,
         dataset_root=dataset,
-        class_schema_path=labsop / "configs" / "data" / "class_schema.yaml",
+        class_schema_path=root / "configs" / "data" / "class_schema.yaml",
         output_path=output,
     )
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import MaterialSearch from '../MaterialSearch'
 import { experimentApi } from '../../api'
@@ -353,6 +353,113 @@ describe('MaterialSearch formal material library', () => {
     expect(screen.queryByText('窗口同步索引')).not.toBeInTheDocument()
     // dual-view material grid is still rendered for the user
     expect(document.querySelector('[data-smoke="key-material-pair"]')).toBeInTheDocument()
+  })
+
+  it('shows keyframe and keyclip understanding when key-material data contains them', async () => {
+    renderMaterialSearch([], {
+      total: 1,
+      items: [{
+        item_id: 'material-understood',
+        event_id: 'event-understood',
+        display_name: 'hand pipette operation',
+        event_type: 'hand-object-contact',
+        canonical_action_type: 'hand-container',
+        canonical_object: 'bottle',
+        camera_view: 'third_person',
+        time_start: 14.2,
+        time_end: 15.8,
+        experiment_window_id: 'window-1',
+        source_window_sync_index: '101',
+        preview_url: '/outputs/experiments/exp-1/materials/material-understood.jpg',
+        exists: true,
+        recommended: true,
+        preferred_best: true,
+        keyframe_understanding: {
+          visible_facts: ['Third-person keyframe shows hand entering the bottle neck.'],
+          action_interpretation: ['The operator adjusts the pipette position.'],
+          uncertainties: ['Small occlusion from the glove shadow.'],
+          evidence_refs: ['frame-14', 'frame-15'],
+        },
+        keyclip_understanding: {
+          visible_facts: ['Keyclip shows full transfer gesture from start to end.'],
+          action_interpretation: ['Operator lowers and lifts in one continuous movement.'],
+          uncertainties: ['Blur on final frame.'],
+          evidence_refs: ['clip-1'],
+        },
+      }],
+    })  // product default view
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-smoke="formal-material-library"]')).toBeInTheDocument()
+      expect(document.querySelector('[data-smoke="key-material-pair"]')).toBeInTheDocument()
+    })
+
+    const materialCard = document.querySelector('[data-smoke="key-material-pair"]')
+    expect(materialCard).not.toBeNull()
+    if (!materialCard) return
+
+    const keyframePanel = materialCard.querySelector('[data-smoke="material-keyframe-understanding"]')
+    const keyclipPanel = materialCard.querySelector('[data-smoke="material-keyclip-understanding"]')
+    expect(keyframePanel).not.toBeNull()
+    expect(keyclipPanel).not.toBeNull()
+    if (!keyframePanel || !keyclipPanel) return
+
+    const keyframe = within(keyframePanel)
+    const keyclip = within(keyclipPanel)
+
+    expect(keyframe.getByText('Keyframe understanding')).toBeInTheDocument()
+    expect(keyframe.getByText('Third-person keyframe shows hand entering the bottle neck.')).toBeInTheDocument()
+    expect(keyframe.getByText('The operator adjusts the pipette position.')).toBeInTheDocument()
+    expect(keyframe.getByText('Small occlusion from the glove shadow.')).toBeInTheDocument()
+    expect(keyframe.getByText('frame-14')).toBeInTheDocument()
+    expect(keyframe.getByText('frame-15')).toBeInTheDocument()
+
+    expect(keyclip.getByText('Keyclip understanding')).toBeInTheDocument()
+    expect(keyclip.getByText('Keyclip shows full transfer gesture from start to end.')).toBeInTheDocument()
+    expect(keyclip.getByText('Operator lowers and lifts in one continuous movement.')).toBeInTheDocument()
+    expect(keyclip.getByText('Blur on final frame.')).toBeInTheDocument()
+    expect(keyclip.getByText('clip-1')).toBeInTheDocument()
+  })
+
+  it('shows pending placeholders when keyframe and keyclip understanding are missing', async () => {
+    renderMaterialSearch([], {
+      total: 1,
+      items: [{
+        item_id: 'material-missing-understanding',
+        event_id: 'event-missing-understanding',
+        display_name: 'hand slide operation',
+        event_type: 'hand-object-contact',
+        canonical_action_type: 'hand-container',
+        canonical_object: 'bottle',
+        camera_view: 'third_person',
+        time_start: 10.2,
+        time_end: 11.9,
+        experiment_window_id: 'window-1',
+        source_window_sync_index: '101',
+        preview_url: '/outputs/experiments/exp-1/materials/material-missing-understanding.jpg',
+        exists: true,
+        recommended: true,
+        preferred_best: true,
+      }],
+    })  // product default view
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-smoke="formal-material-library"]')).toBeInTheDocument()
+      expect(document.querySelector('[data-smoke="key-material-pair"]')).toBeInTheDocument()
+    })
+
+    const materialCard = document.querySelector('[data-smoke="key-material-pair"]')
+    expect(materialCard).not.toBeNull()
+    if (!materialCard) return
+
+    const keyframePanel = materialCard.querySelector('[data-smoke="material-keyframe-understanding"]')
+    const keyclipPanel = materialCard.querySelector('[data-smoke="material-keyclip-understanding"]')
+    expect(keyframePanel).not.toBeNull()
+    expect(keyclipPanel).not.toBeNull()
+    if (!keyframePanel || !keyclipPanel) return
+
+    expect(keyframePanel.textContent).toContain('Keyframe understanding pending')
+    expect(keyclipPanel.textContent).toContain('Keyclip understanding pending')
   })
 
   it('uses all_items for blocked alignment and keeps orphan materials in diagnostics without normal material rendering', async () => {

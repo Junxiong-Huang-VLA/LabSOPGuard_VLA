@@ -1,5 +1,5 @@
 ﻿project:
-  name: LabEmbodiedVLA
+  name: LabEmbodied
   scenario: lab_sop_compliance_monitoring
   seed: 42
 

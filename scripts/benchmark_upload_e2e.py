@@ -70,7 +70,7 @@ class StreamingMultipartBody:
     """A small streaming multipart encoder for very large local video uploads."""
 
     def __init__(self, fields: dict[str, str], files: dict[str, tuple[str, Path, str]]) -> None:
-        self.boundary = f"----labcapability-{uuid.uuid4().hex}"
+        self.boundary = f"----labembodied-{uuid.uuid4().hex}"
         self.content_type = f"multipart/form-data; boundary={self.boundary}"
         self._parts: list[dict[str, Any]] = []
         self._handles: list[Any] = []

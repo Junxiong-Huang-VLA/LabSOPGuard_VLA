@@ -657,10 +657,10 @@ def test_formal_material_references_root_uses_domain_title_for_technical_rerun(t
         encoding="utf-8",
     )
 
-    assert formal_material_references_root(session).name == "\u56fa\u4f53\u79f0\u91cf\u5b9e\u9a8c_20260512"
+    assert formal_material_references_root(session).name == "\u56fa\u4f53\u79f0\u91cf\u5b9e\u9a8c_20260514"
 
 
-def test_formal_material_references_root_prefers_experiment_id_date_over_created_at(tmp_path: Path) -> None:
+def test_formal_material_references_root_prefers_created_at_over_experiment_id_date(tmp_path: Path) -> None:
     session = tmp_path / "solid-weighing-dual-view-20260508-153648" / "key_action_index"
     session.mkdir(parents=True)
     (session.parent / "experiment.json").write_text(
@@ -675,7 +675,25 @@ def test_formal_material_references_root_prefers_experiment_id_date_over_created
         encoding="utf-8",
     )
 
-    assert formal_material_references_root(session).name == "\u56fa\u4f53\u79f0\u91cf\u53cc\u89c6\u89d2\u5b9e\u9a8c-5.8_20260508"
+    assert formal_material_references_root(session).name == "\u56fa\u4f53\u79f0\u91cf\u53cc\u89c6\u89d2\u5b9e\u9a8c-5.8_20260511"
+
+
+def test_formal_material_references_root_replaces_title_date_with_created_at(tmp_path: Path) -> None:
+    session = tmp_path / "pipetting-demo" / "key_action_index"
+    session.mkdir(parents=True)
+    (session.parent / "experiment.json").write_text(
+        json.dumps(
+            {
+                "experiment_id": "pipetting-demo",
+                "title": "\u79f0\u91cf\u79fb\u6db2\u5b9e\u9a8c 2026-05-22",
+                "created_at": "2026-05-31T09:48:00+08:00",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    assert formal_material_references_root(session).name == "\u79f0\u91cf\u79fb\u6db2\u5b9e\u9a8c_20260531"
 
 
 def test_core_v1_physical_action_scope_keeps_only_fast_quality_targets(monkeypatch) -> None:

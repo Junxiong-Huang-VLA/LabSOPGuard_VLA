@@ -78,6 +78,17 @@ def _material_delivery_safe_name(value: str) -> str:
     return re.sub(r'[<>:"/\\|?*\s]+', "_", value).strip("._") or "material"
 
 
+def _material_delivery_title_label(value: str) -> str:
+    title = re.sub(r"\s+", " ", str(value or "").strip())
+    title = re.sub(
+        r"(?:[_\-\s]+(?:20\d{6}|20\d{2}[-/.年](?:0?[1-9]|1[0-2])[-/.月](?:0?[1-9]|[12]\d|3[01])日?))"
+        r"(?:[_\-\s]+\d{3,6})?$",
+        "",
+        title,
+    ).strip(" _-.")
+    return title or "experiment"
+
+
 def _material_delivery_date_label(value: str) -> str:
     if value:
         try:
@@ -101,13 +112,13 @@ def _formal_material_reference_root_for_exp(exp_dir: Path) -> Path:
             return Path(str(candidate))
 
     exp = _load_json(exp_dir / "experiment.json", {})
-    title = str(
+    title = _material_delivery_title_label(str(
         exp.get("title")
         or exp.get("experiment_title")
         or exp.get("experiment_name")
         or exp.get("name")
         or exp_dir.name
-    )
+    ))
     date = _material_delivery_date_label(str(exp.get("created_at") or exp.get("experiment_date") or exp.get("date") or exp_dir.name))
     outputs_dir = exp_dir.parent.parent if exp_dir.parent.name == "experiments" else exp_dir.parent
     return outputs_dir / "material_references" / _material_delivery_safe_name(f"{title}_{date}")

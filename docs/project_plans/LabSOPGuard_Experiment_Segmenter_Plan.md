@@ -231,7 +231,7 @@ experiment_segmentation:
 |---|------|------|---------|---------|
 | 4.1 | API: 获取子实验列表 | `backend/main.py` | `GET /api/v1/experiments/{id}/sub-experiments` 返回子实验列表 | 1h |
 | 4.2 | API: 处理进度细化 | 同上 | 返回当前处理哪个子实验、进度百分比 | 30min |
-| 4.3 | 前端: 子实验卡片展示 | `frontend-app/src/` | 父实验 workspace 展示子实验列表，点击进入各自 workspace | 2h |
+| 4.3 | 前端: 子实验卡片展示 | `frontend/src/` | 父实验 workspace 展示子实验列表，点击进入各自 workspace | 2h |
 | 4.4 | 前端: 时间轴总览 | 同上 | 父实验展示 3h 完整时间轴，标注各实验段范围 | 1.5h |
 
 ---
@@ -276,7 +276,7 @@ Phase 1 (核心模块，独立开发)
 | 修改 | `src/experiment/models.py` | 父子实验模型 |
 | 修改 | `backend/main.py` | 子实验 API |
 | 修改 | `configs/model/detection_runtime.yaml` | 新增 experiment_segmentation 配置 |
-| 修改 | `frontend-app/src/` | 子实验 UI 展示 |
+| 修改 | `frontend/src/` | 子实验 UI 展示 |
 
 ---
 

@@ -4,7 +4,7 @@ Date: 2026-05-20
 
 Owner lane: Worker C, validation scripts and handoff records only.
 
-Write scope: `D:\LabCapability\scripts`, `D:\LabCapability\docs`, and `D:\LabCapability\docs\project_plans`. This lane does not modify `src`, `tests`, `LabSOPGuard\backend`, or `LabSOPGuard\frontend-app`.
+Write scope: `D:\LabEmbodied\scripts`, `D:\LabEmbodied\docs`, and `D:\LabEmbodied\docs\project_plans`. This lane does not modify `src`, `tests`, `LabSOPGuard\backend`, or `frontend`.
 
 ## Purpose
 
@@ -12,30 +12,30 @@ This runbook turns the implementation taskbook acceptance commands into a replay
 
 - Python compilation: `python -m compileall -q src`
 - Python regression suite: `python -m pytest -q`
-- frontend build: `npm run build` under `LabSOPGuard\frontend-app`
+- frontend build: `npm run build` under `frontend`
 - optional evidence package validation: `evidence-package-validate --package-root <package> [--strict]`
 - optional evidence package evaluation: `evidence-package-eval --package-root <package> --queries <queries> [--output <output>] [--limit <n>]`
 
-The script preserves the project boundary from `AGENTS.md`: LabCapability owns long dual-view evidence extraction, time alignment, physical evidence, evidence packages, retrieval, and eval. It does not productize PTZ, DeepStream deployment, or multi-camera SLA validation.
+The script preserves the project boundary from `AGENTS.md`: LabEmbodied owns long dual-view evidence extraction, time alignment, physical evidence, evidence packages, retrieval, and eval. It does not productize PTZ, DeepStream deployment, or multi-camera SLA validation.
 
 ## Script
 
 Main entrypoint:
 
 ```powershell
-Set-Location -LiteralPath 'D:\LabCapability'
+Set-Location -LiteralPath 'D:\LabEmbodied'
 .\scripts\run_taskbook_acceptance.ps1 -DryRun
 ```
 
 With evidence package checks:
 
 ```powershell
-Set-Location -LiteralPath 'D:\LabCapability'
+Set-Location -LiteralPath 'D:\LabEmbodied'
 .\scripts\run_taskbook_acceptance.ps1 `
-  -PackageRoot 'D:\LabCapability\data\sessions\<experiment>\material_references' `
+  -PackageRoot 'D:\LabEmbodied\data\sessions\<experiment>\material_references' `
   -EvidencePackageStrict `
-  -EvalQueries 'D:\LabCapability\data\sessions\<experiment>\reports\evidence_package_eval_queries.json' `
-  -EvalOutput 'D:\LabCapability\data\sessions\<experiment>\reports\evidence_package_eval.json'
+  -EvalQueries 'D:\LabEmbodied\data\sessions\<experiment>\reports\evidence_package_eval_queries.json' `
+  -EvalOutput 'D:\LabEmbodied\data\sessions\<experiment>\reports\evidence_package_eval.json'
 ```
 
 Useful options:
@@ -47,7 +47,7 @@ Useful options:
 | `-PythonExe <path>` | Use a specific Python, for example the LabSOPGuard conda env. |
 | `-CompileTargets <paths>` | Override compile targets; default is `src`. |
 | `-PytestArgs <args>` | Override pytest args; default is `-q`. |
-| `-FrontendDir <path>` | Override frontend directory; default is `LabSOPGuard\frontend-app`. |
+| `-FrontendDir <path>` | Override frontend directory; default is `frontend`. |
 | `-PackageRoot <path>` | Enables evidence-package validation and, with `-EvalQueries`, eval. |
 | `-EvidencePackageStrict` | Adds `--strict` to `evidence-package-validate`. |
 | `-EvalQueries <json>` | Query fixture for `evidence-package-eval`. |
@@ -62,10 +62,10 @@ Dry-run with an execution JSON:
 ```powershell
 .\scripts\run_taskbook_acceptance.ps1 `
   -DryRun `
-  -PackageRoot 'D:\LabCapability\data\sessions\<experiment>\material_references' `
+  -PackageRoot 'D:\LabEmbodied\data\sessions\<experiment>\material_references' `
   -EvidencePackageStrict `
-  -EvalQueries 'D:\LabCapability\data\sessions\<experiment>\reports\evidence_package_eval_queries.json' `
-  -EvalOutput 'D:\LabCapability\data\sessions\<experiment>\reports\evidence_package_eval.json' `
+  -EvalQueries 'D:\LabEmbodied\data\sessions\<experiment>\reports\evidence_package_eval_queries.json' `
+  -EvalOutput 'D:\LabEmbodied\data\sessions\<experiment>\reports\evidence_package_eval.json' `
   -RecordPath 'docs\project_plans\worker_c_acceptance_record.<date>.json'
 ```
 
@@ -77,7 +77,7 @@ Copy this section into the concrete run note and replace placeholders.
 | --- | --- |
 | Date/time | `<YYYY-MM-DD HH:mm timezone>` |
 | Operator/thread | `Worker C` |
-| Repo root | `D:\LabCapability` |
+| Repo root | `D:\LabEmbodied` |
 | Git revision | `<commit or dirty-worktree note>` |
 | Python | `<python --version and path>` |
 | Node/npm | `<node --version / npm --version>` |
@@ -95,19 +95,19 @@ Copy this section into the concrete run note and replace placeholders.
 
 ## Real Issue List Template
 
-Use concrete evidence. Keep productization and external acceptance gaps visible but separate from LabCapability code regressions.
+Use concrete evidence. Keep productization and external acceptance gaps visible but separate from LabEmbodied code regressions.
 
 | ID | Symptom | Evidence | Likely cause | Fix status | Next action | Scope |
 | --- | --- | --- | --- | --- | --- | --- |
-| RI-001 | `<what failed or looked wrong>` | `<command output, file path, timestamp, segment ID, eval result, or screenshot>` | `<technical hypothesis>` | `<fixed/mitigated/needs data/needs GPU/needs product decision/out of scope>` | `<one concrete step>` | `<LabCapability / productization / external acceptance>` |
-| RI-002 | `<example: evidence-package eval misses target object>` | `<query id and top results>` | `<retrieval or evidence gap>` | `needs data` | `<add or review targeted evidence>` | `LabCapability` |
-| RI-EXT-PTZ | PTZ acceptance is not part of LabCapability core validation. | `AGENTS.md` points PTZ work to `D:\PtzTracker`. | Separate product surface and hardware/control stack. | `out of scope` | Validate PTZ in the PTZ tracker project. | `external acceptance` |
+| RI-001 | `<what failed or looked wrong>` | `<command output, file path, timestamp, segment ID, eval result, or screenshot>` | `<technical hypothesis>` | `<fixed/mitigated/needs data/needs GPU/needs product decision/out of scope>` | `<one concrete step>` | `<LabEmbodied / productization / external acceptance>` |
+| RI-002 | `<example: evidence-package eval misses target object>` | `<query id and top results>` | `<retrieval or evidence gap>` | `needs data` | `<add or review targeted evidence>` | `LabEmbodied` |
+| RI-EXT-PTZ | PTZ acceptance is not part of LabEmbodied core validation. | `AGENTS.md` points PTZ work to `D:\PtzTracker`. | Separate product surface and hardware/control stack. | `out of scope` | Validate PTZ in the PTZ tracker project. | `external acceptance` |
 | RI-EXT-DS | DeepStream runtime/SLA acceptance is not part of this taskbook script. | No DeepStream deployment contract is owned by this repository lane. | Productized GPU/video service integration needs deployment-specific checks. | `needs product decision` | Define DeepStream service contract, hardware, sample streams, and pass/fail SLA outside this lane. | `productization` |
-| RI-EXT-MCAM | Multi-camera SLA/five-camera orchestration is outside LabCapability core validation. | `AGENTS.md` points multi-camera monitoring to `D:\MultiCameraMonitor`. | Separate camera orchestration and monitoring product. | `out of scope` | Validate multi-camera SLA in the monitor/product acceptance plan. | `external acceptance` |
+| RI-EXT-MCAM | Multi-camera SLA/five-camera orchestration is outside LabEmbodied core validation. | `AGENTS.md` points multi-camera monitoring to `D:\MultiCameraMonitor`. | Separate camera orchestration and monitoring product. | `out of scope` | Validate multi-camera SLA in the monitor/product acceptance plan. | `external acceptance` |
 
 ## Scope Notes
 
-- LabCapability acceptance can fail on evidence package schema, time alignment, physical change log, retrieval, or eval quality.
+- LabEmbodied acceptance can fail on evidence package schema, time alignment, physical change log, retrieval, or eval quality.
 - PTZ belongs to `D:\PtzTracker`.
 - DeepStream deployment, throughput, latency, and hardware SLA belong to productization or external deployment acceptance.
 - Multi-camera SLA, five-camera orchestration, wireless video SDKs, camera proxy/streaming, and monitor recording belong to `D:\MultiCameraMonitor` or external acceptance.

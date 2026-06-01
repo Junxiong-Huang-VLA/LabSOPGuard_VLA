@@ -1,19 +1,14 @@
-version: "3.9"
-
-# ----------------------------------------------------------------
-# Credentials are loaded from a .env file (NOT committed to git).
-# Copy .env.example → .env and fill in strong passwords before
-# running: docker compose --env-file .env -f docker-compose.runtime.yml up
-# ----------------------------------------------------------------
+# Optional runtime services for a fuller local deployment.
+# Optional .env overrides are supported, but this file has safe local defaults:
+#   docker compose -f docker-compose.runtime.yml up --build
 
 services:
   postgres:
     image: postgres:16
-    container_name: labsopguard-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-labembodied}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-labembodied}
+      POSTGRES_DB: ${POSTGRES_DB:-labembodied}
     ports:
       - "5432:5432"
     volumes:
@@ -21,18 +16,16 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7
-    container_name: labsopguard-redis
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     restart: unless-stopped
 
   minio:
     image: minio/minio:latest
-    container_name: labsopguard-minio
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
@@ -41,50 +34,34 @@ services:
       - minio_data:/data
     restart: unless-stopped
 
-  api:
-    # Use a pre-built image with deps installed to avoid reinstalling on every restart.
-    # Build locally: docker build -t labsopguard-app:latest .
-    image: labsopguard-app:latest
-    container_name: labsopguard-api
-    working_dir: /app
-    command: >
-      uvicorn lab_titration_vla.deploy.runtime_pipeline.api_server:app
-      --host 0.0.0.0 --port 8080
-    volumes:
-      - ./:/app
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "${API_PORT:-8080}:8080"
-    env_file:
-      - .env
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      PYTHONPATH: /app/src
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-labembodied}:${POSTGRES_PASSWORD:-labembodied}@postgres:5432/${POSTGRES_DB:-labembodied}
+      LAB_MODELS_DIR: /models
+      LAB_VIDEO_STORE_ROOT: /videos/raw_uploads
+      LAB_MATERIAL_LIBRARY_ROOT: /materials
+      YOLO_CONFIG_DIR: /app/.ultralytics
+    volumes:
+      - ./outputs:/app/outputs
+      - ./memory:/app/memory
+      - ./.runtime:/app/.runtime
+      - ${LAB_MODELS_DIR:-D:/LabModels}:/models:ro
+      - ${LAB_VIDEO_STORE_ROOT:-D:/LabVideo/raw_uploads}:/videos/raw_uploads
+      - ${LAB_MATERIAL_LIBRARY_ROOT:-D:/LabMaterialLibrary}:/materials
     depends_on:
       - postgres
       - redis
       - minio
     restart: unless-stopped
 
-  worker:
-    image: labsopguard-app:latest
-    container_name: labsopguard-worker
-    working_dir: /app
-    command: python -m lab_titration_vla.deploy.runtime_pipeline.celery_worker
-    volumes:
-      - ./:/app
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - postgres
-    restart: unless-stopped
-
-  sglang:
-    image: lmsysorg/sglang:latest
-    container_name: labsopguard-sglang
-    ports:
-      - "${SGLANG_PORT:-30000}:30000"
-    command: ["python3", "-m", "sglang.launch_server", "--host", "0.0.0.0", "--port", "30000"]
-    restart: unless-stopped
-
 volumes:
   pg_data:
   minio_data:
-

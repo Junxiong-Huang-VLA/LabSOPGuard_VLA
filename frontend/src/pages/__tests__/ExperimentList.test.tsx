@@ -94,8 +94,7 @@ describe('ExperimentList', () => {
       experiment({ experiment_id: 'exp-2', title: '双视角实验', status: 'running', processing_stage: 'video_analysis', completed_at: null, analyzed_at: null }),
     ])
 
-    await waitFor(() => expect(screen.getByText('固体称量实验')).toBeInTheDocument())
-    expect(screen.getAllByText('固体称量实验')).toHaveLength(1)
+    await waitFor(() => expect(screen.getAllByText('固体称量实验')).toHaveLength(1))
     expect(screen.queryByText(/output_generation/)).not.toBeInTheDocument()
     expect(screen.getAllByText('已完成').length).toBeGreaterThan(0)
   })
@@ -103,12 +102,52 @@ describe('ExperimentList', () => {
   it('keeps the recovered experiment-list surface copy', async () => {
     renderList([experiment({ experiment_id: 'exp-1', title: '固体称量实验' })])
 
-    await waitFor(() => expect(screen.getByText('实验片段 Experiment Segments')).toBeInTheDocument())
-    expect(screen.getByText('从这里创建实验、上传视频并启动分析。')).toBeInTheDocument()
-    expect(screen.getByText('新建实验 New')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('实验工作台')).toBeInTheDocument())
+    expect(screen.queryByText('从这里创建实验、上传视频并启动分析。')).not.toBeInTheDocument()
+    expect(screen.getByText('实验片段、关键素材和复核状态集中处理。')).toBeInTheDocument()
+    expect(screen.getByText('新建实验')).toBeInTheDocument()
+    expect(screen.queryByText('新建实验 New')).not.toBeInTheDocument()
+    expect(screen.queryByText('选择视频')).not.toBeInTheDocument()
     expect(screen.getByPlaceholderText('搜索实验标题或 ID')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /活跃 Active/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /全部 All/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /已归档 Archived/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /失败 Failed/ })).not.toBeInTheDocument()
     expect(screen.queryByText('实验证据队列')).not.toBeInTheDocument()
     expect(screen.queryByText('Experiment Evidence Queue')).not.toBeInTheDocument()
+  })
+
+  it('syncs a trailing title date with the created date', async () => {
+    renderList([
+      experiment({
+        experiment_id: 'exp-dated',
+        title: '称量移液实验 2026-05-22',
+        created_at: '2026-05-31T09:48:00+08:00',
+      }),
+    ])
+
+    await waitFor(() => expect(screen.getAllByText('称量移液实验 2026-05-31').length).toBeGreaterThan(0))
+    expect(screen.queryByText('称量移液实验 2026-05-22')).not.toBeInTheDocument()
+  })
+
+  it('adds frontend filler experiments to sparse lists in descending created order', async () => {
+    renderList([
+      experiment({
+        experiment_id: 'exp-main',
+        title: '称量移液实验 2026-05-31',
+        created_at: '2026-05-31T09:48:00+08:00',
+        avg_confidence: null,
+      }),
+    ])
+
+    await waitFor(() => expect(screen.getByText('固体称量实验 2026-05-27')).toBeInTheDocument())
+    expect(screen.getByText('显示 9 / 9')).toBeInTheDocument()
+    const rowTitles = screen.getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)
+    expect(rowTitles.slice(0, 3)).toEqual([
+      '称量移液实验 2026-05-31',
+      '固体称量实验 2026-05-27',
+      '容量瓶定容实验 2026-05-26',
+    ])
   })
 
   it('archives experiments before permanent deletion', async () => {
@@ -117,14 +156,13 @@ describe('ExperimentList', () => {
       experiment({ experiment_id: 'exp-2', title: '双视角实验' }),
     ])
 
-    await waitFor(() => expect(screen.getByText('固体称量实验')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('固体称量实验').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByLabelText('更多操作 固体称量实验'))
-    fireEvent.click(screen.getByText('归档 Archive'))
+    fireEvent.click(screen.getByText('归档'))
 
     await waitFor(() => expect(mockedApi.archive).toHaveBeenCalledWith('exp-1'))
-    await waitFor(() => expect(screen.queryByText('固体称量实验')).not.toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /已归档 Archived/ }))
-    await waitFor(() => expect(screen.getByText('固体称量实验')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('固体称量实验').length).toBeGreaterThan(0))
+    expect(screen.getAllByText('归档').length).toBeGreaterThan(0)
   })
 
   it('clears backend archived state when unarchiving', async () => {
@@ -134,20 +172,16 @@ describe('ExperimentList', () => {
     ])
 
     await waitFor(() => expect(screen.getByText('活跃实验')).toBeInTheDocument())
-    expect(screen.queryByText('已归档实验')).not.toBeInTheDocument()
+    expect(screen.getAllByText('已归档实验').length).toBeGreaterThan(0)
 
-    fireEvent.click(screen.getByRole('button', { name: /已归档 Archived/ }))
-    await waitFor(() => expect(screen.getByText('已归档实验')).toBeInTheDocument())
     fireEvent.click(screen.getByLabelText('更多操作 已归档实验'))
-    fireEvent.click(screen.getByText('取消归档 Unarchive'))
+    fireEvent.click(screen.getByText('取消归档'))
 
     await waitFor(() => expect(mockedApi.unarchive).toHaveBeenCalledWith('exp-archived'))
-    await waitFor(() => expect(screen.queryByText('已归档实验')).not.toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /全部 All/ }))
-    await waitFor(() => expect(screen.getByText('已归档实验')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('已归档实验').length).toBeGreaterThan(0))
   })
 
-  it('loads additional backend pages before filtering and counting', async () => {
+  it('loads additional backend pages before rendering the paginated list', async () => {
     const items = Array.from({ length: 105 }, (_, index) => experiment({
       experiment_id: `page-exp-${index}`,
       title: `分页实验 ${index}`,
@@ -156,12 +190,9 @@ describe('ExperimentList', () => {
     }))
     renderPaginatedList(items)
 
-    await waitFor(() => expect(screen.getByText('共 105 项')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('显示 18 / 105')).toBeInTheDocument())
     expect(mockedApi.list).toHaveBeenCalledWith({ limit: 100 }, { force: true })
     expect(mockedApi.list).toHaveBeenCalledWith({ limit: 100, offset: 100 }, { force: true })
-
-    fireEvent.click(screen.getByRole('button', { name: /失败 Failed/ }))
-    await waitFor(() => expect(screen.getByText('共 5 项')).toBeInTheDocument())
   })
 
   it('shows the first page and loads more experiments on demand', async () => {
@@ -179,24 +210,24 @@ describe('ExperimentList', () => {
 
   it('shows unknown confidence as empty and searches repaired Chinese titles', async () => {
     renderList([
-      experiment({ experiment_id: 'exp-mojibake', title: 'ç°åºæ¼ç¤ºå®éª 2026-04-29', avg_confidence: null }),
+      experiment({ experiment_id: 'exp-mojibake', title: 'ç°åºæ¼ç¤ºå®éª 2026-04-29', created_at: '2026-04-29T00:00:00Z', avg_confidence: null }),
       experiment({ experiment_id: 'exp-other', title: '另一个实验', avg_confidence: 0.88 }),
     ])
 
-    await waitFor(() => expect(screen.getByText('现场演示实验 2026-04-29')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('现场演示实验 2026-04-29').length).toBeGreaterThan(0))
     expect(screen.getByText('-')).toBeInTheDocument()
 
     fireEvent.change(screen.getByPlaceholderText('搜索实验标题或 ID'), { target: { value: '现场演示' } })
-    expect(screen.getByText('现场演示实验 2026-04-29')).toBeInTheDocument()
+    expect(screen.getAllByText('现场演示实验 2026-04-29').length).toBeGreaterThan(0)
     expect(screen.queryByText('另一个实验')).not.toBeInTheDocument()
   })
 
   it('keeps permanent delete behind confirmation', async () => {
     renderList([experiment({ experiment_id: 'exp-1', title: '固体称量实验' })])
 
-    await waitFor(() => expect(screen.getByText('固体称量实验')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('固体称量实验').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByLabelText('更多操作 固体称量实验'))
-    fireEvent.click(screen.getByText('删除 Delete'))
+    fireEvent.click(screen.getByText('删除'))
 
     expect(screen.getByRole('dialog', { name: '删除实验' })).toBeInTheDocument()
     expect(mockedApi.delete).not.toHaveBeenCalled()

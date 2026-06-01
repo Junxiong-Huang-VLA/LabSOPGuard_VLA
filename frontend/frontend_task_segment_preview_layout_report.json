@@ -2,8 +2,8 @@
     "task":  "frontend-only segment preview layout fix",
     "date":  "2026-05-30",
     "files":  [
-                  "LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
-                  "LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+                  "frontend/src/components/ExperimentSegments.tsx",
+                  "frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx"
               ],
     "checks":  {
                    "preview_mapping":  {
@@ -13,15 +13,15 @@
                                            "fallback_behavior":  "if only side-by-side preview exists, first/third panels show placeholders"
                                        },
                    "duration_display":  [
-                                            "ÕæÊµÊµÑéÊ±³¤",
-                                            "Ô¤ÀÀÊ±³¤",
-                                            "Ô¤ÀÀÄ£Ê½",
-                                            "²¥·Å±¶ÂÊ",
-                                            "Êµ¼Ê¿ªÊ¼×´Ì¬"
+                                            "ï¿½ï¿½ÊµÊµï¿½ï¿½Ê±ï¿½ï¿½",
+                                            "Ô¤ï¿½ï¿½Ê±ï¿½ï¿½",
+                                            "Ô¤ï¿½ï¿½Ä£Ê½",
+                                            "ï¿½ï¿½ï¿½Å±ï¿½ï¿½ï¿½",
+                                            "Êµï¿½Ê¿ï¿½Ê¼×´Ì¬"
                                         ],
                    "placeholders":  [
-                                        "µÚÒ»ÈË³ÆÔ¤ÀÀ´ýÉú³É",
-                                        "µÚÈýÈË³ÆÔ¤ÀÀ´ýÉú³É"
+                                        "ï¿½ï¿½Ò»ï¿½Ë³ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
+                                        "ï¿½ï¿½ï¿½ï¿½ï¿½Ë³ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
                                     ],
                    "tests_run":  [
                                      "npm test -- src/pages/__tests__/ExperimentWorkspace.test.tsx"

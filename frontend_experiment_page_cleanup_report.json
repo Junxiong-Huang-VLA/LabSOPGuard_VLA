@@ -1,0 +1,19 @@
+﻿{
+  "generated_at": "2026-06-01T12:00:00+08:00",
+  "scope": "frontend_experiment_workspace_cleanup",
+  "status": "partial_complete",
+  "files_updated": [
+    "frontend/src/pages/ExperimentWorkspace.tsx",
+    "frontend/src/components/AnalysisTimingSummary.tsx",
+    "frontend/src/components/EvidenceUI.tsx",
+    "frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+  ],
+  "cleanup_items": [
+    "top summary cards now use missing-safe count rendering (show 未记录 when metrics absent)",
+    "failed runtime banner used on workspace to avoid full red failed progress strip",
+    "analysis timing summary now honors display_stage_order when provided",
+    "field gap detection treats null/undefined count metrics as missing",
+    "progress strip failure state no longer renders full-width 100% red bar"
+  ],
+  "open_items": []
+}

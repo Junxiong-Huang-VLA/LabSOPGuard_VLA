@@ -1,6 +1,6 @@
 # YOLO Material Candidate Pipeline Contract
 
-This contract protects the LabCapability key-material pipeline from regressions while the detector, semantic rules, VLM assist, and frontend review flow continue to evolve.
+This contract protects the LabEmbodied key-material pipeline from regressions while the detector, semantic rules, VLM assist, and frontend review flow continue to evolve.
 
 ## Pipeline
 
@@ -40,7 +40,7 @@ Run material candidates through one path:
 Use this command to rebuild candidates through the guarded path:
 
 ```powershell
-python -m key_action_indexer.cli material-candidates --session-dir "D:\LabCapability\LabSOPGuard\outputs\experiments\<experiment-id>\key_action_index" --rebuild-source --no-enable-vlm
+python -m key_action_indexer.cli material-candidates --session-dir "D:\LabEmbodied\outputs\experiments\<experiment-id>\key_action_index" --rebuild-source --no-enable-vlm
 ```
 
 The command writes the review queue under:

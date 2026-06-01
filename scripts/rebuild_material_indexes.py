@@ -15,7 +15,7 @@ from labsopguard.material_maintenance import rebuild_workspace_material_index, s
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Rebuild LabSOPGuard material indexes.")
+    parser = argparse.ArgumentParser(description="Rebuild LabEmbodied material indexes.")
     parser.add_argument("--experiments-root", default=str(PROJECT_ROOT / "outputs" / "experiments"))
     parser.add_argument("--workspace-index", default=str(PROJECT_ROOT / "outputs" / "materials" / "material_index.sqlite"))
     parser.add_argument("--health-only", action="store_true")

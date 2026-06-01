@@ -1,14 +1,14 @@
-﻿{
-    "schema_version":  "labcapability_taskbook_acceptance_run.v1",
-    "repo_root":  "D:\\LabCapability",
+{
+    "schema_version":  "labembodied_taskbook_acceptance_run.v1",
+    "repo_root":  "D:\\LabEmbodied",
     "dry_run":  false,
     "generated_at":  "2026-05-20T11:07:32.5817208+08:00",
-    "pythonpath_prefix":  "D:\\LabCapability\\src",
+    "pythonpath_prefix":  "D:\\LabEmbodied\\src",
     "steps":  [
                   {
                       "name":  "python compileall",
                       "command":  "python -m compileall -q src",
-                      "working_directory":  "D:\\LabCapability",
+                      "working_directory":  "D:\\LabEmbodied",
                       "status":  "passed",
                       "exit_code":  0,
                       "started_at":  "2026-05-20T11:02:10.7958018+08:00",
@@ -18,7 +18,7 @@
                   {
                       "name":  "pytest",
                       "command":  "python -m pytest -q",
-                      "working_directory":  "D:\\LabCapability",
+                      "working_directory":  "D:\\LabEmbodied",
                       "status":  "passed",
                       "exit_code":  0,
                       "started_at":  "2026-05-20T11:02:11.2504115+08:00",
@@ -28,7 +28,7 @@
                   {
                       "name":  "frontend npm build",
                       "command":  "npm run build",
-                      "working_directory":  "D:\\LabCapability\\LabSOPGuard\\frontend-app",
+                      "working_directory":  "D:\\LabEmbodied\\frontend",
                       "status":  "passed",
                       "exit_code":  0,
                       "started_at":  "2026-05-20T11:07:18.4771029+08:00",
@@ -38,7 +38,7 @@
                   {
                       "name":  "evidence-package-validate",
                       "command":  "",
-                      "working_directory":  "D:\\LabCapability",
+                      "working_directory":  "D:\\LabEmbodied",
                       "status":  "skipped",
                       "exit_code":  null,
                       "started_at":  "2026-05-20T11:07:32.5697559+08:00",
@@ -48,7 +48,7 @@
                   {
                       "name":  "evidence-package-eval",
                       "command":  "",
-                      "working_directory":  "D:\\LabCapability",
+                      "working_directory":  "D:\\LabEmbodied",
                       "status":  "skipped",
                       "exit_code":  null,
                       "started_at":  "2026-05-20T11:07:32.5724336+08:00",

@@ -1,6 +1,6 @@
 # LabSOPGuard 全流程 Pipeline 完整技术文档
 
-> 版本：v1.0 | 日期：2026-05-11 | 项目路径：`D:\LabCapability\LabSOPGuard`
+> 版本：v1.0 | 日期：2026-05-11 | 项目路径：`D:\LabEmbodied`
 
 ---
 
@@ -83,7 +83,7 @@ Python: C:\Users\Xx7\.conda\envs\LabSOPGuard\python.exe
 ### 启动命令
 
 ```powershell
-cd D:\LabCapability\LabSOPGuard
+cd D:\LabEmbodied
 .\scripts\start_full_stack.ps1 -SkipRedis -PythonExe "C:\Users\Xx7\.conda\envs\LabSOPGuard\python.exe"
 ```
 

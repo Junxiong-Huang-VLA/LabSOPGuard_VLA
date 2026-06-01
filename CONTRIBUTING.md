@@ -1,6 +1,6 @@
-﻿# Contributing Guide
+# Contributing Guide
 
-Thanks for contributing to LabSOPGuard.
+Thanks for contributing to LabEmbodied.
 
 ## Branch Workflow
 
@@ -9,8 +9,6 @@ Thanks for contributing to LabSOPGuard.
 - `feature/*`: feature implementation
 
 ## Commit Convention
-
-Use Conventional Commits:
 
 - `feat:` new feature
 - `fix:` bug fix
@@ -21,22 +19,25 @@ Use Conventional Commits:
 
 ## Local Validation
 
-Before opening a PR, run:
-
-```bash
-conda run -n LabSOPGuard python scripts/check_env.py --project-name LabSOPGuard
-conda run -n LabSOPGuard python scripts/data_check.py --config configs/data/dataset.yaml
-conda run -n LabSOPGuard python scripts/infer.py --video data/raw/videos/session_001.mp4 --sample-id smoke
+```powershell
+python scripts/check_env.py --project-name LabEmbodied
+python scripts/startup_runtime_preflight.py
+python scripts/check_project_scope.py
+python -m pytest -q
+cd frontend
+npm run build
 ```
 
 ## Data and Privacy
 
 - Do not commit raw private videos.
-- Keep only placeholders in `data/raw`.
-- Do not commit runtime outputs/logs/weights.
+- Keep YOLO/model weights in `D:\LabModels` or another external `LAB_MODELS_DIR`.
+- Keep raw videos in `LAB_VIDEO_STORE_ROOT`.
+- Keep real secrets in local `.env` only.
+- Do not commit runtime outputs, logs, caches, or generated reports unless they are tiny intentional fixtures.
 
 ## PR Requirements
 
-- Fill PR template completely.
-- Explain SOP impact and validation evidence.
-- Update docs if behavior changed.
+- Explain evidence-pipeline impact and validation evidence.
+- Update docs when behavior or runtime setup changes.
+- Keep PTZ, camera orchestration, and wireless-video transport out of this repo.

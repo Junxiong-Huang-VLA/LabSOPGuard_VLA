@@ -1484,7 +1484,7 @@ def _font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
 
 
 def _default_logo_path() -> Optional[Path]:
-    candidate = Path(__file__).resolve().parents[2] / "frontend-app" / "public" / "realityloop-logo.png"
+    candidate = Path(__file__).resolve().parents[2] / "frontend" / "public" / "realityloop-logo.png"
     return candidate if candidate.exists() else None
 
 

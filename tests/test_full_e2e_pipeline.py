@@ -51,7 +51,7 @@ class TestFullPipelineE2E:
         video_path = tmp_path / "short.mp4"
         _create_video(video_path, fps=30, duration_sec=30.0)
 
-        project_root = Path("D:/LabCapability/LabSOPGuard")
+        project_root = Path(__file__).resolve().parents[1]
         settings = load_runtime_settings(project_root)
         engine = EventPreprocessingEngine(settings)
 
@@ -98,7 +98,7 @@ class TestFullPipelineE2E:
         video_path = tmp_path / "range_test.mp4"
         _create_video(video_path, fps=30, duration_sec=60.0)  # Longer video
 
-        project_root = Path("D:/LabCapability/LabSOPGuard")
+        project_root = Path(__file__).resolve().parents[1]
         settings = load_runtime_settings(project_root)
         engine = EventPreprocessingEngine(settings)
 

@@ -15,7 +15,7 @@
 最终验收：
 - `python -m compileall -q src tests` 通过。
 - `python -m pytest -q` 通过，158 passed。
-- `npm run build` 在 `LabSOPGuard/frontend-app` 通过。
+- `npm run build` 在 `frontend` 通过。
 - `python -m key_action_indexer.cli run --manifest .runtime\timeline_demo_manifest.json --dry-run` 通过。
 - strict artifact validation 通过：6/6 artifacts valid，128 records，0 errors。
 - strict artifact export 通过：6/6 artifacts exported，128 records。

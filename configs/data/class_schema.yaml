@@ -1,5 +1,5 @@
 version: 1
-project: LabSOPGuard_VLA
+project: LabEmbodied
 task_type: detection_and_sop_compliance
 
 classes:

@@ -1,16 +1,16 @@
-﻿{
+{
     "backend_field_gaps":  [
                                "experiment_window_duration_s may be missing in some payloads; fallback to duration_sec",
                                "preview_duration_s, preview_mode, playback_speed_ratio can be missing in older payloads",
                                "formal publish reason strings are often model-facing tokens (e.g., no_confirmed_dual_view_action_events) and are now shown in collapsed debug"
                            ],
     "files_inspected":  [
-                            "LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
-                            "LabSOPGuard/frontend-app/src/components/AnalysisTimingSummary.tsx",
-                            "LabSOPGuard/frontend-app/src/pages/ExperimentWorkspace.tsx",
-                            "LabSOPGuard/frontend-app/src/api.ts",
-                            "LabSOPGuard/frontend-app/src/types.ts",
-                            "LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+                            "frontend/src/components/ExperimentSegments.tsx",
+                            "frontend/src/components/AnalysisTimingSummary.tsx",
+                            "frontend/src/pages/ExperimentWorkspace.tsx",
+                            "frontend/src/api.ts",
+                            "frontend/src/types.ts",
+                            "frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx"
                         ],
     "tests_run":  [
                       "npm run test -- src/pages/__tests__/ExperimentWorkspace.test.tsx",
@@ -59,10 +59,10 @@
                                   "Runtime summary and segment UI cleanup are implemented but no visual snapshot automation exists here"
                               ],
     "files_changed":  [
-                          "D:/LabCapability/LabSOPGuard/frontend-app/src/components/ExperimentSegments.tsx",
-                          "D:/LabCapability/LabSOPGuard/frontend-app/src/components/AnalysisTimingSummary.tsx",
-                          "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/ExperimentWorkspace.tsx",
-                          "D:/LabCapability/LabSOPGuard/frontend-app/src/pages/__tests__/ExperimentWorkspace.test.tsx"
+                          "D:/LabEmbodied/frontend/src/components/ExperimentSegments.tsx",
+                          "D:/LabEmbodied/frontend/src/components/AnalysisTimingSummary.tsx",
+                          "D:/LabEmbodied/frontend/src/pages/ExperimentWorkspace.tsx",
+                          "D:/LabEmbodied/frontend/src/pages/__tests__/ExperimentWorkspace.test.tsx"
                       ],
     "hidden_debug_fields":  [
                                 "动作对齐未通过 (segment card internal note)",

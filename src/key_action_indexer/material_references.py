@@ -2129,10 +2129,7 @@ def material_library_root(session_dir: str | Path | None = None) -> Path | None:
         configured = os.environ.get(env_name)
         if configured and configured.strip():
             return Path(configured.strip())
-    if session_dir is not None and (
-        _looks_like_labsopguard_output_session(Path(session_dir))
-        or _looks_like_labcapability_session(Path(session_dir))
-    ):
+    if session_dir is not None and _looks_like_labembodied_session(Path(session_dir)):
         return DEFAULT_D_DRIVE_MATERIAL_LIBRARY_ROOT
     return None
 
@@ -2144,20 +2141,12 @@ def formal_material_library_root(session_dir: str | Path | None = None) -> Path 
     return root if root.name.lower() == "material_references" else root / "material_references"
 
 
-def _looks_like_labsopguard_output_session(session_root: Path) -> bool:
+def _looks_like_labembodied_session(session_root: Path) -> bool:
     try:
         parts = {part.lower() for part in session_root.resolve().parts}
     except Exception:
         parts = {part.lower() for part in session_root.parts}
-    return {"labcapability", "labsopguard", "outputs"}.issubset(parts)
-
-
-def _looks_like_labcapability_session(session_root: Path) -> bool:
-    try:
-        parts = {part.lower() for part in session_root.resolve().parts}
-    except Exception:
-        parts = {part.lower() for part in session_root.parts}
-    return "labcapability" in parts
+    return "labembodied" in parts and "outputs" in parts
 
 
 def formal_material_references_root(session_dir: str | Path) -> Path:
@@ -2169,7 +2158,7 @@ def formal_material_references_root(session_dir: str | Path) -> Path:
 
 
 def frontend_material_references_root(session_dir: str | Path) -> Path:
-    """Return the legacy LabSOPGuard material library folder used by the UI."""
+    """Return the frontend material library folder used by the UI."""
 
     session_root = Path(session_dir)
     experiment = _experiment_metadata(session_root)
@@ -2707,7 +2696,12 @@ def _select_experiment_title(payloads: list[dict[str, Any]], fallback: str) -> t
 def _clean_experiment_title(value: Any) -> str:
     title = str(value or "").strip()
     title = re.sub(r"\s+", " ", title)
-    title = re.sub(r"(?:[_\-\s]+20\d{6})(?:[_\-\s]+\d{6})?(?:[_\-\s]+\d{3,6})?$", "", title).strip(" _-.")
+    title = re.sub(
+        r"(?:[_\-\s]+(?:20\d{6}|20\d{2}[-/.年](?:0?[1-9]|1[0-2])[-/.月](?:0?[1-9]|[12]\d|3[01])日?))"
+        r"(?:[_\-\s]+\d{3,6})?$",
+        "",
+        title,
+    ).strip(" _-.")
     return title
 
 
@@ -2754,6 +2748,11 @@ def _select_experiment_date(
     raw_title: str,
     raw_title_is_technical: bool,
 ) -> str | None:
+    for key in ("created_at",):
+        date = _first_date_for_key(payloads, key)
+        if date:
+            return date
+
     for key in ("experiment_date", "recorded_date", "source_date", "date"):
         date = _first_date_for_key(payloads, key)
         if date:
@@ -2778,7 +2777,7 @@ def _select_experiment_date(
         if date:
             return date
 
-    for key in ("created_at", "updated_at"):
+    for key in ("updated_at",):
         date = _first_date_for_key(payloads, key)
         if date:
             return date

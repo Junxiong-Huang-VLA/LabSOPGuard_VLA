@@ -1,0 +1,15 @@
+﻿{
+    "generated_at":  "2026-06-01T00:00:00+08:00",
+    "checked_fields":  [
+                           "keyframe_understanding",
+                           "keyclip_understanding",
+                           "keyframe_understanding_text",
+                           "keyclip_understanding_text",
+                           "keyframe_vlm_understanding",
+                           "keyclip_vlm_understanding"
+                       ],
+    "gaps":  [
+
+             ],
+    "status":  "no_new_gaps"
+}

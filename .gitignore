@@ -77,6 +77,11 @@ Ultralytics/
 *.pid
 exp_*.json
 overview_*.json
+*_tmp.json
+frontend/tmp-snap.js
+pg_*.png
+pg_*.jpg
+pg_*.jpeg
 tempmonitor_page.html
 *.source_patch.txt
 boot/

@@ -81,10 +81,6 @@ def main():
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parent.parent
-    if project_root.name == "LabSOPGuard":
-        pass
-    elif (project_root / "LabSOPGuard").exists():
-        project_root = project_root / "LabSOPGuard"
 
     if args.video:
         video_path = Path(args.video)

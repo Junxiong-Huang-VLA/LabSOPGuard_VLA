@@ -85,3 +85,30 @@ def test_cli_ready_report_rejects_needs_review_memory_eligible(tmp_path):
 
     assert report["status"] == "needs_attention"
     assert report["checks"]["memory_policy_violations"]
+
+
+def test_cli_ready_report_routes_orphans_to_diagnostics(tmp_path):
+    module = _load_cli_module()
+    root = tmp_path / "exp001"
+    root.mkdir()
+    row = {
+        "material_id": "orphan001",
+        "evidence_bundle_id": "bundle001",
+        "official_status": "needs_review",
+        "action_type": "hand_object_contact",
+        "keyframe_paths": [str(root / "frame.jpg")],
+        "keyclip_paths": [str(root / "clip.mp4")],
+        "memory_eligible": False,
+    }
+    (root / "material_stream.jsonl").write_text(
+        __import__("json").dumps(row, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (root / "review_candidate_materials.jsonl").write_text("", encoding="utf-8")
+    (root / "official_materials.jsonl").write_text("", encoding="utf-8")
+
+    report = module.build_cli_ready_report(root)
+
+    assert report["status"] == "ready"
+    assert report["checks"]["missing_required_fields"] == []
+    assert report["checks"]["orphan_diagnostics"][0]["material_id"] == "orphan001"

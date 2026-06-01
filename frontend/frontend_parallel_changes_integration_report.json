@@ -1,4 +1,4 @@
-﻿{
+{
     "task2_ui_requirements_still_met":  {
                                             "no_formal_blocked_panel":  true,
                                             "verification_evidence":  [
@@ -31,17 +31,17 @@
                          "details":  [
                                          "first run reported TS errors in MaterialSearch.tsx, likely from stale/alternate snapshot, re-run completed successfully with exit code 0",
                                          "tsc succeeded and vite production build completed",
-                                         "dist generated in frontend-app/dist"
+                                         "dist generated in frontend/dist"
                                      ]
                      },
     "files_inspected":  [
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\components\\AnalysisTimingSummary.tsx",
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\components\\ExperimentSegments.tsx",
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\components\\Layout.tsx",
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\ExperimentWorkspace.tsx",
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\MaterialSearch.tsx",
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\__tests__/ExperimentWorkspace.test.tsx",
-                            "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\__tests__/MaterialSearch.test.tsx"
+                            "D:\\LabEmbodied\\frontend\\src\\components\\AnalysisTimingSummary.tsx",
+                            "D:\\LabEmbodied\\frontend\\src\\components\\ExperimentSegments.tsx",
+                            "D:\\LabEmbodied\\frontend\\src\\components\\Layout.tsx",
+                            "D:\\LabEmbodied\\frontend\\src\\pages\\ExperimentWorkspace.tsx",
+                            "D:\\LabEmbodied\\frontend\\src\\pages\\MaterialSearch.tsx",
+                            "D:\\LabEmbodied\\frontend\\src\\pages\\__tests__/ExperimentWorkspace.test.tsx",
+                            "D:\\LabEmbodied\\frontend\\src\\pages\\__tests__/MaterialSearch.test.tsx"
                         ],
     "safe_to_start_task3":  true,
     "fixes_applied_if_any":  [

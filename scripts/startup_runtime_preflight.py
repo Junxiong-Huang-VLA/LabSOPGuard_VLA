@@ -28,7 +28,7 @@ def _write_json(path: Path, payload: Dict[str, Any]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate one-click LabSOPGuard runtime before services start.")
+    parser = argparse.ArgumentParser(description="Validate one-click LabEmbodied runtime before services start.")
     parser.add_argument("--project-root", type=Path, default=PROJECT_ROOT)
     parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "outputs" / "run_logs" / "startup_runtime.json")
     parser.add_argument("--load-model", action="store_true", help="Instantiate VideoAnalysisPipeline to catch corrupt weights early.")

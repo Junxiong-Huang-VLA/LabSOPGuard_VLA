@@ -1,7 +1,7 @@
-﻿# LabCapability / LabSOPGuard 全流程阶段汇报与下一步方案
+# LabEmbodied / LabSOPGuard 全流程阶段汇报与下一步方案
 
 生成时间：2026-05-14  
-项目路径：`D:\LabCapability`  
+项目路径：`D:\LabEmbodied`  
 当前前端页面：`http://127.0.0.1:5173/experiments/db64d9d2-16ce-4de0-8fb3-597066531c31/materials`
 
 ---
@@ -23,7 +23,7 @@
 实验输出目录：
 
 ```text
-D:\LabCapability\LabSOPGuard\outputs\experiments\db64d9d2-16ce-4de0-8fb3-597066531c31
+D:\LabEmbodied\outputs\experiments\db64d9d2-16ce-4de0-8fb3-597066531c31
 ```
 
 当前实验状态：
@@ -143,7 +143,7 @@ material_references/
 根因是：
 
 ```text
-D:\LabCapability\LabSOPGuard\.env
+D:\LabEmbodied\.env
 ```
 
 原配置为：
@@ -183,7 +183,7 @@ model: qwen3.6-plus
 新增独立包：
 
 ```text
-D:\LabCapability\src\realityloop_sync
+D:\LabEmbodied\src\realityloop_sync
 ```
 
 结构：
@@ -242,13 +242,13 @@ C:\Users\Xx7\Desktop\windows-dev-01_cam02\2026-05-13\182744
 配置文件：
 
 ```text
-D:\LabCapability\configs\realityloop_windows_dev_01_20260513_182744.yaml
+D:\LabEmbodied\configs\realityloop_windows_dev_01_20260513_182744.yaml
 ```
 
 输出目录：
 
 ```text
-D:\LabCapability\outputs\realityloop_sync\windows_dev_01_20260513_182744
+D:\LabEmbodied\outputs\realityloop_sync\windows_dev_01_20260513_182744
 ```
 
 真实同步耗时：
@@ -316,7 +316,7 @@ flowchart LR
 ## 5. 文件结构图
 
 ```text
-D:\LabCapability
+D:\LabEmbodied
   configs\
     realityloop_example.yaml
     realityloop_windows_dev_01_20260513_182744.yaml
@@ -341,7 +341,7 @@ D:\LabCapability
   LabSOPGuard\
     backend\
       main.py
-    frontend-app\
+    frontend\
     outputs\
       experiments\
         db64d9d2-16ce-4de0-8fb3-597066531c31\
@@ -365,7 +365,7 @@ D:\LabCapability
 当前正式素材 SQLite：
 
 ```text
-D:\LabCapability\LabSOPGuard\outputs\experiments\db64d9d2-16ce-4de0-8fb3-597066531c31\material_references\key_material_references.sqlite
+D:\LabEmbodied\outputs\experiments\db64d9d2-16ce-4de0-8fb3-597066531c31\material_references\key_material_references.sqlite
 ```
 
 核心表：

@@ -21,21 +21,14 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-LABSOP_ROOT = PROJECT_ROOT / "LabSOPGuard"
 
-# Make both the key_action_indexer package and the LabSOPGuard experiment
-# package importable, and load the same .env the backend uses (DashScope key).
-# Order matters: PROJECT_ROOT/src holds the COMPLETE key_action_indexer package
-# (with dual_view_action_alignment, material_references, ...). LabSOPGuard/src has
-# a *partial* same-named package, so it must come AFTER to avoid shadowing the
-# real one; it is only needed for the `experiment` package (vlm_client).
+# Make the source packages importable and load the same .env the backend uses.
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
-sys.path.append(str(LABSOP_ROOT / "src"))
 
 try:
     from dotenv import load_dotenv
 
-    load_dotenv(LABSOP_ROOT / ".env")
+    load_dotenv(PROJECT_ROOT / ".env")
 except Exception:  # pragma: no cover - dotenv optional
     pass
 

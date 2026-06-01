@@ -12,7 +12,7 @@ SCAN_TARGETS = [
     "config",
     "configs",
     "docker-compose.yml",
-    "frontend-app/src",
+    "frontend/src",
     "monitoring",
     "scripts",
     "src/experiment",
@@ -100,7 +100,7 @@ def check_project_scope(root: Path = PROJECT_ROOT) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Keep LabSOPGuard focused on dual-view key-action material evidence.")
+    parser = argparse.ArgumentParser(description="Keep LabEmbodied focused on dual-view key-action material evidence.")
     parser.add_argument("--project-root", type=Path, default=PROJECT_ROOT)
     args = parser.parse_args()
 

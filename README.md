@@ -1,60 +1,67 @@
 # LabEmbodied
 
-RealityLoop 实验室双视角视频理解平台 —— 单一整合仓库。
+LabEmbodied is the cleaned, flattened workspace for backend APIs, frontend UI, data-processing pipelines, indexing, retrieval, reports, tests, and configuration.
 
-把核心算法、数据处理 pipeline、FastAPI 后端、Vite 前端、数据库检索、Qwen VLM 理解、关键素材库、实验室日报整合在一起。原视频、模型权重、训练集等大资产**外置于仓库之外**,仓库只保留代码与管道。
+Large or sensitive runtime assets stay outside the repo:
 
-## 目录结构
+| Asset | Default location | Notes |
+| --- | --- | --- |
+| YOLO/model weights | `D:\LabModels` (`LAB_MODELS_DIR`) | Referenced by `configs/model/detection_runtime.yaml` or env overrides. |
+| Raw/aligned videos | `D:\LabVideo\raw_uploads` (`LAB_VIDEO_STORE_ROOT`) | Experiment folders keep `.video_ref.json` pointers instead of copied videos. |
+| Approved material library | `D:\LabMaterialLibrary` (`LAB_MATERIAL_LIBRARY_ROOT`) | Backend can also read project-local `outputs/material_references` for dev runs. |
+| Secrets | `.env` | Copy from `.env.example`; never commit real keys. |
 
+## Repository Layout
+
+```text
+backend/      FastAPI service, port 8000
+frontend/     Vite + React + TypeScript UI, port 5173
+src/          key_action_indexer, labsopguard pipeline modules, experiment services
+configs/      Runtime, model, scoring, reporting, SOP, and monitoring config
+scripts/      Operational checks, rebuild tools, evaluation helpers
+tests/        Pytest coverage
+docs/         Specs, runbooks, and historical planning notes
 ```
-src/
-  key_action_indexer/   核心算法:时间对齐、片段检测、微分段、证据、向量索引、CLI
-  realityloop_sync/     多机位帧同步工具(CLI: realityloop-sync)
-  labsopguard/          事件预处理、关键素材发布/检索、embeddings、专业报告、检测器
-  experiment/           Qwen VLM 客户端 + 实验服务
-  project_name/         检测/SOP/PDF 底层模块(backend 运行时依赖)
-backend/                FastAPI 服务(main.py + routers),uvicorn 启动,端口 8000
-frontend/               Vite + React + TS 前端,端口 5173,/api 代理到后端
-configs/                YAML 配置(检测运行时、素材打分、报告、SOP 等)
-tests/                  pytest 测试集
-docs/                   核心规范文档
-```
 
-## 外置资产(不在仓库内)
+## Quick Start
 
-| 资产 | 位置 | 说明 |
-|------|------|------|
-| 模型权重 | `D:\LabModels`(`LAB_MODELS_DIR`) | YOLO/pose 权重,见 `D:\LabModels\README.md` |
-| 原始视频 | `LAB_VIDEO_STORE_ROOT` | 双视角原始/对齐视频 |
-| 实验产物 | `outputs/` | 片段、关键帧、关键片段、素材库(运行时生成) |
-| 训练集 | 外置 | YOLO 标注图像,不进仓 |
-| 密钥 | `.env` | 从 `.env.example` 复制后填入 |
-
-## 启动
-
-```bash
-# 1) 后端依赖
-python -m venv .venv && .venv\Scripts\activate   # Windows
+```powershell
+cd D:\LabEmbodied
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
+Copy-Item .env.example .env
+```
 
-# 2) 配置密钥
-copy .env.example .env        # 填入 DASHSCOPE_API_KEY 等;按需设 LAB_MODELS_DIR / LAB_VIDEO_STORE_ROOT
+Edit `.env` with `DASHSCOPE_API_KEY` and any local overrides for `LAB_MODELS_DIR`, `LAB_VIDEO_STORE_ROOT`, or `LAB_MATERIAL_LIBRARY_ROOT`.
 
-# 3) 启动后端(端口 8000)
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Start both services:
 
-# 4) 启动前端(端口 5173,自动代理 /api -> :8000)
+```powershell
+.\scripts\start_full_stack.ps1 -SkipRedis
+```
+
+Manual startup:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-CLI:`realityloop-sync --help`,核心管道 `python -m key_action_indexer.cli --help`。
+## Validation
 
-## 测试
-
-```bash
-pytest                 # 后端 + 算法
-cd frontend && npm run test    # 前端单测(ExperimentWorkspace / MaterialSearch 等)
+```powershell
+python scripts/check_env.py --project-name LabEmbodied
+python scripts/startup_runtime_preflight.py
+python -m pytest -q
+cd frontend
+npm run build
 ```
+
+For every development session, read `LabSOPGuard.md` first. It is still the project guardrail for YOLO weight resolution, DashScope/Qwen API use, the experiment processing chain, and evidence-pipeline scope.

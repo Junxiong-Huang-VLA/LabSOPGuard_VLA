@@ -13,11 +13,11 @@ This repository's key-action work is limited to experiment process understanding
 
 The key-action mainline does not include complex frontend expansion, cloud PTZ control, five-camera orchestration, camera port mapping, storage platform integration, or standalone YOLO box rendering as a final deliverable.
 
-PTZ tracking/control has been split out of this repository. The working copy for that capability lives at `D:\PtzTracker`; LabCapability should stay focused on YOLO-backed key action segments, hand-object evidence, micro-segments, multiview alignment, metadata, and retrieval.
+PTZ tracking/control has been split out of this repository. The working copy for that capability lives at `D:\PtzTracker`; LabEmbodied should stay focused on YOLO-backed key action segments, hand-object evidence, micro-segments, multiview alignment, metadata, and retrieval.
 
-Multi-camera and wireless-video monitoring have also been split out. The working copy lives at `D:\MultiCameraMonitor`; LabCapability keeps dual-view video input through upload/session metadata and does not own camera orchestration, wireless video SDKs, or multi-monitor recording services.
+Multi-camera and wireless-video monitoring have also been split out. The working copy lives at `D:\MultiCameraMonitor`; LabEmbodied keeps dual-view video input through upload/session metadata and does not own camera orchestration, wireless video SDKs, or multi-monitor recording services.
 
-Run `scripts/check_project_scope.ps1` before merging key-action changes. The guard fails if PTZ, wireless-video, camera proxy/streaming, or multi-monitor orchestration code appears in the LabCapability core paths.
+Run `scripts/check_project_scope.ps1` before merging key-action changes. The guard fails if PTZ, wireless-video, camera proxy/streaming, or multi-monitor orchestration code appears in the LabEmbodied core paths.
 
 YOLO output is an intermediate physical-evidence source. It must feed segment metadata, micro-segment metadata, evidence references, and retrieval text.
 

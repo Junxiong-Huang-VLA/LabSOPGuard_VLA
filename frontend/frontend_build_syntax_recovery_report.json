@@ -1,26 +1,26 @@
 {
   "files_inspected": [
-    "D:\\LabCapability\\AGENTS.md",
-    "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\MaterialSearch.tsx"
+    "D:\\LabEmbodied\\AGENTS.md",
+    "D:\\LabEmbodied\\frontend\\src\\pages\\MaterialSearch.tsx"
   ],
   "files_changed": [
-    "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\MaterialSearch.tsx"
+    "D:\\LabEmbodied\\frontend\\src\\pages\\MaterialSearch.tsx"
   ],
   "initial_build_errors": [
     {
-      "file": "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\MaterialSearch.tsx",
+      "file": "D:\\LabEmbodied\\frontend\\src\\pages\\MaterialSearch.tsx",
       "code": "TS1003",
       "line": 2861,
       "message": "Identifier expected."
     },
     {
-      "file": "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\MaterialSearch.tsx",
+      "file": "D:\\LabEmbodied\\frontend\\src\\pages\\MaterialSearch.tsx",
       "code": "TS1381",
       "line": 2877,
       "message": "Unexpected token. Did you mean `{'}'}` or `&rbrace;`?"
     },
     {
-      "file": "D:\\LabCapability\\LabSOPGuard\\frontend-app\\src\\pages\\MaterialSearch.tsx",
+      "file": "D:\\LabEmbodied\\frontend\\src\\pages\\MaterialSearch.tsx",
       "code": "TS1128",
       "line": 2895,
       "message": "Declaration or statement expected."

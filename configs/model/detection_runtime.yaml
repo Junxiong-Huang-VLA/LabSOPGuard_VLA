@@ -1,8 +1,10 @@
 backend: ultralytics
-# Primary weights: production candidate. Strict mode prevents silent fallback
-# to generic COCO weights; missing lab weights should fail fast.
-model: outputs/training/yolo26s_autodl_8_1_1/weights/best.pt
+# Primary weights: production candidate from the external model store.
+# The current junctions point at the latest first/third-person lab models.
+# Strict mode prevents silent fallback to generic COCO weights.
+model: D:/LabModels/yolo/third_person/current/best.pt
 model_fallbacks:
+  - D:/LabModels/yolo/first_person/current/best.pt
   - outputs/training/yolo26s_pose_lab_v4_focus_auto/weights/best.pt
   - outputs/training/yolo26s_allphotos_e40/weights/best.pt
   - outputs/training/detect/outputs/training/yolo26s_allphotos_aug_ms_ft/weights/best.pt

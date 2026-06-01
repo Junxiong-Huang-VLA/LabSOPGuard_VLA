@@ -20,6 +20,36 @@ DEFAULT_MATERIAL_ROOT = Path(r"D:\LabMaterialLibrary")
 DEFAULT_LABVIDEO_ROOT = Path(r"D:\LabVideo")
 LOCK_SUFFIX = ".lock"
 
+ACTION_DISPLAY_NAMES = {
+    "hand_object_contact": "手部与物体接触",
+    "hand_object_interaction": "手部与物体接触",
+    "object_move": "物体移动",
+    "liquid_transfer": "液体转移",
+    "liquid_movement": "液体移动",
+    "device_panel_interaction": "设备面板操作",
+    "equipment_panel_operation": "设备面板操作",
+    "panel_operation": "设备面板操作",
+    "balance_operation": "天平面板操作",
+    "weighing_paper_operation": "称量纸操作",
+    "pipette_operation": "移液枪操作",
+    "container_state_change": "容器状态变化",
+    "container_operation": "容器操作",
+    "reagent_bottle_operation": "试剂瓶操作",
+}
+
+OBJECT_DISPLAY_NAMES = {
+    "balance": "天平",
+    "beaker": "烧杯",
+    "bottle": "试剂瓶",
+    "container": "容器",
+    "paper": "称量纸",
+    "pipette": "移液枪",
+    "reagent_bottle": "试剂瓶",
+    "spatula": "药匙",
+    "tube": "试管",
+    "weighing_paper": "称量纸",
+}
+
 
 def _utc_now() -> str:
     return datetime.now().astimezone().isoformat()
@@ -132,6 +162,15 @@ def _evidence_bundle_id(row: Mapping[str, Any]) -> str:
     return str(row.get("evidence_bundle_id") or row.get("dual_event_id") or _material_id(row))
 
 
+def _first_text(*values: Any) -> str:
+    for value in values:
+        if value not in (None, ""):
+            text = str(value).strip()
+            if text:
+                return text
+    return ""
+
+
 def _action_type(row: Mapping[str, Any]) -> str:
     return str(
         row.get("action_type")
@@ -140,6 +179,50 @@ def _action_type(row: Mapping[str, Any]) -> str:
         or row.get("action_name")
         or "unknown"
     )
+
+
+def _window_id(row: Mapping[str, Any]) -> str:
+    return _first_text(row.get("window_id"), row.get("experiment_window_id"), row.get("segment_id"), row.get("parent_segment_id"))
+
+
+def _source_window_sync_index(row: Mapping[str, Any]) -> str:
+    return _first_text(row.get("source_window_sync_index"), row.get("window_sync_index"))
+
+
+def _is_orphan_material(row: Mapping[str, Any]) -> bool:
+    if row.get("orphan_material") is True:
+        return True
+    if _official_status(row) == "official":
+        return False
+    return not _window_id(row) or not _source_window_sync_index(row)
+
+
+def _timestamp_label(value: Any) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if numeric <= 0:
+        return ""
+    # Large values are epoch microseconds; small values are session seconds.
+    if numeric > 1_000_000_000_000:
+        try:
+            return datetime.fromtimestamp(numeric / 1_000_000).astimezone().strftime("%H%M%S")
+        except (OSError, OverflowError, ValueError):
+            return ""
+    return f"{int(numeric):06d}"
+
+
+def _display_name(row: Mapping[str, Any]) -> str:
+    explicit = _first_text(row.get("display_name"), row.get("display_title"), row.get("action_name"))
+    if explicit and not explicit.startswith(("event_candidate_group_", "view_action_review_bundle_")):
+        return explicit
+    action = ACTION_DISPLAY_NAMES.get(_action_type(row), _action_type(row))
+    objects = _object_refs(row)
+    object_name = OBJECT_DISPLAY_NAMES.get(objects[0], objects[0]) if objects else ""
+    ts = _timestamp_label(_timestamp_value(row))
+    parts = [part for part in (action, object_name, ts) if part]
+    return "_".join(parts) if parts else _material_id(row)
 
 
 def _official_status(row: Mapping[str, Any]) -> str:
@@ -291,13 +374,22 @@ def normalize_material_stream(experiment_root: Path) -> list[dict[str, Any]]:
             continue
         seen.add(material_id)
         status = _official_status(row)
+        window_id = _window_id(row)
+        source_window_sync_index = _source_window_sync_index(row)
+        orphan_material = _is_orphan_material(row)
         normalized.append(
             {
                 **row,
                 "material_id": material_id,
                 "evidence_bundle_id": _evidence_bundle_id(row),
                 "action_type": _action_type(row),
+                "display_name": _display_name(row),
                 "official_status": status,
+                "window_id": window_id or row.get("window_id"),
+                "experiment_window_id": _first_text(row.get("experiment_window_id"), window_id) or row.get("experiment_window_id"),
+                "source_window_sync_index": source_window_sync_index or row.get("source_window_sync_index"),
+                "orphan_material": orphan_material,
+                "diagnostic_status": "orphan_material" if orphan_material else row.get("diagnostic_status"),
                 "memory_eligible": bool(row.get("memory_eligible") or row.get("memory_write_allowed"))
                 and status == "official",
                 "object_refs": _object_refs(row),
@@ -336,9 +428,12 @@ def _representative_evidence(rows: Sequence[Mapping[str, Any]], limit: int = 8) 
                 "evidence_bundle_id": row.get("evidence_bundle_id"),
                 "action_type": row.get("action_type"),
                 "official_status": row.get("official_status"),
+                "display_name": row.get("display_name") or _display_name(row),
                 "timestamp": row.get("timestamp") or _timestamp_value(row),
                 "keyframe_refs": row.get("keyframe_paths") or _keyframe_paths(row),
                 "keyclip_refs": row.get("keyclip_paths") or _keyclip_paths(row),
+                "source_window_sync_index": row.get("source_window_sync_index"),
+                "orphan_material": bool(row.get("orphan_material")),
                 "cli_ready_folder": row.get("cli_ready_folder"),
             }
         )
@@ -424,6 +519,8 @@ def build_experiment_action_ledger(
     _write_ledger_markdown(experiment_root / "experiment_action_ledger.md", ledger)
     _write_material_index_sqlite(experiment_root / "material_index.sqlite", rows, ledger)
     _write_evidence_trace_index(experiment_root / "evidence_trace_index.json", rows, ledger)
+    _ensure_material_workspace_contract(experiment_root, experiment_id, ledger)
+    _refresh_global_indexes_for_experiment(material_root, experiment_id, ledger, rows)
     return ledger
 
 
@@ -452,6 +549,50 @@ def _write_ledger_markdown(path: Path, ledger: Mapping[str, Any]) -> None:
     _atomic_write_text(path, "\n".join(lines) + "\n")
 
 
+def _ensure_material_workspace_contract(experiment_root: Path, experiment_id: str, ledger: Mapping[str, Any]) -> None:
+    """Create stable sidecar files/directories without touching media assets."""
+    experiment_root.mkdir(parents=True, exist_ok=True)
+    for dirname in ("windows", "materials", "reports"):
+        (experiment_root / dirname).mkdir(parents=True, exist_ok=True)
+    for filename in (
+        "material_stream.jsonl",
+        "review_candidate_materials.jsonl",
+        "official_materials.jsonl",
+        "human_feedback.jsonl",
+        "corrected_material_stream.jsonl",
+    ):
+        path = experiment_root / filename
+        if not path.exists():
+            _atomic_write_text(path, "")
+    manifest_path = experiment_root / "experiment_manifest.json"
+    if not manifest_path.exists():
+        _write_json(
+            manifest_path,
+            {
+                "schema_version": "lab_material_library_experiment_manifest.v1",
+                "experiment_id": experiment_id,
+                "experiment_name": ledger.get("experiment_name") or experiment_id,
+                "material_root": str(experiment_root),
+                "source_material_stream": str(experiment_root / "material_stream.jsonl"),
+                "updated_at": _utc_now(),
+            },
+        )
+    context_path = experiment_root / "context_bundle.json"
+    if not context_path.exists():
+        _write_json(
+            context_path,
+            {
+                "schema_version": "lab_material_context_bundle.v1",
+                "experiment_id": experiment_id,
+                "material_root": str(experiment_root),
+                "source_material_stream": str(experiment_root / "material_stream.jsonl"),
+                "experiment_action_ledger": str(experiment_root / "experiment_action_ledger.json"),
+                "memory_policy": "only_official_materials_are_factual_memory_inputs",
+                "created_at": _utc_now(),
+            },
+        )
+
+
 def _write_material_index_sqlite(path: Path, rows: Sequence[Mapping[str, Any]], ledger: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
@@ -463,8 +604,12 @@ def _write_material_index_sqlite(path: Path, rows: Sequence[Mapping[str, Any]], 
                 experiment_id TEXT,
                 evidence_bundle_id TEXT,
                 action_type TEXT,
+                display_name TEXT,
                 official_status TEXT,
                 timestamp TEXT,
+                window_id TEXT,
+                source_window_sync_index TEXT,
+                orphan_material INTEGER,
                 keyframe_paths TEXT,
                 keyclip_paths TEXT,
                 cli_ready_folder TEXT,
@@ -473,22 +618,36 @@ def _write_material_index_sqlite(path: Path, rows: Sequence[Mapping[str, Any]], 
             )
             """
         )
+        existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(materials)").fetchall()}
+        for column, definition in {
+            "display_name": "TEXT",
+            "window_id": "TEXT",
+            "source_window_sync_index": "TEXT",
+            "orphan_material": "INTEGER",
+        }.items():
+            if column not in existing_columns:
+                conn.execute(f"ALTER TABLE materials ADD COLUMN {column} {definition}")
         conn.execute("DELETE FROM materials")
         for row in rows:
             conn.execute(
                 """
                 INSERT OR REPLACE INTO materials (
-                    material_id, experiment_id, evidence_bundle_id, action_type, official_status,
-                    timestamp, keyframe_paths, keyclip_paths, cli_ready_folder, memory_eligible, ledger_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    material_id, experiment_id, evidence_bundle_id, action_type, display_name,
+                    official_status, timestamp, window_id, source_window_sync_index, orphan_material,
+                    keyframe_paths, keyclip_paths, cli_ready_folder, memory_eligible, ledger_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(row.get("material_id") or _material_id(row)),
                     str(ledger.get("experiment_id") or ""),
                     str(row.get("evidence_bundle_id") or _evidence_bundle_id(row)),
                     str(row.get("action_type") or _action_type(row)),
+                    str(row.get("display_name") or _display_name(row)),
                     _official_status(row),
                     str(row.get("timestamp") or _timestamp_value(row) or ""),
+                    str(_window_id(row) or ""),
+                    str(_source_window_sync_index(row) or ""),
+                    1 if _is_orphan_material(row) else 0,
                     json.dumps(row.get("keyframe_paths") or _keyframe_paths(row), ensure_ascii=False),
                     json.dumps(row.get("keyclip_paths") or _keyclip_paths(row), ensure_ascii=False),
                     str(row.get("cli_ready_folder") or ""),
@@ -1193,11 +1352,22 @@ def _refresh_global_indexes_for_experiment(
             "experiment_id": experiment_id,
             "material_id": row.get("material_id") or _material_id(row),
             "action_type": row.get("action_type") or _action_type(row),
+            "display_name": row.get("display_name") or _display_name(row),
             "official_status": _official_status(row),
             "timestamp": row.get("timestamp") or _timestamp_value(row),
             "keyframe_paths": row.get("keyframe_paths") or _keyframe_paths(row),
             "keyclip_paths": row.get("keyclip_paths") or _keyclip_paths(row),
+            "first_keyframe": row.get("first_keyframe"),
+            "third_keyframe": row.get("third_keyframe"),
+            "first_keyclip": row.get("first_keyclip"),
+            "third_keyclip": row.get("third_keyclip"),
+            "side_by_side_keyclip": row.get("side_by_side_keyclip"),
             "evidence_bundle_id": row.get("evidence_bundle_id") or _evidence_bundle_id(row),
+            "window_id": _window_id(row) or None,
+            "experiment_window_id": _first_text(row.get("experiment_window_id"), _window_id(row)) or None,
+            "source_window_sync_index": _source_window_sync_index(row) or None,
+            "orphan_material": _is_orphan_material(row),
+            "diagnostic_status": "orphan_material" if _is_orphan_material(row) else row.get("diagnostic_status"),
             "cli_ready_folder": row.get("cli_ready_folder"),
             "memory_eligible": bool(row.get("memory_eligible")) and _official_status(row) == "official",
             "review_status": row.get("review_status") or row.get("official_status"),
@@ -1392,11 +1562,22 @@ def _write_global_indexes(material_root: Path, ledgers: Sequence[Mapping[str, An
             "experiment_id": experiment_id,
             "material_id": row.get("material_id") or _material_id(row),
             "action_type": row.get("action_type") or _action_type(row),
+            "display_name": row.get("display_name") or _display_name(row),
             "official_status": _official_status(row),
             "timestamp": row.get("timestamp") or _timestamp_value(row),
             "keyframe_paths": row.get("keyframe_paths") or _keyframe_paths(row),
             "keyclip_paths": row.get("keyclip_paths") or _keyclip_paths(row),
+            "first_keyframe": row.get("first_keyframe"),
+            "third_keyframe": row.get("third_keyframe"),
+            "first_keyclip": row.get("first_keyclip"),
+            "third_keyclip": row.get("third_keyclip"),
+            "side_by_side_keyclip": row.get("side_by_side_keyclip"),
             "evidence_bundle_id": row.get("evidence_bundle_id") or _evidence_bundle_id(row),
+            "window_id": _window_id(row) or None,
+            "experiment_window_id": _first_text(row.get("experiment_window_id"), _window_id(row)) or None,
+            "source_window_sync_index": _source_window_sync_index(row) or None,
+            "orphan_material": _is_orphan_material(row),
+            "diagnostic_status": "orphan_material" if _is_orphan_material(row) else row.get("diagnostic_status"),
             "cli_ready_folder": row.get("cli_ready_folder"),
             "memory_eligible": bool(row.get("memory_eligible")) and _official_status(row) == "official",
             "review_status": row.get("review_status") or row.get("official_status"),
@@ -1577,6 +1758,12 @@ def query_materials(
     action_type: str | None = None,
     experiment_id: str | None = None,
     official_status: str | None = None,
+    material_id: str | None = None,
+    evidence_bundle_id: str | None = None,
+    has_keyframe: bool | None = None,
+    has_keyclip: bool | None = None,
+    source_window_sync_index: str | None = None,
+    include_orphans: bool = False,
 ) -> list[dict[str, Any]]:
     material_root = Path(material_root)
     index = material_root / "global_material_search_index.jsonl"
@@ -1585,11 +1772,25 @@ def query_materials(
     rows = _read_jsonl(index)
     result: list[dict[str, Any]] = []
     for row in rows:
+        if not include_orphans and row.get("orphan_material") is True and str(row.get("official_status") or "") != "official":
+            continue
         if action_type and str(row.get("action_type") or "") != action_type:
             continue
         if experiment_id and str(row.get("experiment_id") or "") != experiment_id:
             continue
         if official_status and str(row.get("official_status") or "") != official_status:
+            continue
+        if material_id and str(row.get("material_id") or "") != material_id:
+            continue
+        if evidence_bundle_id and str(row.get("evidence_bundle_id") or "") != evidence_bundle_id:
+            continue
+        if source_window_sync_index and str(row.get("source_window_sync_index") or "") != source_window_sync_index:
+            continue
+        keyframe_available = bool(row.get("first_keyframe") or row.get("third_keyframe") or row.get("keyframe_paths"))
+        keyclip_available = bool(row.get("first_keyclip") or row.get("third_keyclip") or row.get("side_by_side_keyclip") or row.get("keyclip_paths"))
+        if has_keyframe is not None and keyframe_available is not has_keyframe:
+            continue
+        if has_keyclip is not None and keyclip_available is not has_keyclip:
             continue
         result.append(row)
     return result
@@ -1630,12 +1831,37 @@ def main_query_materials(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--action-type")
     parser.add_argument("--experiment-id")
     parser.add_argument("--official-status")
+    parser.add_argument("--material-id")
+    parser.add_argument("--evidence-bundle-id")
+    parser.add_argument("--source-window-sync-index")
+    parser.add_argument("--needs-review", action="store_true")
+    parser.add_argument("--official", action="store_true")
+    parser.add_argument("--keyframe", dest="has_keyframe", action="store_true")
+    parser.add_argument("--no-keyframe", dest="has_keyframe", action="store_false")
+    parser.set_defaults(has_keyframe=None)
+    parser.add_argument("--keyclip", dest="has_keyclip", action="store_true")
+    parser.add_argument("--no-keyclip", dest="has_keyclip", action="store_false")
+    parser.set_defaults(has_keyclip=None)
+    parser.add_argument("--include-orphans", action="store_true")
     args = parser.parse_args(argv)
+    official_status = args.official_status
+    if args.official and args.needs_review:
+        parser.error("--official and --needs-review are mutually exclusive")
+    if args.official:
+        official_status = "official"
+    elif args.needs_review:
+        official_status = "needs_review"
     rows = query_materials(
         args.material_root,
         action_type=args.action_type,
         experiment_id=args.experiment_id,
-        official_status=args.official_status,
+        official_status=official_status,
+        material_id=args.material_id,
+        evidence_bundle_id=args.evidence_bundle_id,
+        source_window_sync_index=args.source_window_sync_index,
+        has_keyframe=args.has_keyframe,
+        has_keyclip=args.has_keyclip,
+        include_orphans=args.include_orphans,
     )
     print(json.dumps(rows, ensure_ascii=False, indent=2))
     return 0

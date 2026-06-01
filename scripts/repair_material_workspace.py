@@ -333,9 +333,10 @@ def browser_compatible_clip(source: Path) -> Optional[Path]:
     return transcode_for_browser_webm(source, force=True)
 
 
-OLD_PROJECT_ROOTS = (
-    "D:/LabEmbodiedVLA/LabSOPGuard",
-    "C:/Users/Xx7/Desktop/LabTest/LabSOPGuard",
+OLD_PROJECT_ROOTS = tuple(
+    item.strip()
+    for item in os.environ.get("LAB_LEGACY_PROJECT_ROOTS", "").split(";")
+    if item.strip()
 )
 
 

@@ -1,8 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Clock3, Filter, Layers3, Video } from 'lucide-react'
-import { experimentApi, prefetchExperimentRoute } from '../api'
+import { experimentApi } from '../api'
 import { EmptyEvidence, EvidenceBadge, EvidenceCard, MetricTile, PageHero, primaryButtonClass, secondaryButtonClass } from '../components/EvidenceUI'
+import ExperimentPageShell from '../components/ExperimentSideNav'
 import { cleanDisplayText } from '../displayText'
 import { experimentFileUrl } from '../mediaUrl'
 import type { MaterialSearchItem } from '../types'
@@ -41,7 +42,7 @@ export default function MaterialTimelineView() {
     .filter(item => !pendingOnly || String(item.review_status || item.payload?.review_status || '').toLowerCase().includes('pending'))
     .sort((a, b) => itemTime(a) - itemTime(b)), [camera, items, kind, pendingOnly])
 
-  return (
+  const content = (
     <div className="space-y-5">
       <PageHero
         eyebrow={id ? <Link to={`/experiments/${id}/materials`} className="hover:text-slate-900">证据包</Link> : 'Timeline'}
@@ -53,7 +54,6 @@ export default function MaterialTimelineView() {
             <Link to={`/experiments/${id}/materials`} className={primaryButtonClass('blue')}><Layers3 className="h-4 w-4" />证据库</Link>
           </>
         ) : null}
-        tabs={id ? <Tabs id={id} /> : null}
       />
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -93,15 +93,6 @@ export default function MaterialTimelineView() {
       )}
     </div>
   )
-}
 
-function Tabs({ id }: { id: string }) {
-  const cls = 'rounded-md px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-100'
-  return (
-    <nav className="flex flex-wrap gap-2">
-      <Link to={`/experiments/${id}/workspace`} onMouseEnter={() => prefetchExperimentRoute(id, 'workspace')} className={cls}>分析概览</Link>
-      <Link to={`/experiments/${id}/report`} className={cls}>分析报告</Link>
-      <Link to={`/experiments/${id}/materials`} className={cls}>关键素材库</Link>
-    </nav>
-  )
+  return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
 }

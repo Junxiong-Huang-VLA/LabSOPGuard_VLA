@@ -308,7 +308,7 @@ def main() -> int:
     experiment_root = (
         Path(args.experiment_root)
         if args.experiment_root
-        else Path("D:/LabCapability/LabSOPGuard/outputs/experiments") / args.experiment_id
+        else Path(__file__).resolve().parents[1] / "outputs" / "experiments" / args.experiment_id
     )
     session_root = experiment_root / "key_action_index"
     metadata_dir = session_root / "metadata"

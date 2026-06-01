@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { experimentApi } from '../api'
+import ExperimentPageShell from '../components/ExperimentSideNav'
 import type { StepRecord, UpdateStepRequest } from '../types'
 
 function displayValue(value: unknown, fallback = '-'): string {
@@ -67,10 +68,16 @@ export default function StepDetail() {
     }
   }
 
-  if (loading) return <div className="py-12 text-center">加载中...</div>
-  if (!step) return <div className="py-12 text-center text-red-600">步骤加载失败</div>
+  if (loading) {
+    const content = <div className="py-12 text-center">加载中...</div>
+    return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
+  }
+  if (!step) {
+    const content = <div className="py-12 text-center text-red-600">步骤加载失败</div>
+    return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
+  }
 
-  return (
+  const content = (
     <div>
       <div className="mb-6">
         <div className="mb-2 flex items-center space-x-2 text-sm text-gray-500">
@@ -236,4 +243,6 @@ export default function StepDetail() {
       </div>
     </div>
   )
+
+  return id ? <ExperimentPageShell experimentId={id}>{content}</ExperimentPageShell> : content
 }

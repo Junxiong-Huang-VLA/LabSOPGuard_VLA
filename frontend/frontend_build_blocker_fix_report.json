@@ -1,10 +1,10 @@
 {
   "files_inspected": [
-    "D:\LabCapability\AGENTS.md",
-    "D:\LabCapability\LabSOPGuard\frontend-app\src\pages\MaterialSearch.tsx"
+    "D:\LabEmbodied\AGENTS.md",
+    "D:\LabEmbodied\frontend\src\pages\MaterialSearch.tsx"
   ],
   "files_changed": [
-    "D:\LabCapability\LabSOPGuard\frontend-app\src\pages\MaterialSearch.tsx"
+    "D:\LabEmbodied\frontend\src\pages\MaterialSearch.tsx"
   ],
   "initial_build_errors": [
     "src/pages/MaterialSearch.tsx(199,6): error TS6196: 'MaterialViewBucket' is declared but never used.",

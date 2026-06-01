@@ -2,7 +2,18 @@ import type { HTMLAttributes, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { AlertCircle, CheckCircle2, Clock3, Loader2 } from 'lucide-react'
 
-export type Tone = 'primary' | 'slate' | 'success' | 'warning' | 'danger'
+export type Tone =
+  | 'primary'
+  | 'slate'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'blue'
+  | 'cyan'
+  | 'emerald'
+  | 'amber'
+  | 'red'
+  | 'violet'
 
 const toneClasses: Record<Tone, { soft: string; solid: string; border: string; text: string }> = {
   primary: {
@@ -34,6 +45,42 @@ const toneClasses: Record<Tone, { soft: string; solid: string; border: string; t
     solid: 'bg-[color:var(--ui-danger)] text-white',
     border: 'border-[color:var(--ui-danger-soft)]',
     text: 'text-[color:var(--ui-danger)]',
+  },
+  blue: {
+    soft: 'bg-[color:var(--ui-accent-soft)] text-[color:var(--ui-accent)] ring-[color:var(--ui-accent-weak)]',
+    solid: 'bg-[color:var(--ui-accent)] text-white',
+    border: 'border-[color:var(--ui-accent-soft)]',
+    text: 'text-[color:var(--ui-accent)]',
+  },
+  cyan: {
+    soft: 'bg-[color:var(--ui-accent-soft)] text-[color:var(--ui-accent)] ring-[color:var(--ui-accent-weak)]',
+    solid: 'bg-[color:var(--ui-accent)] text-white',
+    border: 'border-[color:var(--ui-accent-soft)]',
+    text: 'text-[color:var(--ui-accent)]',
+  },
+  emerald: {
+    soft: 'bg-[color:var(--ui-success-soft)] text-[color:var(--ui-success)] ring-[color:var(--ui-success-weak)]',
+    solid: 'bg-[color:var(--ui-success)] text-white',
+    border: 'border-[color:var(--ui-success-soft)]',
+    text: 'text-[color:var(--ui-success)]',
+  },
+  amber: {
+    soft: 'bg-[color:var(--ui-warning-soft)] text-[color:var(--ui-warning)] ring-[color:var(--ui-warning-weak)]',
+    solid: 'bg-[color:var(--ui-warning)] text-white',
+    border: 'border-[color:var(--ui-warning-soft)]',
+    text: 'text-[color:var(--ui-warning)]',
+  },
+  red: {
+    soft: 'bg-[color:var(--ui-danger-soft)] text-[color:var(--ui-danger)] ring-[color:var(--ui-danger-weak)]',
+    solid: 'bg-[color:var(--ui-danger)] text-white',
+    border: 'border-[color:var(--ui-danger-soft)]',
+    text: 'text-[color:var(--ui-danger)]',
+  },
+  violet: {
+    soft: 'bg-[color:var(--ui-accent-soft)] text-[color:var(--ui-accent)] ring-[color:var(--ui-accent-weak)]',
+    solid: 'bg-[color:var(--ui-accent)] text-white',
+    border: 'border-[color:var(--ui-accent-soft)]',
+    text: 'text-[color:var(--ui-accent)]',
   },
 }
 
@@ -87,10 +134,51 @@ export function PageHero({ eyebrow, title, description, actions, tabs }: { eyebr
   )
 }
 
-export function ProgressStrip({ status, progress, message }: { status: string; progress: number; message?: ReactNode }) {
+export function ProgressStrip({
+  status,
+  progress,
+  message,
+  variant = 'default',
+}: {
+  status: string
+  progress: number
+  message?: ReactNode
+  variant?: 'default' | 'health'
+}) {
   const tone = toneForStatus(status)
   const pct = progress > 1 ? Math.round(progress) : Math.round(Math.max(0, Math.min(1, progress)) * 100)
   const Icon = tone === 'success' ? CheckCircle2 : tone === 'danger' ? AlertCircle : tone === 'warning' ? Clock3 : tone === 'primary' ? Loader2 : Clock3
+  const barPercent = tone === 'danger' ? Math.min(99, Math.max(2, pct)) : Math.max(2, pct)
+
+  if (variant === 'health') {
+    const isFailed = tone === 'danger'
+    const isPassed = tone === 'success'
+    const healthPercent = isPassed ? 100 : isFailed ? 100 : Math.max(4, Math.min(100, pct))
+    const healthLabel = isPassed ? '分析成功' : isFailed ? '分析失败' : '分析中'
+    const healthFillClass = isFailed ? 'bg-red-500' : 'bg-emerald-500'
+    const healthTextClass = isFailed ? 'text-red-700' : 'text-emerald-700'
+    const healthSoftClass = isFailed ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'
+
+    return (
+      <EvidenceCard className={`px-5 py-4 ${healthSoftClass}`} data-smoke="analysis-health-progress">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
+            <Icon className={`h-4 w-4 shrink-0 ${healthTextClass} ${tone === 'primary' ? 'animate-spin' : ''}`} />
+            <span className={`text-sm font-semibold ${healthTextClass}`}>{healthLabel}</span>
+            {message ? <span className="min-w-0 break-words text-sm font-medium text-[color:var(--ui-text-muted)]">{message}</span> : null}
+          </div>
+          <span className={`w-fit rounded-md bg-white/80 px-2 py-0.5 font-mono text-xs font-semibold ${healthTextClass}`}>{isPassed ? 100 : pct}%</span>
+        </div>
+        <div className="relative h-5 overflow-hidden rounded-md border border-white/70 bg-red-500 shadow-inner">
+          <div className={`h-full rounded-[5px] transition-all duration-700 ${healthFillClass}`} style={{ width: `${healthPercent}%` }} />
+          <div className="pointer-events-none absolute inset-0 grid grid-cols-10 divide-x divide-white/30" aria-hidden="true">
+            {Array.from({ length: 10 }).map((_, index) => <span key={index} />)}
+          </div>
+        </div>
+      </EvidenceCard>
+    )
+  }
+
   return (
     <EvidenceCard className="px-5 py-4">
       <div className="mb-2 flex items-center justify-between gap-3 text-sm">
@@ -101,7 +189,7 @@ export function ProgressStrip({ status, progress, message }: { status: string; p
         <span className={`font-mono text-xs font-semibold ${toneClasses[tone].text}`}>{pct}%</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-[color:var(--ui-bg-muted)]">
-        <div className={`h-full rounded-full transition-all duration-700 ${toneClasses[tone].solid}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+        <div className={`h-full rounded-full transition-all duration-700 ${toneClasses[tone].solid}`} style={{ width: `${barPercent}%` }} />
       </div>
     </EvidenceCard>
   )

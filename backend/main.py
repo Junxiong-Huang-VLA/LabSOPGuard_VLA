@@ -64,18 +64,7 @@ try:
 except ImportError:
     make_asgi_app = None
 
-# Python
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-if str(PROJECT_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT / "src"))
-KEY_ACTION_INDEXER_SRC = PROJECT_ROOT.parent / "src"
-if KEY_ACTION_INDEXER_SRC.exists():
-    key_action_src_text = str(KEY_ACTION_INDEXER_SRC)
-    while key_action_src_text in sys.path:
-        sys.path.remove(key_action_src_text)
-    sys.path.insert(0, key_action_src_text)
 
 from backend.video_store_fast_register import extract_video_store_ref, normalize_sha256
 
@@ -4169,6 +4158,17 @@ def _material_delivery_safe_name(value: str) -> str:
     return re.sub(r'[<>:"/\\|?*\s]+', "_", value).strip("._") or "material"
 
 
+def _material_delivery_title_label(value: str) -> str:
+    title = re.sub(r"\s+", " ", str(value or "").strip())
+    title = re.sub(
+        r"(?:[_\-\s]+(?:20\d{6}|20\d{2}[-/.年](?:0?[1-9]|1[0-2])[-/.月](?:0?[1-9]|[12]\d|3[01])日?))"
+        r"(?:[_\-\s]+\d{3,6})?$",
+        "",
+        title,
+    ).strip(" _-.")
+    return title or "experiment"
+
+
 def _material_delivery_date_label(value: str) -> str:
     if value:
         try:
@@ -4192,13 +4192,13 @@ def _formal_material_reference_root_for_exp(exp_dir: Path) -> Path:
             return Path(str(candidate))
 
     exp = _load_json_if_exists(exp_dir / "experiment.json") or {}
-    title = str(
+    title = _material_delivery_title_label(str(
         exp.get("title")
         or exp.get("experiment_title")
         or exp.get("experiment_name")
         or exp.get("name")
         or exp_dir.name
-    )
+    ))
     date = _material_delivery_date_label(str(exp.get("created_at") or exp.get("experiment_date") or exp.get("date") or exp_dir.name))
     label = _material_delivery_safe_name(f"{title}_{date}")
     outputs_dir = exp_dir.parent.parent if exp_dir.parent.name == "experiments" else exp_dir.parent
@@ -22030,7 +22030,7 @@ async def removed_standalone_video_analysis(removed_path: str):
 
 
 # ── SPA static file serving (production) ─────────────────────────
-_FRONTEND_DIST = PROJECT_ROOT / "frontend-app" / "dist"
+_FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 if _FRONTEND_DIST.exists():
     from fastapi.staticfiles import StaticFiles
 

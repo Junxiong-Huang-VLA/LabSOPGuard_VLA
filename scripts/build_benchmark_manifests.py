@@ -14,22 +14,26 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import shutil
 from pathlib import Path
 
 from key_action_indexer import benchmark_manifest as bm
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MODEL_ROOT = Path(os.environ.get("LAB_MODELS_DIR", r"D:\LabModels"))
+
 DATASET = Path(
     r"D:\LabVideo\raw_uploads\by_import"
     r"\virtual_camera_cache_from_fullres_aligned_2026-05-22"
 )
-W_FIRST = Path(r"C:\Users\Xx7\Desktop\yolo26_first_20_v1\yolo26_first_20_v1.pt")
-W_THIRD = Path(r"C:\Users\Xx7\Desktop\yolo26s_third_20_v2\best.pt")
+W_FIRST = Path(os.environ.get("KEY_ACTION_YOLO_FIRST_PERSON_MODEL", str(MODEL_ROOT / "yolo" / "first_person" / "current" / "best.pt")))
+W_THIRD = Path(os.environ.get("KEY_ACTION_YOLO_THIRD_PERSON_MODEL", str(MODEL_ROOT / "yolo" / "third_person" / "current" / "best.pt")))
 
-OUT_ROOT = Path(r"D:\LabCapability\_benchmark")
+OUT_ROOT = Path(os.environ.get("LAB_BENCHMARK_ROOT", r"D:\LabBenchmarks\LabEmbodied"))
 SESSION_FULL = "benchmark-weighing-pipetting-2026-05-22"
 SESSION_SMOKE = "benchmark-smoke-2026-05-22"
-OUTPUTS = Path(r"D:\LabCapability\LabSOPGuard\outputs\experiments")
+OUTPUTS = PROJECT_ROOT / "outputs" / "experiments"
 
 SMOKE_SECONDS = 120.0
 TIMESTAMP_FIELD = "packet_system_timestamp_us"

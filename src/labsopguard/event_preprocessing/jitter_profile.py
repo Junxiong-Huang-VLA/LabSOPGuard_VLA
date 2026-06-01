@@ -28,8 +28,7 @@ def load_jitter_config(path: str | Path | None = None) -> dict[str, Any]:
     if path is None:
         root = Path(__file__).resolve().parents[4]
         sources = [
-            root / "LabSOPGuard" / "configs" / "model" / "physical_event_gate.yaml",
-            root / "configs" / "physical_event_gate.yaml",
+            root / "configs" / "model" / "physical_event_gate.yaml",
         ]
     else:
         sources = [Path(path)]

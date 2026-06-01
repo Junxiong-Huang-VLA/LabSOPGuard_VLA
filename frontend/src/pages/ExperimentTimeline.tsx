@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { experimentApi } from '../api'
+import ExperimentPageShell from '../components/ExperimentSideNav'
 import { cleanDisplayText } from '../displayText'
 import type { AnalysisOverview, StepRecord } from '../types'
 
@@ -86,6 +87,7 @@ export default function ExperimentTimelinePage() {
   }
 
   return (
+    <ExperimentPageShell experimentId={id!}>
     <div>
       <div className="mb-6">
         <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
@@ -179,6 +181,7 @@ export default function ExperimentTimelinePage() {
 
       {filteredSteps.length === 0 && <EmptyTimeline />}
     </div>
+    </ExperimentPageShell>
   )
 }
 

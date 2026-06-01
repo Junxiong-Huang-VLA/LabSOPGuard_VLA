@@ -31,58 +31,64 @@ def _dir_size(path: Path) -> int:
 
 def build_workspace_governance_report(workspace_root: str | Path) -> Dict[str, object]:
     root = Path(workspace_root)
-    entries: List[WorkspaceEntry] = []
     specs = [
         (
-            root / "LabSOPGuard",
+            root,
             "primary_project",
             "keep_as_primary_project",
-            "当前主工程，包含后端、前端、配置、测试、运行入口和素材流水线。",
+            "Current source repository: backend, frontend, configs, scripts, src, tests, and pipeline code.",
         ),
         (
             root / "lab_preprocessing",
             "legacy_or_upstream_preprocessing_project",
             "migrate_unique_source_then_archive",
-            "如仍有独有源码，应迁入 LabSOPGuard/src 或 LabSOPGuard/scripts；重复产物应归档，不建议继续双项目并行开发。",
+            "Legacy preprocessing code should be migrated into src/ or scripts/ before this folder is archived.",
         ),
         (
             root / ".ultralytics",
             "model_runtime_cache",
             "keep_ignored_runtime_cache",
-            "Ultralytics 运行缓存，不属于源码；应保留在项目根或通过 YOLO_CONFIG_DIR 指向 LabSOPGuard/.ultralytics，并保持 gitignore。",
+            "Ultralytics runtime cache; keep ignored and do not treat as source or model storage.",
         ),
         (
             root / "memory",
             "experiment_memory_runtime_data",
             "keep_ignored_runtime_data",
-            "实验记忆/运行态数据，不属于源码；应通过运行配置管理并保持 gitignore。",
+            "Runtime memory data; keep ignored and controlled through runtime configuration.",
         ),
         (
-            root / "LabSOPGuard" / ".runtime",
+            root / ".runtime",
             "runtime_outputs",
             "keep_ignored_runtime_outputs",
-            "压测、stream buffer、daemon 状态和临时产物目录，不进入版本库。",
+            "Stream buffers, daemon state, and temporary runtime artifacts; keep ignored.",
+        ),
+        (
+            root / "outputs",
+            "pipeline_outputs",
+            "keep_ignored_or_externalize_heavy_outputs",
+            "Generated experiment outputs; keep lightweight pointers in source and heavy artifacts outside git.",
         ),
     ]
-    for path, role, action, reason in specs:
-        entries.append(
-            WorkspaceEntry(
-                path=str(path),
-                exists=path.exists(),
-                role=role,
-                recommended_action=action,
-                reason=reason,
-                size_bytes=_dir_size(path),
-            )
+    entries = [
+        WorkspaceEntry(
+            path=str(path),
+            exists=path.exists(),
+            role=role,
+            recommended_action=action,
+            reason=reason,
+            size_bytes=_dir_size(path),
         )
+        for path, role, action, reason in specs
+    ]
     return {
         "schema_version": "workspace_governance.v1",
         "workspace_root": str(root),
         "entries": [asdict(entry) for entry in entries],
         "merge_policy": {
-            "source_code": "统一进入 LabSOPGuard/src、backend、frontend-app、scripts、configs、tests。",
-            "runtime_cache": "保留在 .runtime、.ultralytics、memory，全部 gitignore。",
-            "legacy_project": "lab_preprocessing 只在确认独有源码已迁移后归档，不自动删除。",
+            "source_code": "Use src/, backend/, frontend/, scripts/, configs/, tests/, and docs/ for source work.",
+            "external_assets": "Keep videos in LAB_VIDEO_STORE_ROOT, models in LAB_MODELS_DIR, and approved material libraries in LAB_MATERIAL_LIBRARY_ROOT.",
+            "runtime_cache": "Keep .runtime/, .ultralytics/, memory/, and outputs/ ignored unless a small fixture is intentionally tracked.",
+            "legacy_project": "Archive lab_preprocessing only after confirming unique code has moved into the current source tree.",
         },
     }
 

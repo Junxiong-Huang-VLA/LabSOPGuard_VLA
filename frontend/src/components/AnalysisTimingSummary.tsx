@@ -1,174 +1,224 @@
-﻿import type { AnalysisOverview } from '../types'
+import type { AnalysisOverview } from '../types'
+import { getDemoTiming } from '../demo/weighingPipettingDemo'
 
-function finiteNumber(value: unknown) {
+type Run = AnalysisOverview['run']
+
+type TimingStage = {
+  stage: string
+  label_zh?: string
+  duration_sec?: number | null
+  available?: boolean
+}
+
+type StageTile = {
+  id: string
+  label: string
+  keys: string[]
+  fallback?: string[]
+  includeTotal?: boolean
+}
+
+type TimingMap = Record<string, number | null>
+
+const STAGE_TILES: StageTile[] = [
+  {
+    id: 'total_elapsed',
+    label: '分析总耗时',
+    keys: ['total_elapsed', 'total_runtime', 'total', 'server_end_to_end_sec', 'elapsed_sec', 'elapsed', 'total_sec'],
+    includeTotal: true,
+  },
+  {
+    id: 'time_alignment',
+    label: '时间对齐',
+    keys: ['time_alignment', 'time_axis', 'timestamp_alignment', 'video_time_sync'],
+    fallback: ['alignment', 'sync'],
+  },
+  {
+    id: 'coarse_scan',
+    label: '粗筛',
+    keys: ['coarse_scan', 'parallel_scan', 'window_scan', 'coarse'],
+    fallback: ['coarse_scan', 'coarse'],
+  },
+  {
+    id: 'fine_scan',
+    label: '细筛',
+    keys: ['fine_scan', 'segment_generation', 'micro_segment', 'segment_scan', 'fine'],
+    fallback: ['fine_scan', 'segment_generation', 'segment'],
+  },
+  {
+    id: 'material_publish',
+    label: '关键素材生成',
+    keys: ['material_publish', 'material_generation', 'material_build', 'publish'],
+    fallback: ['material_publish', 'material', 'publish'],
+  },
+  {
+    id: 'memory_write',
+    label: '记忆写入',
+    keys: ['memory_write', 'video_memory', 'write_video_memory', 'memory'],
+    fallback: ['memory_write', 'video_memory', 'memory'],
+  },
+]
+
+function normalizeStage(value: unknown) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+}
+
+function parseFinite(value: unknown) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function formatHHMMSS(value: unknown) {
-  const seconds = finiteNumber(value)
-  if (seconds == null) return '-'
-  const safe = Math.max(0, Math.floor(seconds))
-  const h = Math.floor(safe / 3600)
-  const m = Math.floor((safe % 3600) / 60)
-  const s = safe % 60
-  if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+function formatDuration(value?: number | null) {
+  if (!Number.isFinite(Number(value))) return '未记录'
+  return `${parseFloat(Number(value).toFixed(1))} 秒`
 }
 
-type Run = AnalysisOverview['run']
-
-type StageDef = {
-  id: string
-  label: string
-  hint: string
-  keys: string[]
-  fallbackLabel: string
-}
-
-const STAGE_DEFS: StageDef[] = [
-  {
-    id: 'camera_alignment',
-    label: '摄像头对齐',
-    hint: '先完成时间轴匹配与双视角起始点对齐，保证后续切分参照同一时间基线。',
-    keys: ['time_alignment', 'timestamp_alignment', 'video_time_sync', 'time_axis'],
-    fallbackLabel: '对齐耗时',
-  },
-  {
-    id: 'window_split',
-    label: '实验切分',
-    hint: '基于活动与停顿判定生成实验窗口，保留可复核片段入口。',
-    keys: ['coarse_scan', 'fine_scan', 'segment_generation', 'window_generation', 'experiment_split', 'segment_detection'],
-    fallbackLabel: '切分耗时',
-  },
-  {
-    id: 'material_publish',
-    label: '材料生成',
-    hint: '输出窗口级材料、关键帧和关键片段，并同步到官方素材入口。',
-    keys: ['material_generation', 'material_publish', 'material_generation_wall', 'material_build', 'publish'],
-    fallbackLabel: '生成耗时',
-  },
-]
-
-function stageFromRows(timing: Run['timing']): Record<string, number | null> {
+function buildTimingMap(timing: Run['timing']): TimingMap {
   if (!timing) return {}
-  const stageSource = [
-    ...(Array.isArray((timing as { stages?: unknown }).stages) ? (timing as { stages?: unknown }).stages : []),
-    ...(Array.isArray((timing as { stage_rows?: unknown }).stage_rows) ? (timing as { stage_rows?: unknown }).stage_rows : []),
-    ...(Array.isArray((timing as { display_stages?: unknown }).display_stages) ? (timing as { display_stages?: unknown }).display_stages : []),
-  ] as unknown[]
+  const map: TimingMap = {}
+  const simpleMap = (timing as { stages?: Record<string, unknown> }).stages
+  if (simpleMap && typeof simpleMap === 'object' && !Array.isArray(simpleMap)) {
+    for (const [key, value] of Object.entries(simpleMap)) {
+      const duration = parseFinite(value)
+      if (duration == null) continue
+      map[normalizeStage(key)] = duration
+    }
+  }
 
-  const map = new Map<string, number>()
-  for (const row of stageSource) {
+  const stageRows = Array.isArray((timing as { stages?: unknown }).stages)
+    ? ((timing as { stages?: unknown }).stages as unknown[])
+    : []
+  const namedStageRows = Array.isArray((timing as { stage_rows?: unknown }).stage_rows)
+    ? ((timing as { stage_rows?: unknown }).stage_rows as unknown[])
+    : []
+  const displayRows = Array.isArray((timing as { display_stages?: unknown }).display_stages)
+    ? ((timing as { display_stages?: unknown }).display_stages as unknown[])
+    : []
+  const rows = [...stageRows, ...namedStageRows, ...displayRows]
+
+  for (const row of rows) {
     if (!row || typeof row !== 'object') continue
     const entry = row as Record<string, unknown>
-    const stage = String(entry.stage || entry.label || '').trim()
-    if (!stage) continue
-    const value = finiteNumber(entry.duration_sec)
-    if (value == null) continue
-    const normalized = stage.toLowerCase().replace(/\s+/g, '_')
-    if (!map.has(normalized)) map.set(normalized, value)
+    const stage = normalizeStage(entry.stage)
+    const duration = parseFinite(entry.duration_sec)
+    if (!stage || duration == null) continue
+    if (map[stage] == null) map[stage] = duration
   }
-  return Object.fromEntries(map)
+
+  return map
 }
 
-function pickDuration(rowByStage: Record<string, number | null>, keys: string[]) {
-  const direct = keys.map(key => rowByStage[key]).find(finiteNumber)
+function findDisplayText(raw: unknown) {
+  return String(raw || '').trim() || null
+}
+
+function pickDurationFromMap(stageMap: TimingMap, keys: string[], fallback: string[]) {
+  const direct = keys.map(key => stageMap[normalizeStage(key)]).find(value => value != null)
   if (direct != null) return direct
-  const fallback = Object.entries(rowByStage)
-    .find(([key]) => keys.some(prefix => key.includes(prefix)) && finiteNumber(rowByStage[key]) != null)
-  return fallback ? finiteNumber(fallback[1]) : null
-}
-
-function getProgressState(status: string, progress: number, index: number) {
-  const cleaned = String(status || '').toLowerCase()
-  if (['failed', 'error', 'blocked'].some(item => cleaned.includes(item))) {
-    return index < 2 ? '已完成' : '已停止'
-  }
-  if (['completed', 'partial_completed'].some(item => cleaned.includes(item))) return '已完成'
-  if (index === 0) {
-    if (progress <= 0.05) return '排队中'
-    return '进行中'
-  }
-  if (index === 1) return progress >= 0.45 ? '进行中' : '待启动'
-  return progress >= 0.85 ? '进行中' : '待启动'
+  const fallbackValue = Object.entries(stageMap).find(([stageKey]) => fallback.some(item => stageKey.includes(normalizeStage(item))))?.[1]
+  return fallbackValue ?? null
 }
 
 type Props = {
   run: Run
-  statusLabel?: string
   clientEndToEndSec?: number
+  demo?: boolean
 }
 
-export default function AnalysisTimingSummary({ run, statusLabel, clientEndToEndSec }: Props) {
-  const timing = run.timing || {}
-  const stageRows = stageFromRows(timing)
-  const runStatus = String(statusLabel || run.status || '').toLowerCase()
-  const progressValue = Number.isFinite(run.progress) ? Number(run.progress) : 0
-  const endToEnd = finiteNumber(clientEndToEndSec) || finiteNumber(timing.server_end_to_end_sec) || finiteNumber(timing.elapsed_sec) || null
-
-  const stageEntries = STAGE_DEFS.map(stage => {
-    const duration = pickDuration(stageRows, stage.keys)
-    return {
-      ...stage,
-      status: getProgressState(runStatus, progressValue, STAGE_DEFS.indexOf(stage)),
-      durationSec: duration,
-      durationText: duration != null ? formatHHMMSS(duration) : '-',
-    }
-  })
-
-  const advanced = {
-    stage_count: timing.stage_count,
-    total_sec: timing.server_end_to_end_sec || timing.elapsed_sec,
-    queue_wait_sec: timing.queue_wait_sec,
-    algorithm_elapsed_sec: timing.algorithm_elapsed_sec,
-    upload_save_sec: timing.upload_save_sec,
-    coarse_sampled_frame_count: (timing as { coarse_sampled_frame_count?: unknown }).coarse_sampled_frame_count,
-    fine_sampled_frame_count: (timing as { fine_sampled_frame_count?: unknown }).fine_sampled_frame_count,
-    coarse_wall_sec: (timing as { coarse_wall_sec?: unknown }).coarse_wall_sec,
-    fine_wall_sec: (timing as { fine_wall_sec?: unknown }).fine_wall_sec,
-    gpu_device: (timing as { gpu_device?: unknown }).gpu_device,
-    batch_size: (timing as { batch_size?: unknown }).batch_size,
-  }
-
+function DemoTimingSummary() {
+  const { totalSec, stages } = getDemoTiming()
+  const tiles = [{ id: 'total_elapsed', label: '分析总耗时', durationSec: totalSec }, ...stages]
   return (
-    <section className="space-y-3">
-      <div className="grid gap-3 xl:grid-cols-3">
-        {stageEntries.map(item => (
-          <article key={item.id} className="rounded-[var(--ui-radius-lg)] border border-[color:var(--ui-border)] bg-white/85 p-4 shadow-[var(--ui-shadow-subtle)]">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-[color:var(--ui-text)]">{item.label}</p>
-              <span className="rounded-full border border-[color:var(--ui-accent-soft)] bg-[color:var(--ui-accent-soft)] px-2 py-1 text-xs font-medium text-[color:var(--ui-accent)]">{item.status}</span>
-            </div>
-            <p className="mt-1 text-xs text-[color:var(--ui-text-muted)]">{item.hint}</p>
-            <p className="mt-3 text-lg font-semibold text-[color:var(--ui-text)]">{item.durationText}</p>
-            <p className="text-xs text-[color:var(--ui-text-muted)]">{item.fallbackLabel}</p>
+    <section className="space-y-3" data-smoke="analysis-timing-summary">
+      <h3 className="text-base font-semibold text-[color:var(--ui-text)]">分析耗时</h3>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {tiles.map(tile => (
+          <article
+            key={tile.id}
+            className="rounded-[var(--ui-radius-lg)] border border-[color:var(--ui-border)] bg-white/85 p-3 shadow-[var(--ui-shadow-subtle)]"
+            data-smoke={`timing-tile-${tile.id}`}
+          >
+            <p className="text-xs font-medium text-[color:var(--ui-text-muted)]">{tile.label}</p>
+            <p className="mt-2 text-lg font-semibold text-[color:var(--ui-text)]">{tile.durationSec} 秒</p>
           </article>
         ))}
       </div>
+    </section>
+  )
+}
 
-      <article className="rounded-[var(--ui-radius-lg)] border border-[color:var(--ui-border)] bg-white/85 p-4 shadow-[var(--ui-shadow-subtle)]">
-        <p className="text-sm font-semibold text-[color:var(--ui-text)]">总耗时</p>
-        <p className="mt-2 text-lg font-semibold text-[color:var(--ui-text)]">{formatHHMMSS(endToEnd)} {endToEnd ? '' : '(待刷新)'}</p>
-        {run.message && <p className="mt-2 text-xs text-[color:var(--ui-text-muted)]">{run.message}</p>}
-      </article>
+export default function AnalysisTimingSummary({ run, clientEndToEndSec, demo }: Props) {
+  if (demo) {
+    return <DemoTimingSummary />
+  }
+  const timing = run.timing || {}
+  const displayStages = Array.isArray((timing as { display_stages?: unknown }).display_stages)
+    ? (timing as { display_stages?: unknown }).display_stages as TimingStage[]
+    : []
 
-      <details className="rounded-[var(--ui-radius-lg)] border border-[color:var(--ui-border)] bg-white/85 p-4 shadow-[var(--ui-shadow-subtle)]">
-        <summary className="cursor-pointer text-sm font-semibold text-[color:var(--ui-text)]">高级信息（指标细节）</summary>
-        <div className="mt-3 grid gap-2 text-xs text-[color:var(--ui-text-muted)]">
-          {Object.entries(advanced)
-            .filter(([, value]) => value != null && value !== '')
-            .map(([key, value]) => (
-              <p key={key}>
-                <span className="mr-2 font-medium text-[color:var(--ui-text)]">{key}</span>
-                {String(value)}
-              </p>
-            ))}
-          {Object.keys(advanced).every(key => !Object.values(advanced).some(value => value != null && value !== '')) && (
-            <p className="text-sm">当前阶段仅保留核心指标，后台指标可稍后刷新后查看。</p>
-          )}
-        </div>
-      </details>
+  const displayStageMap = new Map(
+    displayStages.map(item => [normalizeStage(item.stage), {
+      duration: parseFinite(item.duration_sec),
+      available: item.available,
+      label: findDisplayText(item.label_zh),
+    }]),
+  )
+
+  const stageMap = buildTimingMap(timing)
+  const orderedTiles = (() => {
+    const configuredOrder = Array.isArray((timing as { display_stage_order?: unknown }).display_stage_order)
+      ? (timing as { display_stage_order?: unknown }).display_stage_order
+      : []
+    if (!Array.isArray(configuredOrder) || configuredOrder.length === 0) return STAGE_TILES
+
+    const configuredIds = (configuredOrder as unknown[]).map(item => normalizeStage(item)).filter(Boolean)
+    const knownIds = new Set(STAGE_TILES.map(stage => stage.id))
+    const seen = new Set<string>()
+    const uniqueConfigured = configuredIds.filter(id => {
+      if (!knownIds.has(id) || seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+    const missingIds = STAGE_TILES.map(stage => stage.id).filter(id => !uniqueConfigured.includes(id))
+
+    return [...uniqueConfigured, ...missingIds].map(id => STAGE_TILES.find(stage => stage.id === id)!).filter(Boolean)
+  })()
+
+  const totalElapsed = parseFinite(clientEndToEndSec)
+    ?? parseFinite(timing.server_end_to_end_sec)
+    ?? parseFinite(timing.elapsed_sec)
+    ?? parseFinite((timing as { total_sec?: unknown }).total_sec)
+
+  return (
+    <section className="space-y-3" data-smoke="analysis-timing-summary">
+      <h3 className="text-base font-semibold text-[color:var(--ui-text)]">分析耗时</h3>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {orderedTiles.map(tile => {
+          const direct = displayStageMap.get(normalizeStage(tile.id))
+          const matched = direct?.duration != null
+            ? direct.duration
+            : pickDurationFromMap(stageMap, tile.keys, tile.fallback || [])
+          const isTotal = tile.id === 'total_elapsed'
+          const available = direct?.available !== undefined ? Boolean(direct.available) : matched != null
+          const value = isTotal ? totalElapsed ?? matched : matched
+          const showLabel = direct?.label || tile.label
+
+          return (
+            <article
+              key={tile.id}
+              className="rounded-[var(--ui-radius-lg)] border border-[color:var(--ui-border)] bg-white/85 p-3 shadow-[var(--ui-shadow-subtle)]"
+              data-smoke={`timing-tile-${tile.id}`}
+            >
+              <p className="text-xs font-medium text-[color:var(--ui-text-muted)]">{showLabel}</p>
+              <p className="mt-2 text-lg font-semibold text-[color:var(--ui-text)]">{formatDuration(available && Number.isFinite(value as number) ? value : null)}</p>
+              {!available && <p className="mt-1 text-xs text-[color:var(--ui-text-muted)]">未记录</p>}
+            </article>
+          )
+        })}
+      </div>
     </section>
   )
 }

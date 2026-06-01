@@ -16,9 +16,9 @@ from labsopguard.workflow import FormalExperimentWorkflow
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Run the formal LabSOPGuard experiment pipeline')
+    parser = argparse.ArgumentParser(description='Run the formal LabEmbodied experiment pipeline')
     parser.add_argument('--video', required=True)
-    parser.add_argument('--title', default='LabSOPGuard Demo')
+    parser.add_argument('--title', default='LabEmbodied Demo')
     parser.add_argument('--context', default='')
     parser.add_argument('--protocol', default='')
     args = parser.parse_args()

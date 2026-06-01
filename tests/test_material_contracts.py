@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 import backend.main as main
 import key_action_indexer.material_references as root_material_references
+from labsopguard import material_maintenance
 from labsopguard.material_best_score import MATERIAL_BEST_REASON_SCHEMA_VERSION, MATERIAL_BEST_SCORE_SCHEMA_VERSION
 from labsopguard.material_taxonomy import MATERIAL_TAXONOMY_SCHEMA_VERSION
 
@@ -29,6 +30,21 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def test_backend_material_reference_roots_replace_title_date_with_created_at(tmp_path: Path) -> None:
+    exp_dir = tmp_path / "outputs" / "experiments" / "exp-dated"
+    _write_json(
+        exp_dir / "experiment.json",
+        {
+            "title": "\u79f0\u91cf\u79fb\u6db2\u5b9e\u9a8c 2026-05-22",
+            "created_at": "2026-05-31T09:48:00+08:00",
+        },
+    )
+
+    expected = "\u79f0\u91cf\u79fb\u6db2\u5b9e\u9a8c_20260531"
+    assert main._formal_material_reference_root_for_exp(exp_dir).name == expected
+    assert material_maintenance._formal_material_reference_root_for_exp(exp_dir).name == expected
 
 
 def test_root_reference_payload_contract_is_preserved_for_labsopguard_sync(tmp_path: Path) -> None:

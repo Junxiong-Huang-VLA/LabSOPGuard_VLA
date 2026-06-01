@@ -64,6 +64,21 @@ def test_consistent_db_passes(tmp_path):
     assert res.report["counts"]["sqlite_material_count"] == 2
 
 
+def test_official_partition_accepts_evidence_bundle_id_namespace(tmp_path):
+    rows = [_mat("bundle-1", status="official")]
+    _write_stream(tmp_path, rows)
+    _make_sqlite(tmp_path / "material_index.sqlite", rows)
+    (tmp_path / "official_materials.jsonl").write_text(
+        json.dumps({"evidence_bundle_id": "bundle-1", "official_status": "official"}) + "\n",
+        encoding="utf-8",
+    )
+
+    res = validate_material_database(tmp_path)
+
+    assert res.ok
+    assert res.report["checks"]["official_partition_drift"] == []
+
+
 def test_row_count_mismatch_fails(tmp_path):
     _write_stream(tmp_path, [_mat("m1"), _mat("m2")])
     _make_sqlite(tmp_path / "material_index.sqlite", [_mat("m1")])

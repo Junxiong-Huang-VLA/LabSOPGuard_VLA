@@ -220,6 +220,35 @@ def test_needs_review_candidate_can_be_promoted_to_official_material_db(tmp_path
     assert rows[0]["memory_eligible"] is True
 
 
+def test_query_materials_filters_orphans_and_supports_contract_fields(tmp_path: Path) -> None:
+    material_root = tmp_path / "library"
+    exp_root = material_root / "exp-query"
+    valid = _make_review_candidate_material(exp_root, material_id="m-valid", evidence_bundle_id="b-valid")
+    orphan = {
+        **valid,
+        "material_id": "m-orphan",
+        "evidence_bundle_id": "b-orphan",
+        "source_window_sync_index": "",
+        "window_id": "",
+        "experiment_window_id": "",
+    }
+    _write_jsonl(exp_root / "material_stream.jsonl", [valid, orphan])
+
+    default_rows = query_materials(material_root, experiment_id="exp-query", action_type="hand_object_contact")
+    all_rows = query_materials(material_root, experiment_id="exp-query", action_type="hand_object_contact", include_orphans=True)
+    by_material = query_materials(material_root, experiment_id="exp-query", material_id="m-valid", has_keyframe=True, has_keyclip=True)
+    by_sync = query_materials(
+        material_root,
+        experiment_id="exp-query",
+        source_window_sync_index=valid["source_window_sync_index"],
+    )
+
+    assert [row["material_id"] for row in default_rows] == ["m-valid"]
+    assert {row["material_id"] for row in all_rows} == {"m-valid", "m-orphan"}
+    assert by_material and by_material[0]["evidence_bundle_id"] == "b-valid"
+    assert by_sync and by_sync[0]["material_id"] == "m-valid"
+
+
 def test_rejected_candidate_does_not_become_official(tmp_path: Path) -> None:
     material_root = tmp_path / "library"
     exp_root = material_root / "exp-reject"

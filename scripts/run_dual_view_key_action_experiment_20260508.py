@@ -12,15 +12,13 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LABSOPGUARD = ROOT / "LabSOPGuard"
-BACKEND = LABSOPGUARD / "backend"
-EXPERIMENTS_ROOT = LABSOPGUARD / "outputs" / "experiments"
+EXPERIMENTS_ROOT = ROOT / "outputs" / "experiments"
 DEFAULT_INPUT_DIR = Path("C:/Users/Xx7/Desktop") / "固体称量双视角实验-5.8"
 DEFAULT_EXPERIMENT_ID = "solid-weighing-dual-view-20260508-153648"
 DEFAULT_TITLE = "固体称量双视角实验-5.8"
 
 
-for path in (ROOT / "src", LABSOPGUARD, LABSOPGUARD / "src", BACKEND):
+for path in (ROOT, ROOT / "src"):
     text = str(path)
     if text not in sys.path:
         sys.path.insert(0, text)
@@ -54,7 +52,7 @@ def _find_required_input(input_dir: Path, pattern: str) -> Path:
 
 
 def _probe(path: Path, index: int, role: str, camera_id: str) -> dict[str, Any]:
-    import main as backend_main
+    from backend import main as backend_main
 
     metadata = backend_main._probe_video_metadata(path, index)
     metadata["view_type"] = role
@@ -69,7 +67,7 @@ def _probe(path: Path, index: int, role: str, camera_id: str) -> dict[str, Any]:
 
 
 def _prepare_experiment(*, experiment_id: str, title: str, input_dir: Path) -> dict[str, Any]:
-    import main as backend_main
+    from backend import main as backend_main
 
     session = _read_json(input_dir / "session.json")
     session_start_time = str(session.get("start_utc") or _now_iso())
@@ -233,7 +231,7 @@ def _run_post_refresh(experiment_id: str, session_dir: Path) -> dict[str, Any]:
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
-    import main as backend_main
+    from backend import main as backend_main
 
     input_dir = Path(args.input_dir)
     info = _prepare_experiment(experiment_id=args.experiment_id, title=args.title, input_dir=input_dir)
@@ -305,7 +303,7 @@ def main() -> int:
         return 0
     except Exception as exc:
         try:
-            import main as backend_main
+            from backend import main as backend_main
 
             backend_main._write_key_action_status(
                 args.experiment_id,

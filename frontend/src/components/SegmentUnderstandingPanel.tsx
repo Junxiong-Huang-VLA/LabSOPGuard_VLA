@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cleanDisplayText } from '../displayText'
+import { Markdown } from '../markdown'
 
 const TYPEWRITER_CHARS_PER_TICK = 2
 const TYPEWRITER_TICK_MS = 16
@@ -9,18 +10,59 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+function PanelShell({ children, badge }: { children: ReactNode; badge: ReactNode }) {
+  return (
+    <section
+      className="mt-3 rounded-[var(--ui-radius-md)] border border-[color:var(--ui-border)] bg-[color:var(--ui-accent-soft)] p-3"
+      data-smoke="segment-understanding-panel"
+    >
+      <header className="mb-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex h-1.5 w-1.5 rounded-full bg-[color:var(--ui-accent)]" aria-hidden />
+          <span className="text-xs font-black text-[color:var(--ui-text)]">实验片段理解</span>
+          {badge}
+        </div>
+      </header>
+      {children}
+    </section>
+  )
+}
+
 /**
- * Progressive (typewriter) reveal of one segment's Qwen understanding text.
- * The full text is already fetched; this only animates how it appears.
- * Honors prefers-reduced-motion and offers a skip-to-full button.
+ * Renders one segment's process understanding.
+ *
+ * - `markdown` (demo / curated): rendered as clean Markdown with a neutral
+ *   "AI 过程理解" label. No typewriter — the content is already polished.
+ * - `text` (legacy backend output): cleaned for mojibake and progressively
+ *   revealed via a typewriter, honoring prefers-reduced-motion.
  */
 export default function SegmentUnderstandingPanel({
   text,
+  markdown,
   source,
 }: {
-  text: string
+  text?: string
+  markdown?: string
   source?: string
 }) {
+  if (markdown && markdown.trim()) {
+    return (
+      <PanelShell
+        badge={
+          <span className="rounded-full bg-[color:var(--ui-accent)] px-2 py-0.5 text-[10px] font-bold text-white">
+            AI 过程理解
+          </span>
+        }
+      >
+        <Markdown text={markdown} />
+      </PanelShell>
+    )
+  }
+
+  return <LegacyTypewriterPanel text={text || ''} source={source} />
+}
+
+function LegacyTypewriterPanel({ text, source }: { text: string; source?: string }) {
   const cleanText = useMemo(() => cleanDisplayText(text || '', '').trim(), [text])
   const reduceMotion = useMemo(prefersReducedMotion, [])
   const [revealed, setRevealed] = useState(reduceMotion ? cleanText.length : 0)
@@ -76,7 +118,7 @@ export default function SegmentUnderstandingPanel({
       <header className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="flex h-1.5 w-1.5 rounded-full bg-[color:var(--ui-accent)]" aria-hidden />
-          <span className="text-xs font-black text-[color:var(--ui-text)]">实验理解</span>
+          <span className="text-xs font-black text-[color:var(--ui-text)]">实验片段理解</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
               isQwen
@@ -84,7 +126,7 @@ export default function SegmentUnderstandingPanel({
                 : 'bg-[color:var(--ui-bg-muted)] text-[color:var(--ui-text-muted)]'
             }`}
           >
-            {isQwen ? 'Qwen 视觉理解' : '启发式摘要'}
+            {isQwen ? 'Qwen 推断结果' : '规则推断结果'}
           </span>
         </div>
         {isStreaming && (

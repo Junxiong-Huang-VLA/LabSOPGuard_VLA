@@ -79,20 +79,12 @@ def _resolve_project_root(project_root: str | Path | None = None) -> Path:
     for candidate in (cwd, *cwd.parents):
         if (candidate / "pyproject.toml").exists() and (candidate / "src" / "key_action_indexer").exists():
             return candidate
-        if (candidate / "LabSOPGuard").exists() and (candidate / "src" / "key_action_indexer").exists():
-            return candidate
     return cwd
 
 
 def _find_labsopguard_root(root: Path) -> Path | None:
-    candidates = [
-        root / "LabSOPGuard",
-        root,
-        root.parent / "LabSOPGuard",
-    ]
-    for candidate in candidates:
-        if (candidate / "configs").exists() and (candidate / "outputs").exists():
-            return candidate.resolve()
+    if (root / "configs").exists() and (root / "outputs").exists():
+        return root.resolve()
     return None
 
 
@@ -414,8 +406,7 @@ def _resolve_candidate_path(value: str | Path, root: Path) -> Path | None:
     path = Path(value)
     if path.is_absolute():
         return path
-    candidates = [root / path, root / "LabSOPGuard" / path, root.parent / path]
-    return _first_existing(candidates) or (root / path)
+    return root / path
 
 
 def _first_existing(paths: Iterable[Path]) -> Path | None:

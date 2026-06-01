@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 REQUIRED_STREAM_FIELDS = [
@@ -35,6 +36,14 @@ REQUIRED_FILE_FIELDS = [
 ]
 
 
+def _is_orphan_material(row: Mapping[str, Any]) -> bool:
+    if row.get("orphan_material") is True:
+        return True
+    window_id = str(row.get("window_id") or row.get("experiment_window_id") or row.get("segment_id") or "").strip()
+    source_window_sync_index = str(row.get("source_window_sync_index") or row.get("window_sync_index") or "").strip()
+    return not window_id or not source_window_sync_index
+
+
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
@@ -56,8 +65,20 @@ def build_cli_ready_report(material_root: Path) -> dict[str, Any]:
     missing_fields: list[dict[str, Any]] = []
     missing_files: list[dict[str, Any]] = []
     memory_policy_violations: list[dict[str, Any]] = []
+    orphan_diagnostics: list[dict[str, Any]] = []
 
     for index, row in enumerate(rows):
+        if _is_orphan_material(row):
+            orphan_diagnostics.append(
+                {
+                    "row": index,
+                    "material_id": row.get("material_id"),
+                    "official_status": row.get("official_status"),
+                    "missing_window": not (row.get("window_id") or row.get("experiment_window_id") or row.get("segment_id")),
+                    "missing_source_window_sync_index": not (row.get("source_window_sync_index") or row.get("window_sync_index")),
+                }
+            )
+            continue
         missing = [
             field
             for field in REQUIRED_STREAM_FIELDS
@@ -117,6 +138,7 @@ def build_cli_ready_report(material_root: Path) -> dict[str, Any]:
             "missing_required_fields": missing_fields,
             "missing_files": missing_files,
             "memory_policy_violations": memory_policy_violations,
+            "orphan_diagnostics": orphan_diagnostics,
         },
     }
 
@@ -125,7 +147,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Validate a D:\\LabMaterialLibrary experiment folder for CLI/LLM consumption."
     )
-    parser.add_argument("--material-root", required=True, type=Path)
+    parser.add_argument(
+        "--material-root",
+        default=Path(os.environ.get("LAB_MATERIAL_LIBRARY_ROOT", r"D:\LabMaterialLibrary")),
+        type=Path,
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()

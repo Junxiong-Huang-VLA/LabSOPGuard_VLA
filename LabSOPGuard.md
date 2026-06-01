@@ -12,7 +12,7 @@
 - 解析逻辑在 `src/labsopguard/detectors.py` → `resolve_yolo26_weights_path()`，读取顺序：
   1. 函数参数 `override_path`
   2. 环境变量 `YOLO26_WEIGHTS_PATH` 或 `LABSOPGUARD_YOLO_MODEL`
-  3. yaml `model` 字段（当前：`outputs/training/yolo26s_autodl_8_1_1/weights/best.pt`）
+  3. yaml `model` 字段（当前：`D:/LabModels/yolo/third_person/current/best.pt`）
   4. yaml `model_fallbacks` 列表（`yolo26s.pt` → `yolo26n.pt`）
 - 新增训练权重时：只改 yaml 的 `model` 字段，其他地方不动
 
@@ -26,7 +26,7 @@
 - 语义命名：`MATERIAL_DISPLAY_NAME_QWEN_ENABLED=true`，模型 `MATERIAL_DISPLAY_NAME_QWEN_MODEL=qwen3.6-flash`
 
 ### 1.3 .env 文件
-- 唯一路径：`D:/LabEmbodiedVLA/LabSOPGuard/.env`
+- 唯一路径：`D:/LabEmbodied/.env`
 - **禁止**在 `lab_preprocessing/` 或其他子目录单独维护 `.env`
 - 所有服务启动前必须 `load_dotenv('.env')`
 
@@ -73,7 +73,7 @@ POST /api/v1/experiments/{id}/materials/publish
 ## 3. 项目结构约束
 
 ### 3.1 单一主项目
-- **唯一主项目**：`D:/LabEmbodiedVLA/LabSOPGuard/`
+- **唯一主项目**：`D:/LabEmbodied/`
 - `lab_preprocessing/` 是已迁移的历史子项目，其能力已全部集成到 LabSOPGuard：
 
 | lab_preprocessing 模块 | LabSOPGuard 对应实现 |
@@ -85,7 +85,7 @@ POST /api/v1/experiments/{id}/materials/publish
 | `ClipGenerator` | `event_preprocessing/key_material_extraction.py` → `KeyMaterialExtractor` |
 
 - **禁止**从 `LabSOPGuard` 代码中 `import` `lab_preprocessing` 包
-- **禁止**在 `lab_preprocessing/` 中新增功能；所有新功能写在 `LabSOPGuard/src/labsopguard/` 下
+- **禁止**在 `lab_preprocessing/` 中新增功能；所有新功能写在 `D:/LabEmbodied/src/labsopguard/` 下
 
 ### 3.2 Python 包路径
 - 后端启动时：`PYTHONPATH=src`（见 `start_full_stack.ps1`）
@@ -123,7 +123,7 @@ POST /api/v1/experiments/{id}/materials/publish
 
 ### 一键启动
 ```powershell
-cd D:/LabEmbodiedVLA/LabSOPGuard
+cd D:/LabEmbodied
 .\scripts\start_full_stack.ps1 -SkipRedis
 ```
 脚本会自动：杀掉旧进程树（含子进程）→ 清理 dist/ 缓存 → 启动后端+前端 → 健康检查 → 打开最新实验
@@ -137,12 +137,12 @@ cd D:/LabEmbodiedVLA/LabSOPGuard
 
 ### 手动启动（调试）
 ```powershell
-# 后端（必须用 labsopguard 环境的 Python）
+# 后端（必须让 src 在 PYTHONPATH 中）
 $env:PYTHONPATH="src"
-E:\conda_envs\labsopguard\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 # 前端（另开终端）
-cd frontend-app
+cd frontend
 npm run dev
 ```
 
@@ -165,7 +165,7 @@ GET  http://127.0.0.1:8000/api/v1/experiments/{id}/materials/search  # 素材语
 - [ ] YOLO 权重路径：`configs/model/detection_runtime.yaml` → `model` 字段是否指向存在的 `.pt` 文件
 - [ ] API Key：`DASHSCOPE_API_KEY` 在 `.env` 中是否存在
 - [ ] 引入的 SDK：是否只用了 `dashscope` 和 `openai`（兼容模式）
-- [ ] 新增功能位置：是否写在 `LabSOPGuard/src/labsopguard/` 下，而不是 `lab_preprocessing/`
+- [ ] 新增功能位置：是否写在 `D:/LabEmbodied/src/labsopguard/` 下，而不是 `lab_preprocessing/`
 - [ ] 新增事件类型：是否在五类之内，或明确扩展了 `_SOP_DEFAULT_STEPS` 和 `VALID_EVENT_TYPES`
 - [ ] 测试：`pytest -q tests/test_model_data_enhancements.py tests/test_material_production_features.py`
 

@@ -1,6 +1,6 @@
 # Advanced Evidence Input Protocol
 
-LabCapability accepts external model outputs as optional JSONL files under:
+LabEmbodied accepts external model outputs as optional JSONL files under:
 
 `LabSOPGuard/outputs/experiments/<experiment_id>/key_action_index/metadata/`
 

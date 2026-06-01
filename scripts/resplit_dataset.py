@@ -1,5 +1,6 @@
 """Resplit dataset into train/val/test with stratification by class presence."""
 import json
+import os
 import random
 import shutil
 from collections import defaultdict
@@ -8,7 +9,7 @@ from pathlib import Path
 SEED = 42
 RATIOS = {"train": 0.8, "val": 0.1, "test": 0.1}
 NUM_CLASSES = 13
-DATASET_ROOT = Path("D:/LabEmbodiedVLA/LabSOPGuard/data/dataset")
+DATASET_ROOT = Path(os.environ.get("LAB_DATASET_ROOT", r"D:\LabDatasets\LabEmbodied\dataset"))
 
 def get_classes_in_label(label_path: Path) -> set[int]:
     classes = set()
